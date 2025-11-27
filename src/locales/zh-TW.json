@@ -1,0 +1,26 @@
+{
+  "app": {
+    "title": "Zoo Downloader",
+    "description": "跨平台下載器"
+  },
+  "common": {
+    "download": "下載",
+    "pause": "暫停",
+    "resume": "繼續",
+    "cancel": "取消",
+    "settings": "設定",
+    "history": "歷史記錄"
+  },
+  "download": {
+    "addUrl": "新增下載連結",
+    "pasteUrl": "貼上 URL",
+    "status": {
+      "pending": "等待中",
+      "downloading": "下載中",
+      "paused": "已暫停",
+      "completed": "已完成",
+      "failed": "失敗",
+      "cancelled": "已取消"
+    }
+  }
+}

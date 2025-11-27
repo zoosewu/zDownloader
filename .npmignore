@@ -1,0 +1,26 @@
+# Source files
+src/
+src-tauri/src/
+specs/
+scripts/
+
+# Development files
+*.md
+!README.md
+.vscode/
+.idea/
+.git/
+.gitignore
+
+# Test and coverage
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Build artifacts (keep dist for publishing)
+node_modules/
+
+# Environment
+.env*

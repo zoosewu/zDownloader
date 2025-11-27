@@ -1,0 +1,26 @@
+{
+  "app": {
+    "title": "Zoo Downloader",
+    "description": "Cross-Platform Downloader"
+  },
+  "common": {
+    "download": "Download",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "settings": "Settings",
+    "history": "History"
+  },
+  "download": {
+    "addUrl": "Add Download URL",
+    "pasteUrl": "Paste URL",
+    "status": {
+      "pending": "Pending",
+      "downloading": "Downloading",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
+  }
+}
