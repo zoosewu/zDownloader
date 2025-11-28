@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use super::DownloadSegment;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadTask {
@@ -13,8 +14,11 @@ pub struct DownloadTask {
     pub status: DownloadStatus,
     pub progress: f64,  // 0.0 - 100.0
     pub current_speed: u64,  // bytes/sec
+    pub segments: Vec<DownloadSegment>,  // Download segments for multi-threaded downloads
     pub created_at: DateTime<Utc>,
+    pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -42,8 +46,11 @@ impl DownloadTask {
             status: DownloadStatus::Pending,
             progress: 0.0,
             current_speed: 0,
+            segments: Vec::new(),
             created_at: Utc::now(),
+            started_at: None,
             completed_at: None,
+            error_message: None,
         }
     }
 }

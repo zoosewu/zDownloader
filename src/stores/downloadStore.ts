@@ -56,6 +56,12 @@ export const clipboardUrlAtom = atom<string | null>(null);
 // Clipboard hint visibility atom
 export const showClipboardHintAtom = atom<boolean>(false);
 
+// Unfinished downloads atom - detected on app startup
+export const unfinishedDownloadsAtom = atom<DownloadTask[]>([]);
+
+// Resume dialog visibility atom
+export const showResumeDialogAtom = atom<boolean>(false);
+
 // Helper atom to add a task
 export const addTaskAtom = atom(
   null,

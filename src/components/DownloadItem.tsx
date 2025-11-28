@@ -1,5 +1,5 @@
 // Download item component - single download task UI with progress, speed, and control buttons
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -8,6 +8,9 @@ import {
   IconButton,
   Chip,
   Stack,
+  Collapse,
+  LinearProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -15,9 +18,11 @@ import {
   Cancel as CancelIcon,
   CheckCircle as CompleteIcon,
   Error as ErrorIcon,
+  ExpandMore as ExpandMoreIcon,
+  ViewModule as SegmentsIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { DownloadTask, DownloadStatus } from '../types/download';
+import { DownloadTask, DownloadStatus, SegmentStatus } from '../types/download';
 import ProgressBar from './ProgressBar';
 import useDownloads from '../hooks/useDownloads';
 
@@ -28,6 +33,9 @@ interface DownloadItemProps {
 const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
   const { t } = useTranslation();
   const { startDownload, pauseDownload, cancelDownload } = useDownloads();
+  const [showSegments, setShowSegments] = useState(false);
+
+  const hasSegments = task.segments && task.segments.length > 0;
 
   const getStatusColor = (status: DownloadStatus): 'default' | 'primary' | 'success' | 'error' | 'warning' => {
     switch (status) {
@@ -146,6 +154,106 @@ const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
           <Typography variant="caption" color="text.secondary" noWrap>
             {task.url}
           </Typography>
+
+          {/* Segments toggle button */}
+          {hasSegments && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginTop: 1 }}>
+              <IconButton
+                size="small"
+                onClick={() => setShowSegments(!showSegments)}
+                sx={{
+                  transform: showSegments ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.3s',
+                }}
+              >
+                <ExpandMoreIcon />
+              </IconButton>
+              <Chip
+                icon={<SegmentsIcon />}
+                label={t('downloads.segments', '{{count}} 個分段', {
+                  count: task.segments.length,
+                })}
+                size="small"
+                variant="outlined"
+              />
+            </Box>
+          )}
+
+          {/* Segments details (collapsible) */}
+          {hasSegments && (
+            <Collapse in={showSegments}>
+              <Box sx={{ marginTop: 2, paddingLeft: 2, borderLeft: '2px solid', borderColor: 'divider' }}>
+                <Typography variant="caption" fontWeight="bold" color="text.secondary" gutterBottom>
+                  {t('downloads.segmentDetails', '分段詳細資訊')}
+                </Typography>
+                <Stack spacing={1} sx={{ marginTop: 1 }}>
+                  {task.segments.map((segment) => {
+                    const segmentProgress =
+                      segment.endByte - segment.startByte > 0
+                        ? (segment.downloadedBytes / (segment.endByte - segment.startByte + 1)) * 100
+                        : 0;
+
+                    const getSegmentChipColor = (status: SegmentStatus): 'default' | 'primary' | 'success' | 'error' => {
+                      switch (status) {
+                        case 'Downloading':
+                          return 'primary';
+                        case 'Completed':
+                          return 'success';
+                        case 'Failed':
+                          return 'error';
+                        default:
+                          return 'default';
+                      }
+                    };
+
+                    const getSegmentProgressColor = (status: SegmentStatus): 'inherit' | 'primary' | 'secondary' | 'success' | 'error' => {
+                      switch (status) {
+                        case 'Downloading':
+                          return 'primary';
+                        case 'Completed':
+                          return 'success';
+                        case 'Failed':
+                          return 'error';
+                        default:
+                          return 'secondary';
+                      }
+                    };
+
+                    return (
+                      <Box key={segment.id} sx={{ padding: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                          <Typography variant="caption" fontWeight="medium">
+                            {t('downloads.segment', '分段 {{id}}', { id: segment.segmentId + 1 })}
+                          </Typography>
+                          <Chip
+                            label={segment.status}
+                            size="small"
+                            color={getSegmentChipColor(segment.status)}
+                            sx={{ height: 18, fontSize: '0.65rem' }}
+                          />
+                        </Box>
+                        <Tooltip
+                          title={`${formatBytes(segment.downloadedBytes)} / ${formatBytes(
+                            segment.endByte - segment.startByte + 1
+                          )}`}
+                        >
+                          <LinearProgress
+                            variant="determinate"
+                            value={segmentProgress}
+                            color={getSegmentProgressColor(segment.status)}
+                            sx={{ height: 4, borderRadius: 2 }}
+                          />
+                        </Tooltip>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                          {segmentProgress.toFixed(1)}% • {formatBytes(segment.startByte)} - {formatBytes(segment.endByte)}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            </Collapse>
+          )}
         </Box>
       </CardContent>
     </Card>

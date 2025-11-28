@@ -1,33 +1,120 @@
-// Download engine core - single-threaded download for MVP
-use crate::models::{DownloadTask, DownloadStatus};
-use crate::download::HttpClient;
-use std::fs::File;
+// Download engine core - supports both single-threaded and multi-threaded segmented downloads
+use crate::models::{DownloadTask, DownloadStatus, SegmentStatus};
+use crate::download::{HttpClient, SegmentConfig, calculate_segments, merge_segments, can_resume_download, get_resumable_segments, save_checkpoint};
+use std::fs::{File, OpenOptions};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use futures::StreamExt;
+
+// Custom error type that implements Send
+#[derive(Debug)]
+pub struct DownloadError(String);
+
+impl std::fmt::Display for DownloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for DownloadError {}
+
+impl From<String> for DownloadError {
+    fn from(s: String) -> Self {
+        DownloadError(s)
+    }
+}
+
+impl From<std::io::Error> for DownloadError {
+    fn from(e: std::io::Error) -> Self {
+        DownloadError(format!("IO error: {}", e))
+    }
+}
+
+impl From<reqwest::Error> for DownloadError {
+    fn from(e: reqwest::Error) -> Self {
+        DownloadError(format!("HTTP error: {}", e))
+    }
+}
+
+impl From<tokio::task::JoinError> for DownloadError {
+    fn from(e: tokio::task::JoinError) -> Self {
+        DownloadError(format!("Task join error: {}", e))
+    }
+}
 
 pub struct DownloadEngine {
     http_client: HttpClient,
+    segment_config: SegmentConfig,
 }
 
 impl DownloadEngine {
     pub fn new() -> Self {
         Self {
             http_client: HttpClient::new(),
+            segment_config: SegmentConfig::default(),
         }
     }
 
+    pub fn with_segment_config(segment_config: SegmentConfig) -> Self {
+        Self {
+            http_client: HttpClient::new(),
+            segment_config,
+        }
+    }
+
+    /// Download a file with automatic segmentation decision
+    ///
+    /// This method checks if the server supports range requests and if the file
+    /// is large enough to benefit from segmented download. It then automatically
+    /// chooses between single-threaded and multi-threaded download.
     pub async fn download_file<F>(
         &self,
         task: &mut DownloadTask,
-        mut progress_callback: F,
-    ) -> Result<(), Box<dyn std::error::Error>>
+        progress_callback: F,
+    ) -> Result<(), DownloadError>
     where
-        F: FnMut(&DownloadTask) + Send,
+        F: Fn(&DownloadTask) + Send + Sync + 'static,
     {
         // Update status to downloading
         task.status = DownloadStatus::Downloading;
         progress_callback(task);
 
+        // Check if we can resume
+        let temp_dir = self.get_temp_dir(task);
+        let can_resume = can_resume_download(task, &temp_dir).unwrap_or(false);
+
+        if can_resume {
+            // Resume download
+            return self.resume_download(task, progress_callback).await;
+        }
+
+        // Check server capabilities
+        let file_info = self.http_client.check_range_support(&task.url).await
+            .map_err(|e| format!("Failed to check server capabilities: {}", e))?;
+
+        task.filesize = file_info.size;
+
+        // Decide download strategy
+        if file_info.supports_range && file_info.size >= crate::download::segment::MIN_FILE_SIZE_FOR_SEGMENTS {
+            // Use multi-threaded segmented download
+            self.download_segmented(task, progress_callback).await
+        } else {
+            // Use single-threaded download
+            self.download_single_thread(task, progress_callback).await
+        }
+    }
+
+    /// Single-threaded download (original MVP implementation)
+    async fn download_single_thread<F>(
+        &self,
+        task: &mut DownloadTask,
+        progress_callback: F,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync,
+    {
         // Get the file
         let response = self.http_client.get_client()
             .get(&task.url)
@@ -56,7 +143,6 @@ impl DownloadEngine {
         let mut downloaded: u64 = 0;
         let mut stream = response.bytes_stream();
 
-        use futures::StreamExt;
         let mut last_progress_update = 0.0;
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
@@ -81,10 +167,268 @@ impl DownloadEngine {
 
         Ok(())
     }
+
+    /// Multi-threaded segmented download
+    async fn download_segmented<F>(
+        &self,
+        task: &mut DownloadTask,
+        progress_callback: F,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static,
+    {
+        // Calculate segments
+        let segments = calculate_segments(task.filesize, &self.segment_config);
+
+        // Attach segments to task
+        task.segments = segments.iter()
+            .map(|s| s.clone().with_task_id(task.id))
+            .collect();
+
+        // Create temp directory for segments
+        let temp_dir = self.get_temp_dir(task);
+        std::fs::create_dir_all(&temp_dir)?;
+
+        // Save checkpoint
+        let checkpoint_path = temp_dir.join("checkpoint.json");
+        save_checkpoint(task, &checkpoint_path)?;
+
+        let progress_arc = Arc::new(progress_callback);
+
+        // Download all segments concurrently
+        self.download_all_segments(task, &temp_dir, progress_arc.clone()).await?;
+
+        // Merge segments
+        let final_path = Path::new(&task.filepath);
+        merge_segments(&task.segments, final_path, &temp_dir).await
+            .map_err(|e| format!("Failed to merge segments: {}", e))?;
+
+        // Cleanup temp files
+        crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
+
+        task.status = DownloadStatus::Completed;
+        task.completed_at = Some(chrono::Utc::now());
+        progress_arc(task);
+
+        Ok(())
+    }
+
+    /// Download all segments concurrently
+    async fn download_all_segments<F>(
+        &self,
+        task: &mut DownloadTask,
+        temp_dir: &Path,
+        progress_callback: Arc<F>,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static,
+    {
+        let task_arc = Arc::new(Mutex::new(task.clone()));
+        let http_client = Arc::new(self.http_client.clone());
+        let temp_dir = Arc::new(temp_dir.to_path_buf());
+
+        // Create a semaphore to limit concurrent downloads
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.segment_config.max_concurrent_segments));
+
+        let mut handles = vec![];
+
+        for segment_idx in 0..task.segments.len() {
+            let task_clone = task_arc.clone();
+            let http_client_clone = http_client.clone();
+            let temp_dir_clone = temp_dir.clone();
+            let progress_callback_clone = progress_callback.clone();
+            let semaphore_clone = semaphore.clone();
+
+            let handle = tokio::spawn(async move {
+                let _permit = semaphore_clone.acquire().await.unwrap();
+
+                let result = Self::download_segment(
+                    task_clone.clone(),
+                    segment_idx,
+                    http_client_clone,
+                    temp_dir_clone,
+                    progress_callback_clone,
+                ).await;
+
+                result
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all segments to complete
+        for handle in handles {
+            handle.await??;
+        }
+
+        // Update task with final segment statuses
+        *task = task_arc.lock().await.clone();
+
+        Ok(())
+    }
+
+    /// Download a single segment
+    async fn download_segment<F>(
+        task_arc: Arc<Mutex<DownloadTask>>,
+        segment_idx: usize,
+        http_client: Arc<HttpClient>,
+        temp_dir: Arc<PathBuf>,
+        progress_callback: Arc<F>,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync,
+    {
+        let segment = {
+            let task = task_arc.lock().await;
+            task.segments[segment_idx].clone()
+        };
+
+        // Update segment status
+        {
+            let mut task = task_arc.lock().await;
+            task.segments[segment_idx].status = SegmentStatus::Downloading;
+        }
+
+        // Create segment file
+        let segment_path = temp_dir.join(format!("segment_{}", segment.segment_id));
+        let mut file = OpenOptions::new()
+            .create(true)
+            
+            .append(true)
+            .open(&segment_path)?;
+
+        // Build range request
+        let url = {
+            let task = task_arc.lock().await;
+            task.url.clone()
+        };
+
+        let range_header = format!("bytes={}-{}", segment.start_byte, segment.end_byte);
+        let response = http_client.get_client()
+            .get(&url)
+            .header("Range", range_header)
+            .send()
+            .await?;
+
+        if !response.status().is_success() && response.status().as_u16() != 206 {
+            let mut task = task_arc.lock().await;
+            task.segments[segment_idx].status = SegmentStatus::Failed;
+            return Err(format!("HTTP error for segment {}: {}", segment.segment_id, response.status()).into());
+        }
+
+        // Download segment data
+        let mut stream = response.bytes_stream();
+        let mut downloaded: u64 = 0;
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            file.write_all(&chunk)?;
+            downloaded += chunk.len() as u64;
+
+            // Update segment progress
+            {
+                let mut task = task_arc.lock().await;
+                task.segments[segment_idx].downloaded_bytes = downloaded;
+
+                // Calculate overall progress
+                let total_downloaded: u64 = task.segments.iter()
+                    .map(|s| s.downloaded_bytes)
+                    .sum();
+
+                if task.filesize > 0 {
+                    task.progress = (total_downloaded as f64 / task.filesize as f64) * 100.0;
+                }
+
+                // Call progress callback (clone task to avoid holding lock)
+                let task_clone = task.clone();
+                drop(task); // Release lock before calling callback
+                progress_callback(&task_clone);
+            }
+        }
+
+        // Mark segment as completed
+        {
+            let mut task = task_arc.lock().await;
+            task.segments[segment_idx].status = SegmentStatus::Completed;
+            task.segments[segment_idx].downloaded_bytes = segment.size();
+        }
+
+        Ok(())
+    }
+
+    /// Resume a paused or failed download
+    async fn resume_download<F>(
+        &self,
+        task: &mut DownloadTask,
+        progress_callback: F,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static,
+    {
+        let temp_dir = self.get_temp_dir(task);
+
+        // Get segments that need to be downloaded
+        let resumable_segments = get_resumable_segments(task, &temp_dir);
+
+        let progress_arc = Arc::new(progress_callback);
+
+        if resumable_segments.is_empty() {
+            // All segments completed, just merge
+            let final_path = Path::new(&task.filepath);
+            merge_segments(&task.segments, final_path, &temp_dir).await
+                .map_err(|e| format!("Failed to merge segments: {}", e))?;
+
+            crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
+
+            task.status = DownloadStatus::Completed;
+            task.completed_at = Some(chrono::Utc::now());
+            progress_arc(task);
+
+            return Ok(());
+        }
+
+        // Update task segments with resumable segments
+        for resumable in &resumable_segments {
+            if let Some(segment) = task.segments.iter_mut().find(|s| s.segment_id == resumable.segment_id) {
+                segment.start_byte = resumable.start_byte;
+                segment.downloaded_bytes = resumable.downloaded_bytes;
+                segment.status = SegmentStatus::Pending;
+            }
+        }
+
+        // Download remaining segments
+        self.download_all_segments(task, &temp_dir, progress_arc.clone()).await?;
+
+        // Merge segments
+        let final_path = Path::new(&task.filepath);
+        merge_segments(&task.segments, final_path, &temp_dir).await
+            .map_err(|e| format!("Failed to merge segments: {}", e))?;
+
+        crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
+
+        task.status = DownloadStatus::Completed;
+        task.completed_at = Some(chrono::Utc::now());
+        progress_arc(task);
+
+        Ok(())
+    }
+
+    /// Get temp directory for a task's segment files
+    fn get_temp_dir(&self, task: &DownloadTask) -> PathBuf {
+        let temp_base = std::env::temp_dir().join("zoo-downloader");
+        temp_base.join(task.id.to_string())
+    }
 }
 
 impl Default for DownloadEngine {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Impl Clone for HttpClient
+impl Clone for HttpClient {
+    fn clone(&self) -> Self {
+        HttpClient::new()
     }
 }

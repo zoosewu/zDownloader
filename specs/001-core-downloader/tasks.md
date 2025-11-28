@@ -151,20 +151,20 @@
 
 - [X] T053 [US3] 實作 Range Request 檢測在 src-tauri/src/download/client.rs：HEAD 請求檢查 Accept-Ranges
 - [X] T054 [US3] 實作分段策略在 src-tauri/src/download/segment.rs：固定 10MB 分段、可配置
-- [ ] T055 [US3] 重構下載引擎在 src-tauri/src/download/engine.rs：支援多線程分段下載（tokio::spawn）
-- [ ] T056 [US3] 實作分段合併在 src-tauri/src/download/merger.rs：所有分段完成後合併為完整檔案
-- [ ] T057 [US3] 實作分段進度追蹤在 src-tauri/src/download/engine.rs：彙總所有分段的進度
+- [X] T055 [US3] 重構下載引擎在 src-tauri/src/download/engine.rs：支援多線程分段下載（tokio::spawn）
+- [X] T056 [US3] 實作分段合併在 src-tauri/src/download/merger.rs：所有分段完成後合併為完整檔案
+- [X] T057 [US3] 實作分段進度追蹤在 src-tauri/src/download/engine.rs：彙總所有分段的進度
 
 ### 斷點續傳
 
-- [ ] T058 [US3] 實作斷點續傳邏輯在 src-tauri/src/download/resume.rs：檢查部分檔案完整性（±1 byte 容差）
-- [ ] T059 [US3] 實作未完成下載偵測在 src-tauri/src/main.rs：應用程式啟動時掃描未完成的下載
-- [ ] T060 [US3] 實作恢復下載 UI 提示在 src/components/ResumeDialog.tsx：詢問使用者是否恢復下載
+- [X] T058 [US3] 實作斷點續傳邏輯在 src-tauri/src/download/resume.rs：檢查部分檔案完整性（±1 byte 容差）
+- [X] T059 [US3] 實作未完成下載偵測在 src-tauri/src/lib.rs：應用程式啟動時掃描未完成的下載
+- [X] T060 [US3] 實作恢復下載 UI 提示在 src/components/ResumeDialog.tsx：詢問使用者是否恢復下載
 
 ### 前端分段進度顯示
 
-- [ ] T061 [US3] 擴充 DownloadItem 元件在 src/components/DownloadItem.tsx：顯示分段進度（選用）
-- [ ] T062 [US3] 更新 downloadStore 在 src/stores/downloadStore.ts：支援分段資訊
+- [X] T061 [US3] 擴充 DownloadItem 元件在 src/components/DownloadItem.tsx：顯示分段進度（選用）
+- [X] T062 [US3] 更新 downloadStore 在 src/stores/downloadStore.ts：支援分段資訊
 
 **Checkpoint**: User Story 3 完成 - 多線程分段下載和斷點續傳運作正常
 

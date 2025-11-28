@@ -22,7 +22,7 @@ pub async fn create_download(
 ) -> Result<String, String> {
     // Extract filename from URL if not provided
     let filename = filename.unwrap_or_else(|| {
-        url.split('/').last().unwrap_or("download").to_string()
+        url.split('/').next_back().unwrap_or("download").to_string()
     });
 
     // Create download directory
@@ -61,11 +61,12 @@ pub async fn start_download(
     tokio::spawn(async move {
         let mut task = task.clone();
         let app_clone = app.clone();
+        let app_clone2 = app.clone();
 
         // Perform download with progress callbacks
         {
             let engine = engine.lock().await;
-            let result = engine.download_file(&mut task, |task_ref| {
+            let result = engine.download_file(&mut task, move |task_ref| {
                 // Emit progress event
                 if let Err(e) = app_clone.emit("progress-updated", task_ref) {
                     eprintln!("Failed to emit progress event: {}", e);
@@ -75,8 +76,9 @@ pub async fn start_download(
             if let Err(e) = result {
                 eprintln!("Download failed: {}", e);
                 task.status = crate::models::DownloadStatus::Failed;
+                task.error_message = Some(e.to_string());
                 // Emit status changed event
-                if let Err(e) = app_clone.emit("status-changed", &task) {
+                if let Err(e) = app_clone2.emit("status-changed", &task) {
                     eprintln!("Failed to emit status-changed event: {}", e);
                 }
             }
@@ -138,7 +140,7 @@ pub async fn import_batch_downloads(
     let mut queue = state.queue.lock().await;
     for url in urls {
         // Extract filename from URL
-        let filename = url.split('/').last().unwrap_or("download").to_string();
+        let filename = url.split('/').next_back().unwrap_or("download").to_string();
         let filepath = downloads_dir.join(&filename).to_string_lossy().to_string();
 
         // Create task
