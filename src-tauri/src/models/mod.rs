@@ -6,5 +6,3 @@ pub mod settings;
 
 pub use download_task::*;
 pub use download_segment::*;
-pub use proxy_info::*;
-pub use settings::*;

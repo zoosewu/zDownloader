@@ -11,16 +11,57 @@
     "settings": "設定",
     "history": "歷史記錄"
   },
-  "download": {
-    "addUrl": "新增下載連結",
-    "pasteUrl": "貼上 URL",
+  "downloads": {
+    "title": "下載列表",
+    "noTasks": "暫無下載任務",
+    "unknown": "未知",
+    "urlLabel": "下載連結",
+    "urlPlaceholder": "請輸入 HTTP/HTTPS 網址",
+    "filenameLabel": "檔案名稱（選填）",
+    "filenamePlaceholder": "自動從網址提取",
+    "filenameHelp": "留空則自動從網址提取檔案名稱",
     "status": {
       "pending": "等待中",
+      "initializing": "初始化中",
       "downloading": "下載中",
       "paused": "已暫停",
       "completed": "已完成",
       "failed": "失敗",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "cancelling": "取消中",
+      "verifyingintegrity": "驗證中",
+      "mergingsegments": "合併中",
+      "active": "進行中",
+      "pausedCount": "已暫停"
+    },
+    "actions": {
+      "download": "開始下載",
+      "start": "開始",
+      "pause": "暫停",
+      "resume": "繼續",
+      "cancel": "取消",
+      "paste": "貼上",
+      "pauseAll": "全部暫停",
+      "resumeAll": "全部繼續",
+      "clearCompleted": "清除已完成"
+    },
+    "errors": {
+      "emptyUrl": "請輸入下載連結",
+      "invalidUrl": "無效的網址格式，請輸入 HTTP/HTTPS 連結",
+      "invalidClipboard": "剪貼簿內容不是有效的網址",
+      "clipboardPermission": "無法存取剪貼簿，請檢查瀏覽器權限",
+      "startFailed": "無法開始下載",
+      "queueControlFailed": "佇列控制失敗: {{error}}"
+    },
+    "batch": {
+      "import": "批次匯入",
+      "importSuccess": "成功匯入 {{count}} 個下載任務",
+      "importError": "批次匯入失敗: {{error}}"
+    },
+    "clipboard": {
+      "detected": "偵測到剪貼簿中的連結",
+      "accept": "使用此連結",
+      "dismiss": "忽略"
     }
   }
 }

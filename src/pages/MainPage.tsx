@@ -1,0 +1,165 @@
+// Main page - integrates UrlInput, BatchImport, QueueControls and DownloadList
+import React, { useEffect } from 'react';
+import { Container, Box, Typography, Snackbar, Alert } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { useAtom, useAtomValue } from 'jotai';
+import UrlInput from '../components/UrlInput';
+import DownloadList from '../components/DownloadList';
+import BatchImportButton from '../components/BatchImportButton';
+import QueueControls from '../components/QueueControls';
+import useTauriEvents from '../hooks/useTauriEvents';
+import useDownloads from '../hooks/useDownloads';
+import {
+  clipboardUrlAtom,
+  showClipboardHintAtom,
+  activeDownloadsAtom,
+  pausedDownloadsAtom,
+  completedDownloadsAtom,
+} from '../stores/downloadStore';
+
+const MainPage: React.FC = () => {
+  const { t } = useTranslation();
+  const { createAndStartDownload, refreshDownloadList } = useDownloads();
+  const [clipboardUrl, setClipboardUrl] = useAtom(clipboardUrlAtom);
+  const [showClipboardHint, setShowClipboardHint] = useAtom(showClipboardHintAtom);
+
+  // Get download counts for queue controls
+  const activeDownloads = useAtomValue(activeDownloadsAtom);
+  const pausedDownloads = useAtomValue(pausedDownloadsAtom);
+  const completedDownloads = useAtomValue(completedDownloadsAtom);
+
+  // Snackbar state for notifications
+  const [snackbar, setSnackbar] = React.useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
+
+  // Setup Tauri event listeners
+  useTauriEvents();
+
+  // Load initial download list
+  useEffect(() => {
+    refreshDownloadList();
+  }, [refreshDownloadList]);
+
+  const handleSubmit = async (url: string, filename?: string) => {
+    const success = await createAndStartDownload(url, filename);
+    if (!success) {
+      setSnackbar({
+        open: true,
+        message: t('downloads.errors.startFailed'),
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleAcceptClipboard = () => {
+    setShowClipboardHint(false);
+    // The URL will be set in UrlInput component
+  };
+
+  const handleDismissClipboard = () => {
+    setShowClipboardHint(false);
+    setClipboardUrl(null);
+  };
+
+  const handleBatchImportSuccess = (taskIds: string[]) => {
+    setSnackbar({
+      open: true,
+      message: t('downloads.batch.importSuccess', { count: taskIds.length }),
+      severity: 'success',
+    });
+    refreshDownloadList();
+  };
+
+  const handleBatchImportError = (error: string) => {
+    setSnackbar({
+      open: true,
+      message: t('downloads.batch.importError', { error }),
+      severity: 'error',
+    });
+  };
+
+  const handleQueueControlSuccess = () => {
+    refreshDownloadList();
+  };
+
+  const handleQueueControlError = (error: string) => {
+    setSnackbar({
+      open: true,
+      message: t('downloads.errors.queueControlFailed', { error }),
+      severity: 'error',
+    });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ paddingY: 4 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Page title and batch import */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Typography variant="h4" component="h1">
+            {t('app.title')}
+          </Typography>
+          <BatchImportButton
+            onImportSuccess={handleBatchImportSuccess}
+            onImportError={handleBatchImportError}
+          />
+        </Box>
+
+        {/* URL input */}
+        <UrlInput
+          onSubmit={handleSubmit}
+          showClipboardHint={showClipboardHint}
+          clipboardUrl={clipboardUrl || undefined}
+          onAcceptClipboard={handleAcceptClipboard}
+          onDismissClipboard={handleDismissClipboard}
+        />
+
+        {/* Queue controls */}
+        <QueueControls
+          activeCount={activeDownloads.length}
+          pausedCount={pausedDownloads.length}
+          completedCount={completedDownloads.length}
+          onControlSuccess={handleQueueControlSuccess}
+          onControlError={handleQueueControlError}
+        />
+
+        {/* Download list */}
+        <DownloadList />
+      </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+};
+
+export default MainPage;

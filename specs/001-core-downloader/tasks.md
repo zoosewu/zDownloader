@@ -26,14 +26,14 @@
 
 **目的**: 建立專案基礎結構和依賴安裝
 
-- [ ] T001 使用 Tauri CLI 建立專案結構：執行 `npm create tauri-app` 並配置為 React + TypeScript
-- [ ] T002 配置 Rust 依賴在 src-tauri/Cargo.toml：tauri 2.x, tokio, reqwest, serde, uuid, chrono, libloading, headless_chrome, keyring
-- [ ] T003 [P] 配置 React 依賴在 package.json：React 19, Material UI 6, Jotai, react-i18next, i18next
-- [ ] T004 [P] 建立目錄結構：src-tauri/src/{commands,download,proxy,modules,storage,utils,models}
-- [ ] T005 [P] 建立前端目錄結構：src/{components,pages,stores,hooks,locales,styles,types}
-- [ ] T006 [P] 配置 Tauri 應用程式設定在 src-tauri/tauri.conf.json：SystemTray, Notification 功能
-- [ ] T007 [P] 配置 Rust linting：cargo clippy 和 rustfmt
-- [ ] T008 [P] 配置 TypeScript 嚴格模式和 ESLint
+- [X] T001 使用 Tauri CLI 建立專案結構：執行 `npm create tauri-app` 並配置為 React + TypeScript
+- [X] T002 配置 Rust 依賴在 src-tauri/Cargo.toml：tauri 2.x, tokio, reqwest, serde, uuid, chrono, libloading, headless_chrome, keyring
+- [X] T003 [P] 配置 React 依賴在 package.json：React 19, Material UI 6, Jotai, react-i18next, i18next
+- [X] T004 [P] 建立目錄結構：src-tauri/src/{commands,download,proxy,modules,storage,utils,models}
+- [X] T005 [P] 建立前端目錄結構：src/{components,pages,stores,hooks,locales,styles,types}
+- [X] T006 [P] 配置 Tauri 應用程式設定在 src-tauri/tauri.conf.json：SystemTray, Notification 功能
+- [X] T007 [P] 配置 Rust linting：cargo clippy 和 rustfmt
+- [X] T008 [P] 配置 TypeScript 嚴格模式和 ESLint
 
 ---
 
@@ -45,28 +45,28 @@
 
 ### 資料模型與儲存層
 
-- [ ] T009 [P] 定義 DownloadTask 結構體在 src-tauri/src/models/download_task.rs：包含 10 種狀態、狀態轉換邏輯
-- [ ] T010 [P] 定義 DownloadSegment 結構體在 src-tauri/src/models/download_segment.rs
-- [ ] T011 [P] 定義 ProxyInfo 結構體在 src-tauri/src/models/proxy_info.rs：包含健康度評分欄位
-- [ ] T012 [P] 定義 AppSettings 結構體在 src-tauri/src/models/settings.rs：5 大類設定
-- [ ] T013 [P] 實作 JSON 儲存層在 src-tauri/src/storage/mod.rs：讀寫 config.json, history.json
-- [ ] T014 實作跨平台路徑處理在 src-tauri/src/storage/paths.rs：Windows/macOS/Linux 資料目錄
-- [ ] T015 實作 DownloadTask 持久化在 src-tauri/src/storage/tasks.rs：儲存到 downloads/{task_id}.json
+- [X] T009 [P] 定義 DownloadTask 結構體在 src-tauri/src/models/download_task.rs：包含 10 種狀態、狀態轉換邏輯
+- [X] T010 [P] 定義 DownloadSegment 結構體在 src-tauri/src/models/download_segment.rs
+- [X] T011 [P] 定義 ProxyInfo 結構體在 src-tauri/src/models/proxy_info.rs：包含健康度評分欄位
+- [X] T012 [P] 定義 AppSettings 結構體在 src-tauri/src/models/settings.rs：5 大類設定
+- [X] T013 [P] 實作 JSON 儲存層在 src-tauri/src/storage/mod.rs：讀寫 config.json, history.json
+- [X] T014 實作跨平台路徑處理在 src-tauri/src/storage/paths.rs：Windows/macOS/Linux 資料目錄
+- [X] T015 實作 DownloadTask 持久化在 src-tauri/src/storage/tasks.rs：儲存到 downloads/{task_id}.json
 
 ### Tauri 命令基礎
 
-- [ ] T016 建立 Tauri 命令模組結構在 src-tauri/src/commands/mod.rs：匯出 download, proxy, settings 命令
-- [ ] T017 [P] 建立錯誤處理系統在 src-tauri/src/utils/error.rs：定義統一的 Result<T, AppError> 類型
-- [ ] T018 [P] 建立事件發送工具在 src-tauri/src/utils/events.rs：封裝 emit() 函數
-- [ ] T019 在 src-tauri/src/main.rs 註冊所有 Tauri 命令並啟動應用程式
+- [X] T016 建立 Tauri 命令模組結構在 src-tauri/src/commands/mod.rs：匯出 download, proxy, settings 命令
+- [X] T017 [P] 建立錯誤處理系統在 src-tauri/src/utils/error.rs：定義統一的 Result<T, AppError> 類型
+- [X] T018 [P] 建立事件發送工具在 src-tauri/src/utils/events.rs：封裝 emit() 函數
+- [X] T019 在 src-tauri/src/main.rs 註冊所有 Tauri 命令並啟動應用程式
 
 ### 前端基礎
 
-- [ ] T020 [P] 定義 TypeScript 類型在 src/types/download.ts, src/types/proxy.ts, src/types/settings.ts
-- [ ] T021 [P] 建立 Material UI 主題配置在 src/styles/theme.ts：淺色/深色模式
-- [ ] T022 [P] 配置 i18n 在 src/locales/：建立 zh-TW.json, en.json, ja.json 骨架
-- [ ] T023 建立主應用元件在 src/App.tsx：路由、主題提供者、i18n 提供者
-- [ ] T024 [P] 建立 Jotai 狀態原子在 src/stores/settingsStore.ts：全域設定狀態
+- [X] T020 [P] 定義 TypeScript 類型在 src/types/download.ts, src/types/proxy.ts, src/types/settings.ts
+- [X] T021 [P] 建立 Material UI 主題配置在 src/styles/theme.ts：淺色/深色模式
+- [X] T022 [P] 配置 i18n 在 src/locales/：建立 zh-TW.json, en.json, ja.json 骨架
+- [X] T023 建立主應用元件在 src/App.tsx：路由、主題提供者、i18n 提供者
+- [X] T024 [P] 建立 Jotai 狀態原子在 src/stores/settingsStore.ts：全域設定狀態
 
 **Checkpoint**: 基礎設施完成 - 使用者故事實作可以開始
 
@@ -80,39 +80,39 @@
 
 ### 核心下載引擎
 
-- [ ] T025 [P] [US1] 實作 HTTP 客戶端封裝在 src-tauri/src/download/client.rs：使用 reqwest 處理 HTTP/HTTPS
-- [ ] T026 [US1] 實作下載引擎核心在 src-tauri/src/download/engine.rs：單線程下載、進度追蹤、狀態管理
-- [ ] T027 [US1] 實作下載佇列管理在 src-tauri/src/download/queue.rs：任務佇列、狀態同步
-- [ ] T028 [US1] 實作檔案寫入邏輯在 src-tauri/src/download/writer.rs：處理檔名衝突（自動重命名）
+- [X] T025 [P] [US1] 實作 HTTP 客戶端封裝在 src-tauri/src/download/client.rs：使用 reqwest 處理 HTTP/HTTPS
+- [X] T026 [US1] 實作下載引擎核心在 src-tauri/src/download/engine.rs：單線程下載、進度追蹤、狀態管理
+- [X] T027 [US1] 實作下載佇列管理在 src-tauri/src/download/queue.rs：任務佇列、狀態同步
+- [X] T028 [US1] 實作檔案寫入邏輯在 src-tauri/src/download/writer.rs：處理檔名衝突（自動重命名）
 
 ### Tauri 命令實作
 
-- [ ] T029 [P] [US1] 實作 create_download 命令在 src-tauri/src/commands/download.rs：建立下載任務
-- [ ] T030 [P] [US1] 實作 start_download 命令在 src-tauri/src/commands/download.rs：開始下載
-- [ ] T031 [P] [US1] 實作 pause_download 命令在 src-tauri/src/commands/download.rs：暫停下載
-- [ ] T032 [P] [US1] 實作 cancel_download 命令在 src-tauri/src/commands/download.rs：取消下載並清理
-- [ ] T033 [P] [US1] 實作 get_download_list 命令在 src-tauri/src/commands/download.rs：取得下載列表
-- [ ] T034 [US1] 實作進度事件發送在 src-tauri/src/download/engine.rs：發送 progress-updated 和 status-changed 事件
+- [X] T029 [P] [US1] 實作 create_download 命令在 src-tauri/src/commands/download.rs：建立下載任務
+- [X] T030 [P] [US1] 實作 start_download 命令在 src-tauri/src/commands/download.rs：開始下載
+- [X] T031 [P] [US1] 實作 pause_download 命令在 src-tauri/src/commands/download.rs：暫停下載
+- [X] T032 [P] [US1] 實作 cancel_download 命令在 src-tauri/src/commands/download.rs：取消下載並清理
+- [X] T033 [P] [US1] 實作 get_download_list 命令在 src-tauri/src/commands/download.rs：取得下載列表
+- [X] T034 [US1] 實作進度事件發送在 src-tauri/src/download/engine.rs：發送 progress-updated 和 status-changed 事件
 
 ### 剪貼簿監聽
 
-- [ ] T035 [US1] 實作剪貼簿監聽在 src-tauri/src/utils/clipboard.rs：200ms 輪詢 + URL 正則驗證
-- [ ] T036 [US1] 發送 clipboard-detected 事件並整合到下載引擎
+- [X] T035 [US1] 實作剪貼簿監聽在 src-tauri/src/utils/clipboard.rs：200ms 輪詢 + URL 正則驗證
+- [X] T036 [US1] 發送 clipboard-detected 事件並整合到下載引擎
 
 ### 前端 UI（User Story 1）
 
-- [ ] T037 [P] [US1] 建立下載列表元件在 src/components/DownloadList.tsx：顯示所有下載任務
-- [ ] T038 [P] [US1] 建立下載項目元件在 src/components/DownloadItem.tsx：單一下載任務 UI（進度、速度、控制按鈕）
-- [ ] T039 [P] [US1] 建立進度條元件在 src/components/ProgressBar.tsx：Material UI LinearProgress
-- [ ] T040 [P] [US1] 建立 URL 輸入元件在 src/components/UrlInput.tsx：貼上 URL、顯示剪貼簿提示
-- [ ] T041 [US1] 建立下載狀態管理在 src/stores/downloadStore.ts：Jotai atoms 管理下載列表和進度
-- [ ] T042 [US1] 建立 Tauri 事件監聽 hook 在 src/hooks/useTauriEvents.ts：監聽 progress-updated, status-changed, clipboard-detected
-- [ ] T043 [US1] 建立主頁面在 src/pages/MainPage.tsx：整合 UrlInput + DownloadList
-- [ ] T044 [US1] 實作下載控制邏輯在 src/hooks/useDownloads.ts：呼叫 Tauri 命令（create, start, pause, cancel）
+- [X] T037 [P] [US1] 建立下載列表元件在 src/components/DownloadList.tsx：顯示所有下載任務
+- [X] T038 [P] [US1] 建立下載項目元件在 src/components/DownloadItem.tsx：單一下載任務 UI（進度、速度、控制按鈕）
+- [X] T039 [P] [US1] 建立進度條元件在 src/components/ProgressBar.tsx：Material UI LinearProgress
+- [X] T040 [P] [US1] 建立 URL 輸入元件在 src/components/UrlInput.tsx：貼上 URL、顯示剪貼簿提示
+- [X] T041 [US1] 建立下載狀態管理在 src/stores/downloadStore.ts：Jotai atoms 管理下載列表和進度
+- [X] T042 [US1] 建立 Tauri 事件監聽 hook 在 src/hooks/useTauriEvents.ts：監聽 progress-updated, status-changed, clipboard-detected
+- [X] T043 [US1] 建立主頁面在 src/pages/MainPage.tsx：整合 UrlInput + DownloadList
+- [X] T044 [US1] 實作下載控制邏輯在 src/hooks/useDownloads.ts：呼叫 Tauri 命令（create, start, pause, cancel）
 
 ### 系統通知
 
-- [ ] T045 [US1] 實作下載完成通知在 src-tauri/src/utils/notification.rs：使用 Tauri Notification API
+- [X] T045 [US1] 實作下載完成通知在 src-tauri/src/utils/notification.rs：使用 Tauri Notification API
 
 **Checkpoint**: User Story 1 完成 - MVP 可運作！使用者可以下載單一檔案、查看進度、暫停/繼續/取消
 
@@ -126,16 +126,16 @@
 
 ### 後端批次匯入
 
-- [ ] T046 [US2] 實作批次匯入命令在 src-tauri/src/commands/download.rs：import_batch_downloads(file_path)
-- [ ] T047 [US2] 實作文字檔解析在 src-tauri/src/utils/parser.rs：解析換行分隔的 URL 列表
-- [ ] T048 [US2] 擴充下載佇列管理在 src-tauri/src/download/queue.rs：支援同時下載數量限制
+- [X] T046 [US2] 實作批次匯入命令在 src-tauri/src/commands/download.rs：import_batch_downloads(file_path)
+- [X] T047 [US2] 實作文字檔解析在 src-tauri/src/utils/parser.rs：解析換行分隔的 URL 列表
+- [X] T048 [US2] 擴充下載佇列管理在 src-tauri/src/download/queue.rs：支援同時下載數量限制
 
 ### 前端批次管理 UI
 
-- [ ] T049 [P] [US2] 建立批次匯入按鈕元件在 src/components/BatchImportButton.tsx：開啟檔案選擇對話框
-- [ ] T050 [P] [US2] 建立佇列控制元件在 src/components/QueueControls.tsx：全部暫停、全部開始、清除已完成
-- [ ] T051 [US2] 擴充 downloadStore 在 src/stores/downloadStore.ts：支援批次操作
-- [ ] T052 [US2] 更新 MainPage 在 src/pages/MainPage.tsx：整合批次匯入和佇列控制
+- [X] T049 [P] [US2] 建立批次匯入按鈕元件在 src/components/BatchImportButton.tsx：開啟檔案選擇對話框
+- [X] T050 [P] [US2] 建立佇列控制元件在 src/components/QueueControls.tsx：全部暫停、全部開始、清除已完成
+- [X] T051 [US2] 擴充 downloadStore 在 src/stores/downloadStore.ts：支援批次操作
+- [X] T052 [US2] 更新 MainPage 在 src/pages/MainPage.tsx：整合批次匯入和佇列控制
 
 **Checkpoint**: User Story 2 完成 - 使用者可以批次匯入 URL 並管理下載佇列
 
@@ -149,8 +149,8 @@
 
 ### 分段下載引擎
 
-- [ ] T053 [US3] 實作 Range Request 檢測在 src-tauri/src/download/client.rs：HEAD 請求檢查 Accept-Ranges
-- [ ] T054 [US3] 實作分段策略在 src-tauri/src/download/segment.rs：固定 10MB 分段、可配置
+- [X] T053 [US3] 實作 Range Request 檢測在 src-tauri/src/download/client.rs：HEAD 請求檢查 Accept-Ranges
+- [X] T054 [US3] 實作分段策略在 src-tauri/src/download/segment.rs：固定 10MB 分段、可配置
 - [ ] T055 [US3] 重構下載引擎在 src-tauri/src/download/engine.rs：支援多線程分段下載（tokio::spawn）
 - [ ] T056 [US3] 實作分段合併在 src-tauri/src/download/merger.rs：所有分段完成後合併為完整檔案
 - [ ] T057 [US3] 實作分段進度追蹤在 src-tauri/src/download/engine.rs：彙總所有分段的進度

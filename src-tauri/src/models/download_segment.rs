@@ -6,6 +6,7 @@ use uuid::Uuid;
 pub struct DownloadSegment {
     pub id: Uuid,
     pub task_id: Uuid,
+    pub segment_id: usize, // Sequential segment ID (0, 1, 2, ...)
     pub start_byte: u64,
     pub end_byte: u64,
     pub downloaded_bytes: u64,
@@ -24,10 +25,11 @@ pub enum SegmentStatus {
 }
 
 impl DownloadSegment {
-    pub fn new(task_id: Uuid, start_byte: u64, end_byte: u64) -> Self {
+    pub fn new(segment_id: usize, start_byte: u64, end_byte: u64) -> Self {
         Self {
             id: Uuid::new_v4(),
-            task_id,
+            task_id: Uuid::nil(), // Will be set when attached to a task
+            segment_id,
             start_byte,
             end_byte,
             downloaded_bytes: 0,
@@ -36,5 +38,21 @@ impl DownloadSegment {
             proxy_id: None,
             retry_count: 0,
         }
+    }
+
+    pub fn with_task_id(mut self, task_id: Uuid) -> Self {
+        self.task_id = task_id;
+        self
+    }
+
+    pub fn size(&self) -> u64 {
+        self.end_byte - self.start_byte + 1
+    }
+
+    pub fn progress(&self) -> f64 {
+        if self.size() == 0 {
+            return 100.0;
+        }
+        (self.downloaded_bytes as f64 / self.size() as f64) * 100.0
     }
 }

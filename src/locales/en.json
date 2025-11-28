@@ -11,16 +11,45 @@
     "settings": "Settings",
     "history": "History"
   },
-  "download": {
-    "addUrl": "Add Download URL",
-    "pasteUrl": "Paste URL",
+  "downloads": {
+    "title": "Download List",
+    "noTasks": "No download tasks",
+    "unknown": "Unknown",
+    "urlLabel": "Download URL",
+    "urlPlaceholder": "Enter HTTP/HTTPS URL",
+    "filenameLabel": "Filename (optional)",
+    "filenamePlaceholder": "Auto-extract from URL",
+    "filenameHelp": "Leave empty to auto-extract filename from URL",
     "status": {
       "pending": "Pending",
+      "initializing": "Initializing",
       "downloading": "Downloading",
       "paused": "Paused",
       "completed": "Completed",
       "failed": "Failed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "cancelling": "Cancelling",
+      "verifyingintegrity": "Verifying",
+      "mergingsegments": "Merging"
+    },
+    "actions": {
+      "download": "Start Download",
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "paste": "Paste"
+    },
+    "errors": {
+      "emptyUrl": "Please enter a download URL",
+      "invalidUrl": "Invalid URL format, please enter HTTP/HTTPS URL",
+      "invalidClipboard": "Clipboard content is not a valid URL",
+      "clipboardPermission": "Cannot access clipboard, please check browser permissions"
+    },
+    "clipboard": {
+      "detected": "URL detected in clipboard",
+      "accept": "Use this URL",
+      "dismiss": "Dismiss"
     }
   }
 }

@@ -45,3 +45,15 @@ coverage
 # Application data (user-specific, should not be committed)
 *.db
 *.sqlite
+
+# Build outputs
+*.exe
+*.dll
+*.dylib
+*.so
+*.a
+*.o
+
+# Package lock files (keep pnpm-lock.yaml only)
+package-lock.json
+yarn.lock

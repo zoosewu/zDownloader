@@ -11,16 +11,45 @@
     "settings": "設定",
     "history": "履歴"
   },
-  "download": {
-    "addUrl": "ダウンロードURLを追加",
-    "pasteUrl": "URLを貼り付け",
+  "downloads": {
+    "title": "ダウンロードリスト",
+    "noTasks": "ダウンロードタスクがありません",
+    "unknown": "不明",
+    "urlLabel": "ダウンロードURL",
+    "urlPlaceholder": "HTTP/HTTPS URLを入力",
+    "filenameLabel": "ファイル名（オプション）",
+    "filenamePlaceholder": "URLから自動抽出",
+    "filenameHelp": "空白の場合、URLからファイル名を自動抽出します",
     "status": {
       "pending": "待機中",
+      "initializing": "初期化中",
       "downloading": "ダウンロード中",
       "paused": "一時停止",
       "completed": "完了",
       "failed": "失敗",
-      "cancelled": "キャンセル済み"
+      "cancelled": "キャンセル済み",
+      "cancelling": "キャンセル中",
+      "verifyingintegrity": "検証中",
+      "mergingsegments": "結合中"
+    },
+    "actions": {
+      "download": "ダウンロード開始",
+      "start": "開始",
+      "pause": "一時停止",
+      "resume": "再開",
+      "cancel": "キャンセル",
+      "paste": "貼り付け"
+    },
+    "errors": {
+      "emptyUrl": "ダウンロードURLを入力してください",
+      "invalidUrl": "無効なURL形式です。HTTP/HTTPS URLを入力してください",
+      "invalidClipboard": "クリップボードの内容が有効なURLではありません",
+      "clipboardPermission": "クリップボードにアクセスできません。ブラウザの権限を確認してください"
+    },
+    "clipboard": {
+      "detected": "クリップボードでURLを検出しました",
+      "accept": "このURLを使用",
+      "dismiss": "無視"
     }
   }
 }

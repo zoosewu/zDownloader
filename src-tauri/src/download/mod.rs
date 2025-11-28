@@ -3,8 +3,9 @@ pub mod client;
 pub mod engine;
 pub mod queue;
 pub mod writer;
+pub mod segment;
 
 pub use client::*;
 pub use engine::*;
 pub use queue::*;
-pub use writer::*;
+pub use segment::*;
