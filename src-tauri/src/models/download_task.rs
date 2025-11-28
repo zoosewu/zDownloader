@@ -1,8 +1,8 @@
 // DownloadTask model - represents a single download task
+use super::DownloadSegment;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use super::DownloadSegment;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadTask {
@@ -12,9 +12,9 @@ pub struct DownloadTask {
     pub filepath: String,
     pub filesize: u64,
     pub status: DownloadStatus,
-    pub progress: f64,  // 0.0 - 100.0
-    pub current_speed: u64,  // bytes/sec
-    pub segments: Vec<DownloadSegment>,  // Download segments for multi-threaded downloads
+    pub progress: f64,                  // 0.0 - 100.0
+    pub current_speed: u64,             // bytes/sec
+    pub segments: Vec<DownloadSegment>, // Download segments for multi-threaded downloads
     pub created_at: DateTime<Utc>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,

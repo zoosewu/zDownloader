@@ -35,4 +35,5 @@ keyring = "2.0"
 dirs = "5.0"
 futures = "0.3"
 regex = "1"
+rand = "0.8"
 

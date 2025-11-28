@@ -34,7 +34,12 @@ impl DownloadQueue {
         use crate::models::download_task::DownloadStatus;
         self.tasks
             .iter()
-            .filter(|t| matches!(t.status, DownloadStatus::Downloading | DownloadStatus::Initializing))
+            .filter(|t| {
+                matches!(
+                    t.status,
+                    DownloadStatus::Downloading | DownloadStatus::Initializing
+                )
+            })
             .count()
     }
 

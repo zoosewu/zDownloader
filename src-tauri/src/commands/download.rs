@@ -1,12 +1,12 @@
 // Download command handlers - Tauri commands for download management
+use crate::download::{DownloadEngine, DownloadQueue};
 use crate::models::DownloadTask;
-use crate::download::{DownloadQueue, DownloadEngine};
 use crate::storage::get_downloads_dir;
 use crate::utils::parser::parse_url_file;
-use std::sync::Arc;
 use std::path::PathBuf;
-use tokio::sync::Mutex;
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 pub struct AppState {
@@ -21,9 +21,8 @@ pub async fn create_download(
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     // Extract filename from URL if not provided
-    let filename = filename.unwrap_or_else(|| {
-        url.split('/').next_back().unwrap_or("download").to_string()
-    });
+    let filename =
+        filename.unwrap_or_else(|| url.split('/').next_back().unwrap_or("download").to_string());
 
     // Create download directory
     let downloads_dir = get_downloads_dir();
@@ -66,12 +65,14 @@ pub async fn start_download(
         // Perform download with progress callbacks
         {
             let engine = engine.lock().await;
-            let result = engine.download_file(&mut task, move |task_ref| {
-                // Emit progress event
-                if let Err(e) = app_clone.emit("progress-updated", task_ref) {
-                    eprintln!("Failed to emit progress event: {}", e);
-                }
-            }).await;
+            let result = engine
+                .download_file(&mut task, move |task_ref| {
+                    // Emit progress event
+                    if let Err(e) = app_clone.emit("progress-updated", task_ref) {
+                        eprintln!("Failed to emit progress event: {}", e);
+                    }
+                })
+                .await;
 
             if let Err(e) = result {
                 eprintln!("Download failed: {}", e);
@@ -168,10 +169,14 @@ pub async fn pause_all_downloads(state: State<'_, AppState>) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub async fn resume_all_downloads(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+pub async fn resume_all_downloads(
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
     let tasks = {
         let queue = state.queue.lock().await;
-        queue.get_all_tasks()
+        queue
+            .get_all_tasks()
             .into_iter()
             .filter(|t| t.status == crate::models::DownloadStatus::Paused)
             .collect::<Vec<_>>()

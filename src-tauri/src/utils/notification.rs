@@ -33,7 +33,7 @@ pub fn send_download_error_notification(
 
     notification
         .builder()
-        .title(&format!("下載失敗: {}", filename))
+        .title(format!("下載失敗: {}", filename))
         .body(error_message)
         .show()
         .map_err(|e| format!("Failed to show notification: {}", e))?;
@@ -49,10 +49,7 @@ pub fn send_batch_complete_notification(
 ) -> Result<(), String> {
     let notification = app_handle.notification();
 
-    let body = format!(
-        "成功: {} / 總計: {}",
-        success_count, total_count
-    );
+    let body = format!("成功: {} / 總計: {}", success_count, total_count);
 
     notification
         .builder()

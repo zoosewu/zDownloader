@@ -34,10 +34,7 @@ impl SegmentConfig {
 
 /// Calculate segments for a file
 /// Returns a vector of DownloadSegment representing the file split
-pub fn calculate_segments(
-    file_size: u64,
-    config: &SegmentConfig,
-) -> Vec<DownloadSegment> {
+pub fn calculate_segments(file_size: u64, config: &SegmentConfig) -> Vec<DownloadSegment> {
     let mut segments = Vec::new();
 
     // If file is too small, use single segment
@@ -47,7 +44,7 @@ pub fn calculate_segments(
     }
 
     let segment_size = config.segment_size;
-    let num_segments = (file_size + segment_size - 1) / segment_size; // Ceiling division
+    let num_segments = file_size.div_ceil(segment_size); // Ceiling division
 
     for i in 0..num_segments {
         let start = i * segment_size;

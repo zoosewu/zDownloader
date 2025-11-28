@@ -1,8 +1,8 @@
 // Download recovery - scan and restore unfinished downloads on app startup
-use crate::models::DownloadTask;
 use crate::download::load_checkpoint;
-use std::path::{Path, PathBuf};
+use crate::models::DownloadTask;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Scan temp directory for unfinished downloads
 ///
@@ -33,7 +33,10 @@ pub fn scan_unfinished_downloads() -> Vec<DownloadTask> {
                                 }
                             }
                             Err(e) => {
-                                eprintln!("Failed to load checkpoint from {:?}: {}", checkpoint_path, e);
+                                eprintln!(
+                                    "Failed to load checkpoint from {:?}: {}",
+                                    checkpoint_path, e
+                                );
                             }
                         }
                     }
@@ -61,8 +64,8 @@ pub fn cleanup_completed_downloads(days_old: u64) -> Result<usize, String> {
     }
 
     let mut cleaned_count = 0;
-    let cutoff_time = std::time::SystemTime::now()
-        - std::time::Duration::from_secs(days_old * 24 * 60 * 60);
+    let cutoff_time =
+        std::time::SystemTime::now() - std::time::Duration::from_secs(days_old * 24 * 60 * 60);
 
     if let Ok(entries) = fs::read_dir(&temp_base) {
         for entry in entries.flatten() {
@@ -169,9 +172,9 @@ fn get_dir_size(path: &Path) -> Result<u64, std::io::Error> {
 // Add helper method to DownloadStatus
 impl crate::models::DownloadStatus {
     pub fn is_completed(&self) -> bool {
-        matches!(self,
-            crate::models::DownloadStatus::Completed |
-            crate::models::DownloadStatus::Cancelled
+        matches!(
+            self,
+            crate::models::DownloadStatus::Completed | crate::models::DownloadStatus::Cancelled
         )
     }
 }

@@ -119,8 +119,8 @@ pub fn verify_segment_integrity(
         return Ok(false);
     }
 
-    let file_meta = metadata(&segment_path)
-        .map_err(|e| format!("Failed to read segment file: {}", e))?;
+    let file_meta =
+        metadata(&segment_path).map_err(|e| format!("Failed to read segment file: {}", e))?;
 
     let expected_size = segment.end_byte - segment.start_byte + 1;
     let actual_size = file_meta.len();
@@ -168,8 +168,8 @@ pub fn load_checkpoint(checkpoint_path: &Path) -> Result<DownloadTask, String> {
     let json = std::fs::read_to_string(checkpoint_path)
         .map_err(|e| format!("Failed to read checkpoint: {}", e))?;
 
-    let task: DownloadTask = serde_json::from_str(&json)
-        .map_err(|e| format!("Failed to parse checkpoint: {}", e))?;
+    let task: DownloadTask =
+        serde_json::from_str(&json).map_err(|e| format!("Failed to parse checkpoint: {}", e))?;
 
     Ok(task)
 }
@@ -177,7 +177,8 @@ pub fn load_checkpoint(checkpoint_path: &Path) -> Result<DownloadTask, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{DownloadTask, DownloadStatus};
+    use crate::models::{DownloadStatus, DownloadTask};
+    use std::fs::File;
     use std::io::Write;
     use uuid::Uuid;
 
@@ -190,6 +191,7 @@ mod tests {
             filepath: "/tmp/file.zip".to_string(),
             filesize: 1000,
             progress: 0.0,
+            current_speed: 0,
             status: DownloadStatus::Paused,
             segments: vec![],
             created_at: chrono::Utc::now(),
@@ -226,6 +228,7 @@ mod tests {
             filepath: "/tmp/file.zip".to_string(),
             filesize: 20,
             progress: 0.0,
+            current_speed: 0,
             status: DownloadStatus::Paused,
             segments: vec![
                 DownloadSegment::new(0, 0, 9),

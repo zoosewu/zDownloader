@@ -8,15 +8,15 @@ mod storage;
 mod utils;
 
 use commands::download::{
-    AppState, create_download, start_download, pause_download,
-    cancel_download, get_download_list, import_batch_downloads,
-    pause_all_downloads, resume_all_downloads, clear_completed_downloads,
+    cancel_download, clear_completed_downloads, create_download, get_download_list,
+    import_batch_downloads, pause_all_downloads, pause_download, resume_all_downloads,
+    start_download, AppState,
 };
-use download::{DownloadQueue, DownloadEngine, scan_unfinished_downloads};
-use utils::clipboard::start_clipboard_monitor;
+use download::{scan_unfinished_downloads, DownloadEngine, DownloadQueue};
 use std::sync::Arc;
+use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
-use tauri::{Manager, Emitter};
+use utils::clipboard::start_clipboard_monitor;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -72,7 +72,9 @@ pub fn run() {
                     }
 
                     // Emit event to frontend
-                    if let Err(e) = app_handle.emit("unfinished-downloads-detected", &unfinished_tasks) {
+                    if let Err(e) =
+                        app_handle.emit("unfinished-downloads-detected", &unfinished_tasks)
+                    {
                         eprintln!("Failed to emit unfinished-downloads-detected event: {}", e);
                     }
                 }

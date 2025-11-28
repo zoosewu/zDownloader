@@ -1,5 +1,6 @@
 // HTTP client wrapper using reqwest
-use reqwest::{Client, header};
+use crate::models::ProxyInfo;
+use reqwest::{header, Client, Proxy};
 use std::time::Duration;
 
 pub struct HttpClient {
@@ -15,9 +16,26 @@ pub struct FileInfo {
 
 impl HttpClient {
     pub fn new() -> Self {
-        let client = Client::builder()
+        Self::with_proxy(None)
+    }
+
+    /// Create HTTP client with optional proxy
+    pub fn with_proxy(proxy_info: Option<&ProxyInfo>) -> Self {
+        let mut builder = Client::builder()
             .timeout(Duration::from_secs(30))
-            .user_agent("Zoo-Downloader/0.1.0")
+            .user_agent("Zoo-Downloader/0.1.0");
+
+        // Add proxy if provided
+        if let Some(proxy) = proxy_info {
+            let proxy_url = format!("http://{}:{}", proxy.host, proxy.port);
+            if let Ok(reqwest_proxy) = Proxy::http(&proxy_url) {
+                builder = builder.proxy(reqwest_proxy);
+            } else {
+                eprintln!("Warning: Failed to configure proxy {}", proxy_url);
+            }
+        }
+
+        let client = builder
             .build()
             .expect("Failed to create HTTP client");
 
@@ -39,7 +57,10 @@ impl HttpClient {
             .map_err(|e| format!("HEAD request failed: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("HEAD request failed with status: {}", response.status()));
+            return Err(format!(
+                "HEAD request failed with status: {}",
+                response.status()
+            ));
         }
 
         // Check Content-Length header
@@ -76,5 +97,13 @@ impl HttpClient {
 impl Default for HttpClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Clone for HttpClient {
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+        }
     }
 }

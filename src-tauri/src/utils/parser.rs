@@ -1,13 +1,13 @@
+use regex::Regex;
 use std::fs;
 use std::path::Path;
-use regex::Regex;
 
 /// Parse a text file containing URLs (one per line)
 /// Returns a vector of valid HTTP/HTTPS URLs
 pub fn parse_url_file(file_path: &Path) -> Result<Vec<String>, String> {
     // Read file content
-    let content = fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    let content =
+        fs::read_to_string(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
     // Parse URLs line by line
     let urls = parse_url_list(&content);

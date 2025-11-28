@@ -1,7 +1,7 @@
 // ProxyInfo model - represents a proxy server
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProxyInfo {
@@ -15,7 +15,7 @@ pub struct ProxyInfo {
     pub failed_requests: u64,
     pub last_verified: DateTime<Utc>,
     pub last_used: DateTime<Utc>,
-    pub health_score: f64,  // 0.0 - 1.0
+    pub health_score: f64, // 0.0 - 1.0
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

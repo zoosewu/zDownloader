@@ -39,8 +39,8 @@ pub async fn merge_segments(
             .map_err(|e| format!("Failed to create parent directory: {}", e))?;
     }
 
-    let mut final_file = File::create(final_path)
-        .map_err(|e| format!("Failed to create final file: {}", e))?;
+    let mut final_file =
+        File::create(final_path).map_err(|e| format!("Failed to create final file: {}", e))?;
 
     // Merge segments sequentially
     for segment in &sorted_segments {
@@ -98,10 +98,7 @@ pub async fn merge_segments_in_place(
     // Validate all segments are completed
     for segment in segments {
         if segment.status != crate::models::SegmentStatus::Completed {
-            return Err(format!(
-                "Segment {} is not completed",
-                segment.segment_id
-            ));
+            return Err(format!("Segment {} is not completed", segment.segment_id));
         }
     }
 
@@ -173,8 +170,12 @@ pub fn cleanup_segment_files(segments: &[DownloadSegment], temp_dir: &Path) -> R
         let temp_file_path = temp_dir.join(format!("segment_{}", segment.segment_id));
 
         if temp_file_path.exists() {
-            std::fs::remove_file(&temp_file_path)
-                .map_err(|e| format!("Failed to remove segment file {}: {}", segment.segment_id, e))?;
+            std::fs::remove_file(&temp_file_path).map_err(|e| {
+                format!(
+                    "Failed to remove segment file {}: {}",
+                    segment.segment_id, e
+                )
+            })?;
         }
     }
 
@@ -215,7 +216,7 @@ mod tests {
         for (i, segment) in segments.iter().enumerate() {
             let file_path = temp_dir.join(format!("segment_{}", i));
             let mut file = File::create(&file_path).unwrap();
-            let data = format!("SEGMENT{:02}", i).repeat(1); // 10 bytes each
+            let data = format!("SEG{:02}TEST!", i); // Exactly 10 bytes each
             file.write_all(data.as_bytes()).unwrap();
         }
 
@@ -223,12 +224,15 @@ mod tests {
         let final_path = temp_dir.join("merged_file.txt");
         let result = merge_segments(&segments, &final_path, &temp_dir).await;
 
-        assert!(result.is_ok());
+        if let Err(e) = &result {
+            eprintln!("Merge failed with error: {}", e);
+        }
+        assert!(result.is_ok(), "Merge failed: {:?}", result);
         assert!(final_path.exists());
 
         // Verify merged content
         let content = std::fs::read_to_string(&final_path).unwrap();
-        assert_eq!(content, "SEGMENT00SEGMENT01SEGMENT02");
+        assert_eq!(content, "SEG00TEST!SEG01TEST!SEG02TEST!");
 
         // Cleanup
         std::fs::remove_dir_all(&temp_dir).unwrap();

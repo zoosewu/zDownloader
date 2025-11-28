@@ -1,12 +1,16 @@
 // Download engine core - supports both single-threaded and multi-threaded segmented downloads
-use crate::models::{DownloadTask, DownloadStatus, SegmentStatus};
-use crate::download::{HttpClient, SegmentConfig, calculate_segments, merge_segments, can_resume_download, get_resumable_segments, save_checkpoint};
+use crate::download::{
+    calculate_segments, can_resume_download, get_resumable_segments, merge_segments,
+    save_checkpoint, HttpClient, SegmentConfig,
+};
+use crate::models::{DownloadStatus, DownloadTask, SegmentStatus};
+use crate::proxy::pool::ProxyPool;
+use futures::StreamExt;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use futures::StreamExt;
 
 // Custom error type that implements Send
 #[derive(Debug)]
@@ -47,6 +51,8 @@ impl From<tokio::task::JoinError> for DownloadError {
 pub struct DownloadEngine {
     http_client: HttpClient,
     segment_config: SegmentConfig,
+    proxy_pool: Option<Arc<ProxyPool>>,
+    use_proxy: bool,
 }
 
 impl DownloadEngine {
@@ -54,6 +60,8 @@ impl DownloadEngine {
         Self {
             http_client: HttpClient::new(),
             segment_config: SegmentConfig::default(),
+            proxy_pool: None,
+            use_proxy: false,
         }
     }
 
@@ -61,6 +69,33 @@ impl DownloadEngine {
         Self {
             http_client: HttpClient::new(),
             segment_config,
+            proxy_pool: None,
+            use_proxy: false,
+        }
+    }
+
+    /// Enable proxy support with a proxy pool
+    pub fn with_proxy_pool(mut self, proxy_pool: Arc<ProxyPool>) -> Self {
+        self.proxy_pool = Some(proxy_pool);
+        self.use_proxy = true;
+        self
+    }
+
+    /// Set whether to use proxy for downloads
+    pub fn set_use_proxy(&mut self, use_proxy: bool) {
+        self.use_proxy = use_proxy;
+    }
+
+    /// Get the best available proxy
+    async fn get_proxy(&self) -> Option<crate::models::ProxyInfo> {
+        if !self.use_proxy {
+            return None;
+        }
+
+        if let Some(pool) = &self.proxy_pool {
+            pool.get_best_proxy().await
+        } else {
+            None
         }
     }
 
@@ -69,13 +104,15 @@ impl DownloadEngine {
     /// This method checks if the server supports range requests and if the file
     /// is large enough to benefit from segmented download. It then automatically
     /// chooses between single-threaded and multi-threaded download.
+    ///
+    /// If proxy pool is enabled, automatically retries with different proxies on failure.
     pub async fn download_file<F>(
         &self,
         task: &mut DownloadTask,
         progress_callback: F,
     ) -> Result<(), DownloadError>
     where
-        F: Fn(&DownloadTask) + Send + Sync + 'static,
+        F: Fn(&DownloadTask) + Send + Sync + 'static + Clone,
     {
         // Update status to downloading
         task.status = DownloadStatus::Downloading;
@@ -90,36 +127,138 @@ impl DownloadEngine {
             return self.resume_download(task, progress_callback).await;
         }
 
-        // Check server capabilities
-        let file_info = self.http_client.check_range_support(&task.url).await
-            .map_err(|e| format!("Failed to check server capabilities: {}", e))?;
-
-        task.filesize = file_info.size;
-
-        // Decide download strategy
-        if file_info.supports_range && file_info.size >= crate::download::segment::MIN_FILE_SIZE_FOR_SEGMENTS {
-            // Use multi-threaded segmented download
-            self.download_segmented(task, progress_callback).await
+        // If proxy is enabled, use retry logic
+        if self.use_proxy && self.proxy_pool.is_some() {
+            self.download_with_proxy_retry(task, progress_callback).await
         } else {
-            // Use single-threaded download
-            self.download_single_thread(task, progress_callback).await
+            // Direct download without proxy
+            self.download_without_proxy(task, progress_callback).await
         }
     }
 
-    /// Single-threaded download (original MVP implementation)
-    async fn download_single_thread<F>(
+    /// Download with proxy retry logic
+    async fn download_with_proxy_retry<F>(
         &self,
         task: &mut DownloadTask,
         progress_callback: F,
     ) -> Result<(), DownloadError>
     where
+        F: Fn(&DownloadTask) + Send + Sync + 'static + Clone,
+    {
+        const MAX_RETRIES: usize = 3;
+        let mut retry_count = 0;
+        let mut last_error = None;
+
+        loop {
+            // Get a proxy from the pool
+            let proxy = match &self.proxy_pool {
+                Some(pool) => pool.get_best_proxy().await,
+                None => None,
+            };
+
+            if proxy.is_none() && retry_count > 0 {
+                // No proxies available
+                return Err("All proxies failed, no proxies available".to_string().into());
+            }
+
+            let proxy_id = proxy.as_ref().map(|p| p.id);
+            let start_time = std::time::Instant::now();
+
+            // Create HTTP client with this proxy
+            let client = HttpClient::with_proxy(proxy.as_ref());
+
+            // Attempt download
+            let result = self.download_with_client(&client, task, progress_callback.clone()).await;
+
+            let elapsed = start_time.elapsed();
+            let latency_ms = elapsed.as_millis() as f64;
+
+            match result {
+                Ok(_) => {
+                    // Success - mark proxy as successful
+                    if let (Some(id), Some(pool)) = (proxy_id, &self.proxy_pool) {
+                        let _ = pool.mark_success(id, latency_ms).await;
+                    }
+                    return Ok(());
+                }
+                Err(e) => {
+                    // Failure - mark proxy as failed
+                    if let (Some(id), Some(pool)) = (proxy_id, &self.proxy_pool) {
+                        let _ = pool.mark_failure(id).await;
+                    }
+
+                    last_error = Some(e);
+                    retry_count += 1;
+
+                    if retry_count >= MAX_RETRIES {
+                        break;
+                    }
+
+                    // Small delay before retry
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+
+        // All retries exhausted
+        Err(last_error.unwrap_or_else(|| "Download failed after retries".to_string().into()))
+    }
+
+    /// Download without proxy (direct connection)
+    async fn download_without_proxy<F>(
+        &self,
+        task: &mut DownloadTask,
+        progress_callback: F,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static + Clone,
+    {
+        self.download_with_client(&self.http_client, task, progress_callback).await
+    }
+
+    /// Download with a specific HTTP client
+    async fn download_with_client<F>(
+        &self,
+        client: &HttpClient,
+        task: &mut DownloadTask,
+        progress_callback: F,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static + Clone,
+    {
+        // Check server capabilities
+        let file_info = client
+            .check_range_support(&task.url)
+            .await
+            .map_err(|e| format!("Failed to check server capabilities: {}", e))?;
+
+        task.filesize = file_info.size;
+
+        // Decide download strategy
+        if file_info.supports_range
+            && file_info.size >= crate::download::segment::MIN_FILE_SIZE_FOR_SEGMENTS
+        {
+            // Use multi-threaded segmented download
+            let progress_arc = Arc::new(progress_callback);
+            self.download_segmented_with_client(client, task, progress_arc).await
+        } else {
+            // Use single-threaded download
+            self.download_single_thread_with_client(client, task, &progress_callback).await
+        }
+    }
+
+    /// Single-threaded download with specific HTTP client
+    async fn download_single_thread_with_client<F>(
+        &self,
+        client: &HttpClient,
+        task: &mut DownloadTask,
+        progress_callback: &F,
+    ) -> Result<(), DownloadError>
+    where
         F: Fn(&DownloadTask) + Send + Sync,
     {
         // Get the file
-        let response = self.http_client.get_client()
-            .get(&task.url)
-            .send()
-            .await?;
+        let response = client.get_client().get(&task.url).send().await?;
 
         if !response.status().is_success() {
             task.status = DownloadStatus::Failed;
@@ -168,7 +307,57 @@ impl DownloadEngine {
         Ok(())
     }
 
-    /// Multi-threaded segmented download
+    /// Multi-threaded segmented download with specific HTTP client
+    async fn download_segmented_with_client<F>(
+        &self,
+        client: &HttpClient,
+        task: &mut DownloadTask,
+        progress_callback: Arc<F>,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static,
+    {
+        // Calculate segments
+        let segments = calculate_segments(task.filesize, &self.segment_config);
+
+        // Attach segments to task
+        task.segments = segments
+            .iter()
+            .map(|s| s.clone().with_task_id(task.id))
+            .collect();
+
+        // Create temp directory for segments
+        let temp_dir = self.get_temp_dir(task);
+        std::fs::create_dir_all(&temp_dir)?;
+
+        // Save checkpoint
+        let checkpoint_path = temp_dir.join("checkpoint.json");
+        save_checkpoint(task, &checkpoint_path)?;
+
+        // Clone client for concurrent segments
+        let client_arc = Arc::new(client.clone());
+
+        // Download all segments concurrently
+        self.download_all_segments_with_client(client_arc, task, &temp_dir, progress_callback.clone())
+            .await?;
+
+        // Merge segments
+        let final_path = Path::new(&task.filepath);
+        merge_segments(&task.segments, final_path, &temp_dir)
+            .await
+            .map_err(|e| format!("Failed to merge segments: {}", e))?;
+
+        // Cleanup temp files
+        crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
+
+        task.status = DownloadStatus::Completed;
+        task.completed_at = Some(chrono::Utc::now());
+        progress_callback(task);
+
+        Ok(())
+    }
+
+    /// Multi-threaded segmented download (legacy method using default client)
     async fn download_segmented<F>(
         &self,
         task: &mut DownloadTask,
@@ -181,7 +370,8 @@ impl DownloadEngine {
         let segments = calculate_segments(task.filesize, &self.segment_config);
 
         // Attach segments to task
-        task.segments = segments.iter()
+        task.segments = segments
+            .iter()
             .map(|s| s.clone().with_task_id(task.id))
             .collect();
 
@@ -196,11 +386,13 @@ impl DownloadEngine {
         let progress_arc = Arc::new(progress_callback);
 
         // Download all segments concurrently
-        self.download_all_segments(task, &temp_dir, progress_arc.clone()).await?;
+        self.download_all_segments(task, &temp_dir, progress_arc.clone())
+            .await?;
 
         // Merge segments
         let final_path = Path::new(&task.filepath);
-        merge_segments(&task.segments, final_path, &temp_dir).await
+        merge_segments(&task.segments, final_path, &temp_dir)
+            .await
             .map_err(|e| format!("Failed to merge segments: {}", e))?;
 
         // Cleanup temp files
@@ -213,9 +405,10 @@ impl DownloadEngine {
         Ok(())
     }
 
-    /// Download all segments concurrently
-    async fn download_all_segments<F>(
+    /// Download all segments concurrently with specific HTTP client
+    async fn download_all_segments_with_client<F>(
         &self,
+        http_client: Arc<HttpClient>,
         task: &mut DownloadTask,
         temp_dir: &Path,
         progress_callback: Arc<F>,
@@ -224,11 +417,12 @@ impl DownloadEngine {
         F: Fn(&DownloadTask) + Send + Sync + 'static,
     {
         let task_arc = Arc::new(Mutex::new(task.clone()));
-        let http_client = Arc::new(self.http_client.clone());
         let temp_dir = Arc::new(temp_dir.to_path_buf());
 
         // Create a semaphore to limit concurrent downloads
-        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.segment_config.max_concurrent_segments));
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(
+            self.segment_config.max_concurrent_segments,
+        ));
 
         let mut handles = vec![];
 
@@ -248,7 +442,65 @@ impl DownloadEngine {
                     http_client_clone,
                     temp_dir_clone,
                     progress_callback_clone,
-                ).await;
+                )
+                .await;
+
+                result
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all segments to complete
+        for handle in handles {
+            handle.await??;
+        }
+
+        // Update task with final segment statuses
+        *task = task_arc.lock().await.clone();
+
+        Ok(())
+    }
+
+    /// Download all segments concurrently (legacy method using default client)
+    async fn download_all_segments<F>(
+        &self,
+        task: &mut DownloadTask,
+        temp_dir: &Path,
+        progress_callback: Arc<F>,
+    ) -> Result<(), DownloadError>
+    where
+        F: Fn(&DownloadTask) + Send + Sync + 'static,
+    {
+        let task_arc = Arc::new(Mutex::new(task.clone()));
+        let http_client = Arc::new(self.http_client.clone());
+        let temp_dir = Arc::new(temp_dir.to_path_buf());
+
+        // Create a semaphore to limit concurrent downloads
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(
+            self.segment_config.max_concurrent_segments,
+        ));
+
+        let mut handles = vec![];
+
+        for segment_idx in 0..task.segments.len() {
+            let task_clone = task_arc.clone();
+            let http_client_clone = http_client.clone();
+            let temp_dir_clone = temp_dir.clone();
+            let progress_callback_clone = progress_callback.clone();
+            let semaphore_clone = semaphore.clone();
+
+            let handle = tokio::spawn(async move {
+                let _permit = semaphore_clone.acquire().await.unwrap();
+
+                let result = Self::download_segment(
+                    task_clone.clone(),
+                    segment_idx,
+                    http_client_clone,
+                    temp_dir_clone,
+                    progress_callback_clone,
+                )
+                .await;
 
                 result
             });
@@ -293,7 +545,6 @@ impl DownloadEngine {
         let segment_path = temp_dir.join(format!("segment_{}", segment.segment_id));
         let mut file = OpenOptions::new()
             .create(true)
-            
             .append(true)
             .open(&segment_path)?;
 
@@ -304,7 +555,8 @@ impl DownloadEngine {
         };
 
         let range_header = format!("bytes={}-{}", segment.start_byte, segment.end_byte);
-        let response = http_client.get_client()
+        let response = http_client
+            .get_client()
             .get(&url)
             .header("Range", range_header)
             .send()
@@ -313,7 +565,12 @@ impl DownloadEngine {
         if !response.status().is_success() && response.status().as_u16() != 206 {
             let mut task = task_arc.lock().await;
             task.segments[segment_idx].status = SegmentStatus::Failed;
-            return Err(format!("HTTP error for segment {}: {}", segment.segment_id, response.status()).into());
+            return Err(format!(
+                "HTTP error for segment {}: {}",
+                segment.segment_id,
+                response.status()
+            )
+            .into());
         }
 
         // Download segment data
@@ -331,9 +588,7 @@ impl DownloadEngine {
                 task.segments[segment_idx].downloaded_bytes = downloaded;
 
                 // Calculate overall progress
-                let total_downloaded: u64 = task.segments.iter()
-                    .map(|s| s.downloaded_bytes)
-                    .sum();
+                let total_downloaded: u64 = task.segments.iter().map(|s| s.downloaded_bytes).sum();
 
                 if task.filesize > 0 {
                     task.progress = (total_downloaded as f64 / task.filesize as f64) * 100.0;
@@ -375,7 +630,8 @@ impl DownloadEngine {
         if resumable_segments.is_empty() {
             // All segments completed, just merge
             let final_path = Path::new(&task.filepath);
-            merge_segments(&task.segments, final_path, &temp_dir).await
+            merge_segments(&task.segments, final_path, &temp_dir)
+                .await
                 .map_err(|e| format!("Failed to merge segments: {}", e))?;
 
             crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
@@ -389,7 +645,11 @@ impl DownloadEngine {
 
         // Update task segments with resumable segments
         for resumable in &resumable_segments {
-            if let Some(segment) = task.segments.iter_mut().find(|s| s.segment_id == resumable.segment_id) {
+            if let Some(segment) = task
+                .segments
+                .iter_mut()
+                .find(|s| s.segment_id == resumable.segment_id)
+            {
                 segment.start_byte = resumable.start_byte;
                 segment.downloaded_bytes = resumable.downloaded_bytes;
                 segment.status = SegmentStatus::Pending;
@@ -397,11 +657,13 @@ impl DownloadEngine {
         }
 
         // Download remaining segments
-        self.download_all_segments(task, &temp_dir, progress_arc.clone()).await?;
+        self.download_all_segments(task, &temp_dir, progress_arc.clone())
+            .await?;
 
         // Merge segments
         let final_path = Path::new(&task.filepath);
-        merge_segments(&task.segments, final_path, &temp_dir).await
+        merge_segments(&task.segments, final_path, &temp_dir)
+            .await
             .map_err(|e| format!("Failed to merge segments: {}", e))?;
 
         crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
@@ -426,9 +688,3 @@ impl Default for DownloadEngine {
     }
 }
 
-// Impl Clone for HttpClient
-impl Clone for HttpClient {
-    fn clone(&self) -> Self {
-        HttpClient::new()
-    }
-}

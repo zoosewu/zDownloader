@@ -5,21 +5,21 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     // General settings
-    pub language: String,  // "zh-TW" | "en" | "ja"
+    pub language: String, // "zh-TW" | "en" | "ja"
     pub theme: Theme,
     pub auto_start: bool,
 
     // Download settings
     pub default_download_dir: PathBuf,
-    pub max_concurrent_downloads: Option<usize>,  // None = unlimited
-    pub segment_size_mb: u64,  // default 10MB
-    pub thread_count: usize,   // default 8
+    pub max_concurrent_downloads: Option<usize>, // None = unlimited
+    pub segment_size_mb: u64,                    // default 10MB
+    pub thread_count: usize,                     // default 8
     pub speed_limit_mode: SpeedLimitMode,
     pub speed_limit_kbps: Option<u64>,
 
     // Proxy settings
     pub enable_proxy: bool,
-    pub proxy_verification_interval_hours: u64,  // default 24
+    pub proxy_verification_interval_hours: u64, // default 24
 
     // UI settings
     pub enable_clipboard_monitoring: bool,
