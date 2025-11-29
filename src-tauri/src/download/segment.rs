@@ -1,4 +1,6 @@
 // Segmentation strategy for multi-threaded downloads
+#![allow(dead_code)]
+
 use crate::models::DownloadSegment;
 
 /// Default segment size: 10MB

@@ -1,13 +1,24 @@
 // Zoo Downloader - Main Application Component
-import { useMemo, useEffect } from 'react';
-import { ThemeProvider, CssBaseline, Box } from '@mui/material';
+import { useMemo, useEffect, useState } from 'react';
+import {
+  ThemeProvider,
+  CssBaseline,
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+} from '@mui/material';
 import { useAtom } from 'jotai';
 import { listen } from '@tauri-apps/api/event';
 
 import { themeAtom } from './stores/settingsStore';
 import { lightTheme, darkTheme } from './styles/theme';
 import MainPage from './pages/MainPage';
+import SettingsPage from './pages/SettingsPage';
 import ResumeDialog from './components/ResumeDialog';
+import CaptchaDialog from './components/CaptchaDialog';
+import LoginDialog from './components/LoginDialog';
 import {
   unfinishedDownloadsAtom,
   showResumeDialogAtom,
@@ -17,6 +28,7 @@ import { invoke } from '@tauri-apps/api/core';
 import './i18n';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState<'main' | 'settings'>('main');
   const [currentTheme] = useAtom(themeAtom);
   const [unfinishedDownloads, setUnfinishedDownloads] = useAtom(unfinishedDownloadsAtom);
   const [showResumeDialog, setShowResumeDialog] = useAtom(showResumeDialogAtom);
@@ -85,10 +97,42 @@ function App() {
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'auto',
         }}
       >
-        <MainPage />
+        {/* Navigation Bar */}
+        <AppBar position="static" elevation={1}>
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              Zoo Downloader
+            </Typography>
+            <Button
+              color="inherit"
+              onClick={() => setCurrentPage('main')}
+              sx={{
+                fontWeight: currentPage === 'main' ? 'bold' : 'normal',
+              }}
+            >
+              下載
+            </Button>
+            <Button
+              color="inherit"
+              onClick={() => setCurrentPage('settings')}
+              sx={{
+                fontWeight: currentPage === 'settings' ? 'bold' : 'normal',
+              }}
+            >
+              設定
+            </Button>
+          </Toolbar>
+        </AppBar>
+
+        {/* Page Content */}
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          {currentPage === 'main' && <MainPage />}
+          {currentPage === 'settings' && <SettingsPage />}
+        </Box>
+
+        {/* Dialogs */}
         <ResumeDialog
           open={showResumeDialog}
           tasks={unfinishedDownloads}
@@ -97,6 +141,8 @@ function App() {
           onDiscardAll={handleDiscardAll}
           onClose={handleCloseDialog}
         />
+        <CaptchaDialog />
+        <LoginDialog />
       </Box>
     </ThemeProvider>
   );

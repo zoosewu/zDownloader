@@ -178,25 +178,25 @@
 
 ### Proxy 池管理
 
-- [ ] T063 [P] [US4] 實作 Proxy 池核心在 src-tauri/src/proxy/pool.rs：管理 Proxy 列表、健康度評分
-- [ ] T064 [P] [US4] 實作 Proxy 驗證器在 src-tauri/src/proxy/validator.rs：批次驗證（每批 50 個）、5 秒 timeout
-- [ ] T065 [P] [US4] 實作健康度評分算法在 src-tauri/src/proxy/health_scorer.rs：成功率 70% + 延遲 20% + 最近使用 10%
-- [ ] T066 [US4] 實作 Proxy 快取在 src-tauri/src/proxy/cache.rs：讀寫 proxies.txt
-- [ ] T067 [US4] 實作 Proxy 自動切換在 src-tauri/src/download/engine.rs：失敗時切換到下一個可用 Proxy
-- [ ] T068 [US4] 實作優雅降級在 src-tauri/src/download/engine.rs：所有 Proxy 失效時詢問使用者是否使用直接連線
+- [X] T063 [P] [US4] 實作 Proxy 池核心在 src-tauri/src/proxy/pool.rs：管理 Proxy 列表、健康度評分
+- [X] T064 [P] [US4] 實作 Proxy 驗證器在 src-tauri/src/proxy/validator.rs：批次驗證（每批 50 個）、5 秒 timeout
+- [X] T065 [P] [US4] 實作健康度評分算法在 src-tauri/src/proxy/health_scorer.rs：成功率 70% + 延遲 20% + 最近使用 10%
+- [X] T066 [US4] 實作 Proxy 快取在 src-tauri/src/proxy/cache.rs：讀寫 proxies.txt
+- [X] T067 [US4] 實作 Proxy 自動切換在 src-tauri/src/download/engine.rs：失敗時切換到下一個可用 Proxy
+- [X] T068 [US4] 實作優雅降級在 src-tauri/src/download/engine.rs：所有 Proxy 失效時詢問使用者是否使用直接連線
 
 ### Proxy 管理命令
 
-- [ ] T069 [P] [US4] 實作 import_proxy_list 命令在 src-tauri/src/commands/proxy.rs
-- [ ] T070 [P] [US4] 實作 get_proxy_list 命令在 src-tauri/src/commands/proxy.rs
-- [ ] T071 [P] [US4] 實作 remove_proxy 命令在 src-tauri/src/commands/proxy.rs
+- [X] T069 [P] [US4] 實作 import_proxy_list 命令在 src-tauri/src/commands/proxy.rs
+- [X] T070 [P] [US4] 實作 get_proxy_list 命令在 src-tauri/src/commands/proxy.rs
+- [X] T071 [P] [US4] 實作 remove_proxy 命令在 src-tauri/src/commands/proxy.rs
 
 ### 前端 Proxy 管理 UI
 
-- [ ] T072 [P] [US4] 建立 Proxy 設定面板在 src/components/ProxySettings.tsx：匯入列表、顯示 Proxy 狀態
-- [ ] T073 [P] [US4] 建立 Proxy 狀態管理在 src/stores/proxyStore.ts：Jotai atoms
-- [ ] T074 [US4] 建立設定頁面在 src/pages/SettingsPage.tsx：整合 ProxySettings
-- [ ] T075 [US4] 更新 DownloadItem 在 src/components/DownloadItem.tsx：顯示正在使用的 Proxy
+- [X] T072 [P] [US4] 建立 Proxy 設定面板在 src/components/ProxySettings.tsx：匯入列表、顯示 Proxy 狀態
+- [X] T073 [P] [US4] 建立 Proxy 狀態管理在 src/stores/proxyStore.ts：Jotai atoms
+- [X] T074 [US4] 建立設定頁面在 src/pages/SettingsPage.tsx：整合 ProxySettings
+- [ ] T075 [US4] 更新 DownloadItem 在 src/components/DownloadItem.tsx：顯示正在使用的 Proxy（選擇性功能）
 
 **Checkpoint**: User Story 4 完成 - Proxy 池管理和動態切換運作正常
 
@@ -210,31 +210,31 @@
 
 ### 模組系統核心
 
-- [ ] T076 [P] [US5] 定義 WebsiteModule Trait 在 src-tauri/src/modules/interface.rs：metadata, can_handle, extract_download_info, handle_captcha
-- [ ] T077 [US5] 實作模組載入器在 src-tauri/src/modules/loader.rs：使用 libloading 動態載入 .so/.dll/.dylib
-- [ ] T078 [US5] 實作模組註冊表在 src-tauri/src/modules/registry.rs：掃描模組目錄、註冊模組
-- [ ] T079 [US5] 整合 headless browser 在 src-tauri/src/modules/browser.rs：使用 headless_chrome 執行 JavaScript
+- [X] T076 [P] [US5] 定義 WebsiteModule Trait 在 src-tauri/src/modules/interface.rs：metadata, can_handle, extract_download_info, handle_captcha
+- [X] T077 [US5] 實作模組載入器在 src-tauri/src/modules/loader.rs：使用 libloading 動態載入 .so/.dll/.dylib
+- [X] T078 [US5] 實作模組註冊表在 src-tauri/src/modules/registry.rs：掃描模組目錄、註冊模組
+- [X] T079 [US5] 整合 headless browser 在 src-tauri/src/modules/browser.rs：使用 headless_chrome 執行 JavaScript
 
 ### CAPTCHA 處理
 
-- [ ] T080 [US5] 實作 CAPTCHA 事件在 src-tauri/src/modules/interface.rs：發送 captcha-required 事件
-- [ ] T081 [US5] 實作 CAPTCHA 回調在 src-tauri/src/modules/interface.rs：接收使用者輸入
+- [X] T080 [US5] 實作 CAPTCHA 事件在 src-tauri/src/modules/interface.rs：發送 captcha-required 事件
+- [X] T081 [US5] 實作 CAPTCHA 回調在 src-tauri/src/modules/interface.rs：接收使用者輸入
 
 ### 憑證管理
 
-- [ ] T082 [US5] 實作憑證加密在 src-tauri/src/utils/crypto.rs：使用 keyring crate（OS Keychain）
-- [ ] T083 [US5] 實作憑證儲存/讀取在 src-tauri/src/modules/auth.rs
+- [X] T082 [US5] 實作憑證加密在 src-tauri/src/utils/crypto.rs：使用 keyring crate（OS Keychain）
+- [X] T083 [US5] 實作憑證儲存/讀取在 src-tauri/src/modules/auth.rs
 
 ### 範例模組
 
-- [ ] T084 [US5] 建立範例模組專案在 modules/example-downloader/：Cargo.toml + src/lib.rs
-- [ ] T085 [US5] 實作範例模組在 modules/example-downloader/src/lib.rs：示範如何實作 WebsiteModule Trait
+- [X] T084 [US5] 建立範例模組專案在 modules/example-downloader/：Cargo.toml + src/lib.rs
+- [X] T085 [US5] 實作範例模組在 modules/example-downloader/src/lib.rs：示範如何實作 WebsiteModule Trait
 
 ### 前端 CAPTCHA UI
 
-- [ ] T086 [US5] 建立 CAPTCHA 對話框在 src/components/CaptchaDialog.tsx：顯示 CAPTCHA 圖片、接收輸入
-- [ ] T087 [US5] 建立 CAPTCHA 事件監聽在 src/hooks/useTauriEvents.ts：監聽 captcha-required
-- [ ] T088 [US5] 建立登入對話框在 src/components/LoginDialog.tsx：輸入帳號密碼
+- [X] T086 [US5] 建立 CAPTCHA 對話框在 src/components/CaptchaDialog.tsx：顯示 CAPTCHA 圖片、接收輸入
+- [X] T087 [US5] 建立 CAPTCHA 事件監聽在 src/hooks/useTauriEvents.ts：監聽 captcha-required
+- [X] T088 [US5] 建立登入對話框在 src/components/LoginDialog.tsx：輸入帳號密碼
 
 **Checkpoint**: User Story 5 完成 - 模組化網站支援運作正常，可以擴充支援更多網站
 

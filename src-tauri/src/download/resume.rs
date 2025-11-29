@@ -1,4 +1,6 @@
 // Resume download logic - handles partial file integrity check and resume capability
+#![allow(dead_code)]
+
 use crate::models::{DownloadSegment, DownloadTask, SegmentStatus};
 use std::fs::metadata;
 use std::path::Path;

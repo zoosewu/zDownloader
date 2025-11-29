@@ -1,4 +1,6 @@
 // Cross-platform path handling
+#![allow(dead_code)]
+
 use std::path::PathBuf;
 
 pub fn get_app_data_dir() -> PathBuf {

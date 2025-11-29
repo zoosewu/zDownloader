@@ -1,6 +1,7 @@
 // Download command handlers - Tauri commands for download management
 use crate::download::{DownloadEngine, DownloadQueue};
 use crate::models::DownloadTask;
+use crate::proxy::pool::ProxyPool;
 use crate::storage::get_downloads_dir;
 use crate::utils::parser::parse_url_file;
 use std::path::PathBuf;
@@ -12,6 +13,7 @@ use uuid::Uuid;
 pub struct AppState {
     pub queue: Arc<Mutex<DownloadQueue>>,
     pub engine: Arc<Mutex<DownloadEngine>>,
+    pub proxy_pool: Arc<ProxyPool>,
 }
 
 #[tauri::command]
@@ -76,11 +78,37 @@ pub async fn start_download(
 
             if let Err(e) = result {
                 eprintln!("Download failed: {}", e);
-                task.status = crate::models::DownloadStatus::Failed;
-                task.error_message = Some(e.to_string());
-                // Emit status changed event
-                if let Err(e) = app_clone2.emit("status-changed", &task) {
-                    eprintln!("Failed to emit status-changed event: {}", e);
+
+                // Check if all proxies failed
+                if e.is_all_proxies_failed() {
+                    // Set task status to failed but with special flag
+                    task.status = crate::models::DownloadStatus::Failed;
+                    task.error_message = Some("All proxies failed".to_string());
+
+                    // Emit special event for proxy failure
+                    #[derive(Clone, serde::Serialize)]
+                    struct ProxyFailurePayload {
+                        task_id: String,
+                        task: DownloadTask,
+                    }
+
+                    let payload = ProxyFailurePayload {
+                        task_id: task.id.to_string(),
+                        task: task.clone(),
+                    };
+
+                    if let Err(e) = app_clone2.emit("all-proxies-failed", &payload) {
+                        eprintln!("Failed to emit all-proxies-failed event: {}", e);
+                    }
+                } else {
+                    // Regular download failure
+                    task.status = crate::models::DownloadStatus::Failed;
+                    task.error_message = Some(e.to_string());
+
+                    // Emit status changed event
+                    if let Err(e) = app_clone2.emit("status-changed", &task) {
+                        eprintln!("Failed to emit status-changed event: {}", e);
+                    }
                 }
             }
         } // All non-Send types dropped here
@@ -203,4 +231,72 @@ pub async fn clear_completed_downloads(state: State<'_, AppState>) -> Result<usi
     }
 
     Ok(removed_count)
+}
+
+/// Retry download with direct connection (without proxy)
+/// This is called when user chooses to bypass proxies after all proxies failed
+#[tauri::command]
+pub async fn retry_download_direct(
+    task_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let uuid = Uuid::parse_str(&task_id).map_err(|e| e.to_string())?;
+
+    // Get task from queue
+    let task = {
+        let queue = state.queue.lock().await;
+        queue.get_task(&uuid).ok_or("Task not found")?
+    };
+
+    // Reset task status
+    let mut task_reset = task.clone();
+    task_reset.status = crate::models::DownloadStatus::Pending;
+    task_reset.error_message = None;
+    task_reset.progress = 0.0;
+
+    {
+        let mut queue = state.queue.lock().await;
+        queue.update_task(task_reset.clone());
+    }
+
+    // Create a new engine WITHOUT proxy for this download
+    let engine_no_proxy = Arc::new(Mutex::new(DownloadEngine::new()));
+    let queue_clone = Arc::clone(&state.queue);
+
+    tokio::spawn(async move {
+        let mut task = task_reset.clone();
+        let app_clone = app.clone();
+        let app_clone2 = app.clone();
+
+        // Perform download with progress callbacks (using engine without proxy)
+        {
+            let engine = engine_no_proxy.lock().await;
+            let result = engine
+                .download_file(&mut task, move |task_ref| {
+                    // Emit progress event
+                    if let Err(e) = app_clone.emit("progress-updated", task_ref) {
+                        eprintln!("Failed to emit progress event: {}", e);
+                    }
+                })
+                .await;
+
+            if let Err(e) = result {
+                eprintln!("Direct download failed: {}", e);
+                task.status = crate::models::DownloadStatus::Failed;
+                task.error_message = Some(format!("Direct connection failed: {}", e));
+
+                // Emit status changed event
+                if let Err(e) = app_clone2.emit("status-changed", &task) {
+                    eprintln!("Failed to emit status-changed event: {}", e);
+                }
+            }
+        }
+
+        // Update task in queue
+        let mut queue = queue_clone.lock().await;
+        queue.update_task(task);
+    });
+
+    Ok(())
 }

@@ -1,4 +1,6 @@
 // File writer with conflict handling
+#![allow(dead_code)]
+
 use std::path::{Path, PathBuf};
 
 pub fn resolve_filename_conflict(filepath: &str) -> PathBuf {

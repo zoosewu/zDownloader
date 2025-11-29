@@ -1,4 +1,6 @@
 // Download engine core - supports both single-threaded and multi-threaded segmented downloads
+#![allow(dead_code)]
+
 use crate::download::{
     calculate_segments, can_resume_download, get_resumable_segments, merge_segments,
     save_checkpoint, HttpClient, SegmentConfig,
@@ -12,6 +14,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+// Error message constant for all proxies failed
+pub const ALL_PROXIES_FAILED_ERROR: &str = "ALL_PROXIES_FAILED";
+
 // Custom error type that implements Send
 #[derive(Debug)]
 pub struct DownloadError(String);
@@ -23,6 +28,18 @@ impl std::fmt::Display for DownloadError {
 }
 
 impl std::error::Error for DownloadError {}
+
+impl DownloadError {
+    /// Check if this error indicates all proxies failed
+    pub fn is_all_proxies_failed(&self) -> bool {
+        self.0 == ALL_PROXIES_FAILED_ERROR
+    }
+
+    /// Get the inner error message
+    pub fn message(&self) -> &str {
+        &self.0
+    }
+}
 
 impl From<String> for DownloadError {
     fn from(s: String) -> Self {
@@ -157,8 +174,8 @@ impl DownloadEngine {
             };
 
             if proxy.is_none() && retry_count > 0 {
-                // No proxies available
-                return Err("All proxies failed, no proxies available".to_string().into());
+                // No proxies available after initial retry
+                return Err(ALL_PROXIES_FAILED_ERROR.to_string().into());
             }
 
             let proxy_id = proxy.as_ref().map(|p| p.id);
@@ -200,8 +217,8 @@ impl DownloadEngine {
             }
         }
 
-        // All retries exhausted
-        Err(last_error.unwrap_or_else(|| "Download failed after retries".to_string().into()))
+        // All retries exhausted - return the last error or a generic failure message
+        Err(last_error.unwrap_or_else(|| ALL_PROXIES_FAILED_ERROR.to_string().into()))
     }
 
     /// Download without proxy (direct connection)

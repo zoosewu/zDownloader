@@ -57,3 +57,6 @@ coverage
 # Package lock files (keep pnpm-lock.yaml only)
 package-lock.json
 yarn.lock
+
+
+modules/example-downloader/target/*

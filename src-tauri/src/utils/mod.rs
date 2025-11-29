@@ -1,5 +1,6 @@
 // Utils module - utility functions
 pub mod clipboard;
+pub mod crypto;
 pub mod error;
 pub mod events;
 pub mod notification;

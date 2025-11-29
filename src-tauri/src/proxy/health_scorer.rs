@@ -1,4 +1,6 @@
 // Health scoring utilities and configuration
+#![allow(dead_code)]
+
 use crate::models::ProxyInfo;
 
 /// Health score thresholds for proxy categorization

@@ -1,4 +1,6 @@
 // Download recovery - scan and restore unfinished downloads on app startup
+#![allow(dead_code)]
+
 use crate::download::load_checkpoint;
 use crate::models::DownloadTask;
 use std::fs;

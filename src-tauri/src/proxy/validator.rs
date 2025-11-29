@@ -1,4 +1,6 @@
 // Proxy validator - batch validation of proxy servers
+#![allow(dead_code)]
+
 use crate::models::{ProxyInfo, ProxyStatus};
 use futures::stream::{self, StreamExt};
 use reqwest::Client;
@@ -45,7 +47,7 @@ pub async fn validate_proxies_batch(proxies: Vec<ProxyInfo>) -> Vec<ValidationRe
 async fn validate_batch(proxies: Vec<ProxyInfo>) -> Vec<ValidationResult> {
     // Create a stream of validation tasks
     let tasks = stream::iter(proxies)
-        .map(|proxy| validate_single_proxy(proxy))
+        .map(validate_single_proxy)
         .buffer_unordered(BATCH_SIZE);
 
     // Collect all results

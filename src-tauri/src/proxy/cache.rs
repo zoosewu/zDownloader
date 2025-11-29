@@ -1,12 +1,14 @@
 // Proxy cache - persistent storage for proxy list
+#![allow(dead_code)]
+
 use crate::models::ProxyInfo;
 use crate::storage::paths::get_proxies_cache_file;
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, Write};
 
 /// File format: one proxy per line in format "host:port"
-/// Example:
-/// ```
+/// Example file content:
+/// ```text
 /// 127.0.0.1:8080
 /// 192.168.1.1:3128
 /// proxy.example.com:8888

@@ -1,4 +1,6 @@
 // Download queue management - simple in-memory queue for MVP
+#![allow(dead_code)]
+
 use crate::models::DownloadTask;
 use uuid::Uuid;
 

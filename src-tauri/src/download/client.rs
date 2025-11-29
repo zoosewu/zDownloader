@@ -1,4 +1,6 @@
 // HTTP client wrapper using reqwest
+#![allow(dead_code)]
+
 use crate::models::ProxyInfo;
 use reqwest::{header, Client, Proxy};
 use std::time::Duration;

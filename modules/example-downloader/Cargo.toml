@@ -1,0 +1,23 @@
+[package]
+name = "example-downloader"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Core dependencies for module implementation
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.10"
+url = "2.5"
+
+# HTTP client for download info extraction
+reqwest = { version = "0.12", features = ["blocking"] }
+
+# Error handling
+thiserror = "2.0"
+
+[dev-dependencies]
+# For testing the module

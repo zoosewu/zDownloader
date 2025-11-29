@@ -1,4 +1,6 @@
 // Segment merger - combines downloaded segments into a complete file
+#![allow(dead_code)]
+
 use crate::models::DownloadSegment;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};

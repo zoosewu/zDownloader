@@ -7,7 +7,12 @@ import {
   clipboardUrlAtom,
   showClipboardHintAtom,
 } from '../stores/downloadStore';
+import {
+  currentCaptchaAtom,
+  showCaptchaDialogAtom,
+} from '../stores/captchaStore';
 import { DownloadTask } from '../types/download';
+import { CaptchaRequiredEvent, CaptchaSolvedEvent } from '../types/captcha';
 
 interface ProgressUpdatePayload {
   task: DownloadTask;
@@ -25,11 +30,15 @@ export const useTauriEvents = () => {
   const updateTask = useSetAtom(updateTaskAtom);
   const setClipboardUrl = useSetAtom(clipboardUrlAtom);
   const setShowClipboardHint = useSetAtom(showClipboardHintAtom);
+  const setCurrentCaptcha = useSetAtom(currentCaptchaAtom);
+  const setShowCaptchaDialog = useSetAtom(showCaptchaDialogAtom);
 
   useEffect(() => {
     let unlistenProgress: UnlistenFn | null = null;
     let unlistenStatus: UnlistenFn | null = null;
     let unlistenClipboard: UnlistenFn | null = null;
+    let unlistenCaptchaRequired: UnlistenFn | null = null;
+    let unlistenCaptchaSolved: UnlistenFn | null = null;
 
     // Listen for progress-updated events
     const setupProgressListener = async () => {
@@ -68,18 +77,64 @@ export const useTauriEvents = () => {
       );
     };
 
+    // Listen for captcha-required events
+    const setupCaptchaRequiredListener = async () => {
+      unlistenCaptchaRequired = await listen<CaptchaRequiredEvent>(
+        'captcha-required',
+        (event) => {
+          if (event.payload) {
+            // Convert event payload to CaptchaChallenge format
+            setCurrentCaptcha({
+              id: event.payload.challenge_id,
+              captcha_type: event.payload.captcha_type,
+              challenge_data: event.payload.challenge_data,
+              params: event.payload.params,
+              task_id: event.payload.task_id,
+              module_id: event.payload.module_id,
+              created_at: Date.now() / 1000,
+            });
+            setShowCaptchaDialog(true);
+          }
+        }
+      );
+    };
+
+    // Listen for captcha-solved events
+    const setupCaptchaSolvedListener = async () => {
+      unlistenCaptchaSolved = await listen<CaptchaSolvedEvent>(
+        'captcha-solved',
+        (event) => {
+          if (event.payload) {
+            // Clear CAPTCHA dialog when solved
+            setCurrentCaptcha(null);
+            setShowCaptchaDialog(false);
+          }
+        }
+      );
+    };
+
     // Setup all listeners
     setupProgressListener();
     setupStatusListener();
     setupClipboardListener();
+    setupCaptchaRequiredListener();
+    setupCaptchaSolvedListener();
 
     // Cleanup on unmount
     return () => {
       if (unlistenProgress) unlistenProgress();
       if (unlistenStatus) unlistenStatus();
       if (unlistenClipboard) unlistenClipboard();
+      if (unlistenCaptchaRequired) unlistenCaptchaRequired();
+      if (unlistenCaptchaSolved) unlistenCaptchaSolved();
     };
-  }, [updateTask, setClipboardUrl, setShowClipboardHint]);
+  }, [
+    updateTask,
+    setClipboardUrl,
+    setShowClipboardHint,
+    setCurrentCaptcha,
+    setShowCaptchaDialog,
+  ]);
 };
 
 export default useTauriEvents;
