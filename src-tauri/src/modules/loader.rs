@@ -1,4 +1,5 @@
 // Dynamic module loader using libloading
+#![allow(dead_code)]
 use super::interface::{BoxedModule, ModuleError, ModuleResult};
 use libloading::{Library, Symbol};
 use std::path::Path;

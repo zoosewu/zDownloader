@@ -1,4 +1,5 @@
 // Authentication credentials management for website modules
+#![allow(dead_code)]
 use crate::utils::crypto::{CredentialError, CredentialResult, CredentialStore};
 use super::interface::AuthCredentials;
 use std::collections::HashMap;

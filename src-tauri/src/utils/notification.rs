@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
 

@@ -89,7 +89,7 @@ impl DownloadScheduler {
                     let mut tasks = tasks_clone.lock().await;
 
                     // Find tasks that should start now
-                    let mut i = 0;
+                    let i = 0;
                     while i < tasks.len() {
                         if tasks[i].scheduled_time <= now {
                             let scheduled_task = tasks.remove(i);

@@ -1,5 +1,6 @@
 // Module registry for managing website support modules
-use super::interface::{BoxedModule, ModuleMetadata, WebsiteModule};
+#![allow(dead_code)]
+use super::interface::{BoxedModule, ModuleMetadata};
 use super::loader::ModuleLoader;
 use std::path::Path;
 use std::sync::{Arc, RwLock};

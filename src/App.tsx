@@ -12,7 +12,7 @@ import {
 import { useAtom } from 'jotai';
 import { listen } from '@tauri-apps/api/event';
 
-import { themeAtom } from './stores/settingsStore';
+import { themeAtom, settingsAtom } from './stores/settingsStore';
 import { lightTheme, darkTheme } from './styles/theme';
 import MainPage from './pages/MainPage';
 import SettingsPage from './pages/SettingsPage';
@@ -25,11 +25,13 @@ import {
   downloadTasksAtom,
 } from './stores/downloadStore';
 import { invoke } from '@tauri-apps/api/core';
+import { getSettings } from './api/settings';
 import './i18n';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<'main' | 'settings'>('main');
   const [currentTheme] = useAtom(themeAtom);
+  const [, setSettings] = useAtom(settingsAtom);
   const [unfinishedDownloads, setUnfinishedDownloads] = useAtom(unfinishedDownloadsAtom);
   const [showResumeDialog, setShowResumeDialog] = useAtom(showResumeDialogAtom);
   const [, setDownloadTasks] = useAtom(downloadTasksAtom);
@@ -37,6 +39,19 @@ function App() {
   const theme = useMemo(() => {
     return currentTheme === 'Light' ? lightTheme : darkTheme;
   }, [currentTheme]);
+
+  // Load settings from backend on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const backendSettings = await getSettings();
+        setSettings(backendSettings);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
+    loadSettings();
+  }, [setSettings]);
 
   // Listen for unfinished downloads detected event
   useEffect(() => {

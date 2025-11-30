@@ -16,12 +16,15 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAtom } from 'jotai';
+import { settingsAtom } from '../stores/settingsStore';
 import { AppSettings, Theme } from '../types/settings';
 import { getSettings, updateSettings } from '../api/settings';
 import { open } from '@tauri-apps/plugin-dialog';
 
 export default function GeneralSettings() {
   const { t, i18n } = useTranslation();
+  const [, setGlobalSettings] = useAtom(settingsAtom);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,6 +54,9 @@ export default function GeneralSettings() {
     try {
       setSaving(true);
       await updateSettings(settings);
+
+      // Update global settings atom for immediate theme change
+      setGlobalSettings(settings);
 
       // Update i18n language if changed
       if (settings.language !== i18n.language) {

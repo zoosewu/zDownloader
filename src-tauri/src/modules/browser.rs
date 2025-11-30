@@ -1,4 +1,5 @@
 // Headless browser integration for dynamic website support
+#![allow(dead_code)]
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use std::sync::Arc;
 use std::time::Duration;

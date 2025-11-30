@@ -1,4 +1,5 @@
 // Credential encryption using OS Keychain
+#![allow(dead_code)]
 use keyring::Entry;
 
 /// Error type for credential operations

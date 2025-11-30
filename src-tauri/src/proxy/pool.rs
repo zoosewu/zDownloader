@@ -1,4 +1,5 @@
 // Proxy pool management - manages proxy list and health scoring
+#![allow(dead_code)]
 use crate::models::{ProxyInfo, ProxyStatus};
 use std::sync::Arc;
 use tokio::sync::RwLock;
