@@ -75,12 +75,17 @@ export const addTaskAtom = atom(
 export const updateTaskAtom = atom(
   null,
   (get, set, updatedTask: DownloadTask) => {
+    console.log('updateTaskAtom called with:', updatedTask.id, 'Progress:', updatedTask.progress);
     const tasks = get(downloadTasksAtom);
     const index = tasks.findIndex((t) => t.id === updatedTask.id);
+    console.log('Task index in array:', index, 'Total tasks:', tasks.length);
     if (index !== -1) {
       const newTasks = [...tasks];
       newTasks[index] = updatedTask;
       set(downloadTasksAtom, newTasks);
+      console.log('Task updated in store');
+    } else {
+      console.warn('Task not found in store:', updatedTask.id);
     }
   }
 );
@@ -100,5 +105,13 @@ export const clearCompletedAtom = atom(
   (get, set) => {
     const tasks = get(downloadTasksAtom);
     set(downloadTasksAtom, tasks.filter((t) => t.status !== 'Completed'));
+  }
+);
+
+// Helper atom to set all tasks (for refreshing from backend)
+export const setTasksAtom = atom(
+  null,
+  (get, set, tasks: DownloadTask[]) => {
+    set(downloadTasksAtom, tasks);
   }
 );

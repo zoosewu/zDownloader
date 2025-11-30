@@ -45,8 +45,12 @@ export const useTauriEvents = () => {
       unlistenProgress = await listen<ProgressUpdatePayload>(
         'progress-updated',
         (event) => {
+          console.log('Progress event received:', event.payload);
           if (event.payload && event.payload.task) {
+            console.log('Updating task:', event.payload.task.id, 'Progress:', event.payload.task.progress);
             updateTask(event.payload.task);
+          } else {
+            console.warn('Invalid progress event payload:', event.payload);
           }
         }
       );

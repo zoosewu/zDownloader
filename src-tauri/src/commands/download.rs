@@ -69,8 +69,17 @@ pub async fn start_download(
             let engine = engine.lock().await;
             let result = engine
                 .download_file(&mut task, move |task_ref| {
-                    // Emit progress event
-                    if let Err(e) = app_clone.emit("progress-updated", task_ref) {
+                    // Emit progress event with proper payload format
+                    #[derive(Clone, serde::Serialize)]
+                    struct ProgressPayload {
+                        task: DownloadTask,
+                    }
+
+                    let payload = ProgressPayload {
+                        task: task_ref.clone(),
+                    };
+
+                    if let Err(e) = app_clone.emit("progress-updated", &payload) {
                         eprintln!("Failed to emit progress event: {}", e);
                     }
                 })
@@ -105,8 +114,17 @@ pub async fn start_download(
                     task.status = crate::models::DownloadStatus::Failed;
                     task.error_message = Some(e.to_string());
 
-                    // Emit status changed event
-                    if let Err(e) = app_clone2.emit("status-changed", &task) {
+                    // Emit status changed event with proper payload format
+                    #[derive(Clone, serde::Serialize)]
+                    struct StatusPayload {
+                        task: DownloadTask,
+                    }
+
+                    let payload = StatusPayload {
+                        task: task.clone(),
+                    };
+
+                    if let Err(e) = app_clone2.emit("status-changed", &payload) {
                         eprintln!("Failed to emit status-changed event: {}", e);
                     }
                 }

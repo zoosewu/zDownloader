@@ -2,11 +2,12 @@
 import { useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useSetAtom } from 'jotai';
-import { removeTaskAtom } from '../stores/downloadStore';
+import { removeTaskAtom, setTasksAtom } from '../stores/downloadStore';
 import { DownloadTask } from '../types/download';
 
 export const useDownloads = () => {
   const removeTask = useSetAtom(removeTaskAtom);
+  const setTasks = useSetAtom(setTasksAtom);
 
   // Create a new download
   const createDownload = useCallback(
@@ -71,23 +72,30 @@ export const useDownloads = () => {
   const refreshDownloadList = useCallback(async (): Promise<DownloadTask[]> => {
     try {
       const tasks = await invoke<DownloadTask[]>('get_download_list');
+      // Update the store with the fetched tasks
+      setTasks(tasks);
       return tasks;
     } catch (error) {
       console.error('Failed to get download list:', error);
       return [];
     }
-  }, []);
+  }, [setTasks]);
 
   // Create and start download in one step
   const createAndStartDownload = useCallback(
     async (url: string, filename?: string): Promise<boolean> => {
       const taskId = await createDownload(url, filename);
       if (taskId) {
-        return await startDownload(taskId);
+        const started = await startDownload(taskId);
+        if (started) {
+          // Refresh the list to show the new download
+          await refreshDownloadList();
+        }
+        return started;
       }
       return false;
     },
-    [createDownload, startDownload]
+    [createDownload, startDownload, refreshDownloadList]
   );
 
   return {
