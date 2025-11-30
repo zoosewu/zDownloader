@@ -20,11 +20,16 @@ import {
   Error as ErrorIcon,
   ExpandMore as ExpandMoreIcon,
   ViewModule as SegmentsIcon,
+  Refresh as RetryIcon,
+  Schedule as ScheduleIcon,
+  AccessTime as TimeIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { DownloadTask, DownloadStatus, SegmentStatus } from '../types/download';
 import ProgressBar from './ProgressBar';
 import useDownloads from '../hooks/useDownloads';
+import { retryDownload } from '../api/scheduler';
+import ScheduleDialog from './ScheduleDialog';
 
 interface DownloadItemProps {
   task: DownloadTask;
@@ -34,8 +39,22 @@ const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
   const { t } = useTranslation();
   const { startDownload, pauseDownload, cancelDownload } = useDownloads();
   const [showSegments, setShowSegments] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
 
   const hasSegments = task.segments && task.segments.length > 0;
+
+  const handleRetry = async () => {
+    try {
+      await retryDownload(task.id);
+    } catch (error) {
+      console.error('Failed to retry download:', error);
+    }
+  };
+
+  const formatDateTime = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleString();
+  };
 
   const getStatusColor = (status: DownloadStatus): 'default' | 'primary' | 'success' | 'error' | 'warning' => {
     switch (status) {
@@ -92,6 +111,26 @@ const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
             />
           </Box>
 
+          {/* Scheduled time indicator */}
+          {task.scheduledStart && task.status === 'Pending' && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TimeIcon fontSize="small" color="action" />
+              <Typography variant="caption" color="text.secondary">
+                {t('scheduler.scheduledFor')}: {formatDateTime(task.scheduledStart)}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Retry count indicator */}
+          {task.retryCount > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <RetryIcon fontSize="small" color="action" />
+              <Typography variant="caption" color="text.secondary">
+                {t('scheduler.retryAttempt', { count: task.retryCount, max: task.maxRetries || 3 })}
+              </Typography>
+            </Box>
+          )}
+
           {/* Progress bar */}
           {task.status === 'Downloading' || task.status === 'Paused' ? (
             <ProgressBar progress={task.progress} />
@@ -117,36 +156,68 @@ const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
           {/* Control buttons */}
           <Box sx={{ display: 'flex', gap: 1, marginTop: 1 }}>
             {task.status === 'Pending' || task.status === 'Paused' ? (
-              <IconButton
-                size="small"
-                color="primary"
-                aria-label={t('downloads.actions.start')}
-                onClick={() => startDownload(task.id)}
-              >
-                <PlayIcon />
-              </IconButton>
+              <Tooltip title={t('downloads.actions.start')}>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  aria-label={t('downloads.actions.start')}
+                  onClick={() => startDownload(task.id)}
+                >
+                  <PlayIcon />
+                </IconButton>
+              </Tooltip>
             ) : null}
 
             {task.status === 'Downloading' ? (
-              <IconButton
-                size="small"
-                color="warning"
-                aria-label={t('downloads.actions.pause')}
-                onClick={() => pauseDownload(task.id)}
-              >
-                <PauseIcon />
-              </IconButton>
+              <Tooltip title={t('downloads.actions.pause')}>
+                <IconButton
+                  size="small"
+                  color="warning"
+                  aria-label={t('downloads.actions.pause')}
+                  onClick={() => pauseDownload(task.id)}
+                >
+                  <PauseIcon />
+                </IconButton>
+              </Tooltip>
+            ) : null}
+
+            {task.status === 'Pending' && !task.scheduledStart ? (
+              <Tooltip title={t('scheduler.scheduleDownload')}>
+                <IconButton
+                  size="small"
+                  color="info"
+                  aria-label={t('scheduler.scheduleDownload')}
+                  onClick={() => setShowScheduleDialog(true)}
+                >
+                  <ScheduleIcon />
+                </IconButton>
+              </Tooltip>
+            ) : null}
+
+            {task.status === 'Failed' ? (
+              <Tooltip title={t('scheduler.retryDownload')}>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  aria-label={t('scheduler.retryDownload')}
+                  onClick={handleRetry}
+                >
+                  <RetryIcon />
+                </IconButton>
+              </Tooltip>
             ) : null}
 
             {task.status !== 'Completed' && task.status !== 'Failed' ? (
-              <IconButton
-                size="small"
-                color="error"
-                aria-label={t('downloads.actions.cancel')}
-                onClick={() => cancelDownload(task.id)}
-              >
-                <CancelIcon />
-              </IconButton>
+              <Tooltip title={t('downloads.actions.cancel')}>
+                <IconButton
+                  size="small"
+                  color="error"
+                  aria-label={t('downloads.actions.cancel')}
+                  onClick={() => cancelDownload(task.id)}
+                >
+                  <CancelIcon />
+                </IconButton>
+              </Tooltip>
             ) : null}
           </Box>
 
@@ -256,6 +327,14 @@ const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
           )}
         </Box>
       </CardContent>
+
+      {/* Schedule Dialog */}
+      <ScheduleDialog
+        open={showScheduleDialog}
+        task={task}
+        onClose={() => setShowScheduleDialog(false)}
+        onScheduled={() => setShowScheduleDialog(false)}
+      />
     </Card>
   );
 };
