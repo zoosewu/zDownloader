@@ -194,8 +194,8 @@ mod tests {
     #[test]
     fn test_scan_empty_directory() {
         // Should not panic on non-existent directory
-        let tasks = scan_unfinished_downloads();
+        let _tasks = scan_unfinished_downloads();
         // We can't assert the count as it depends on actual temp directory state
-        assert!(tasks.len() >= 0);
+        // Just verify the function completes without panicking
     }
 }

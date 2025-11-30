@@ -164,6 +164,7 @@ impl DownloadEngine {
     {
         const MAX_RETRIES: usize = 3;
         let mut retry_count = 0;
+        #[allow(unused_assignments)]
         let mut last_error = None;
 
         loop {

@@ -183,7 +183,6 @@ impl Drop for ModuleLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn test_module_loader_creation() {

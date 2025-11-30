@@ -215,7 +215,7 @@ mod tests {
         }
 
         // Create segment files with test data
-        for (i, segment) in segments.iter().enumerate() {
+        for (i, _segment) in segments.iter().enumerate() {
             let file_path = temp_dir.join(format!("segment_{}", i));
             let mut file = File::create(&file_path).unwrap();
             let data = format!("SEG{:02}TEST!", i); // Exactly 10 bytes each

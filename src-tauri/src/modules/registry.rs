@@ -152,7 +152,7 @@ impl Default for ModuleRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::interface::{AuthCredentials, CaptchaChallenge, CaptchaSolution, DownloadInfo};
+    use crate::modules::interface::{AuthCredentials, CaptchaChallenge, CaptchaSolution, DownloadInfo, ModuleResult};
     use std::collections::HashMap;
 
     // Mock module for testing

@@ -68,7 +68,7 @@ async fn handle_message(app: &AppHandle, message: NativeMessage) -> NativeRespon
         NativeMessage::AddDownload {
             url,
             filename,
-            referer,
+            referer: _,
         } => {
             // Create download task using existing commands
             match crate::commands::download::create_download(

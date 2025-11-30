@@ -13,7 +13,6 @@ use std::io::{BufRead, BufReader, Write};
 /// 192.168.1.1:3128
 /// proxy.example.com:8888
 /// ```
-
 /// Load proxies from cache file
 ///
 /// Returns empty vector if file doesn't exist or is empty
@@ -212,7 +211,7 @@ mod tests {
         let test_path = get_test_cache_path();
 
         // Override cache path for testing (we can't easily do this, so we'll test import/export instead)
-        let proxies = vec![
+        let _proxies = vec![
             ProxyInfo::new("127.0.0.1".to_string(), 8080),
             ProxyInfo::new("192.168.1.1".to_string(), 3128),
         ];

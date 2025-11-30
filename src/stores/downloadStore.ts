@@ -111,7 +111,7 @@ export const clearCompletedAtom = atom(
 // Helper atom to set all tasks (for refreshing from backend)
 export const setTasksAtom = atom(
   null,
-  (get, set, tasks: DownloadTask[]) => {
+  (_get, set, tasks: DownloadTask[]) => {
     set(downloadTasksAtom, tasks);
   }
 );
