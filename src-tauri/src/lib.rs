@@ -20,11 +20,15 @@ use commands::proxy::{
     clear_all_proxies, get_active_proxy_count, get_proxy_list, import_proxy_list, remove_proxy,
     reset_failed_proxies,
 };
+use commands::scheduler::{
+    cancel_scheduled_download, get_scheduled_downloads, retry_download, schedule_download,
+    SchedulerState,
+};
 use commands::settings::{
     export_settings, get_settings, import_settings, load_settings_from_file, reset_settings,
     update_settings, SettingsState,
 };
-use download::{scan_unfinished_downloads, DownloadEngine, DownloadQueue};
+use download::{scan_unfinished_downloads, DownloadEngine, DownloadQueue, DownloadScheduler};
 use modules::captcha::CaptchaManager;
 use proxy::pool::ProxyPool;
 use std::sync::Arc;
@@ -59,6 +63,12 @@ pub fn run() {
         proxy_pool: Arc::clone(&proxy_pool),
     };
 
+    // Initialize scheduler
+    let scheduler = Arc::new(Mutex::new(DownloadScheduler::new()));
+    let scheduler_state = SchedulerState {
+        scheduler: Arc::clone(&scheduler),
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -67,6 +77,7 @@ pub fn run() {
         .manage(app_state)
         .manage(captcha_manager)
         .manage(settings_state)
+        .manage(scheduler_state)
         .invoke_handler(tauri::generate_handler![
             greet,
             create_download,
@@ -94,6 +105,10 @@ pub fn run() {
             export_settings,
             import_settings,
             reset_settings,
+            schedule_download,
+            cancel_scheduled_download,
+            get_scheduled_downloads,
+            retry_download,
         ])
         .setup(|app| {
             // Scan for unfinished downloads and restore them

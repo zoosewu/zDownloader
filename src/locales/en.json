@@ -232,5 +232,22 @@
     "clearCompletedTitle": "Clear Completed",
     "exitConfirm": "There are active downloads. Are you sure you want to exit?",
     "exitTitle": "Confirm Exit"
+  },
+  "scheduler": {
+    "scheduleDownload": "Schedule Download",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "schedule": "Schedule",
+    "scheduling": "Scheduling...",
+    "scheduledFor": "Scheduled for",
+    "cancelSchedule": "Cancel Schedule",
+    "scheduleHint": "The download will automatically start at the specified time.",
+    "retryDownload": "Retry Download",
+    "retryAttempt": "Retry attempt {{count}} of {{max}}",
+    "errors": {
+      "invalidDateTime": "Please select date and time",
+      "pastTime": "Scheduled time must be in the future",
+      "scheduleFailed": "Failed to schedule download"
+    }
   }
 }

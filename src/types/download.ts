@@ -34,6 +34,12 @@ export interface DownloadTask {
   startedAt?: string;  // ISO 8601
   completedAt?: string;  // ISO 8601
   errorMessage?: string;
+  // Scheduling fields
+  scheduledStart?: string;  // ISO 8601 - when to automatically start
+  // Retry fields
+  retryCount: number;  // Current retry attempt (0 = first attempt)
+  maxRetries?: number;  // Override max retries from settings
+  lastRetryAt?: string;  // ISO 8601 - last retry timestamp
 }
 
 export enum DownloadStatus {

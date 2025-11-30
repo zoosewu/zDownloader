@@ -232,5 +232,22 @@
     "clearCompletedTitle": "清除已完成",
     "exitConfirm": "目前有進行中的下載，確定要結束嗎？",
     "exitTitle": "確認結束"
+  },
+  "scheduler": {
+    "scheduleDownload": "排程下載",
+    "selectDate": "選擇日期",
+    "selectTime": "選擇時間",
+    "schedule": "排程",
+    "scheduling": "排程中...",
+    "scheduledFor": "排程於",
+    "cancelSchedule": "取消排程",
+    "scheduleHint": "下載將在指定時間自動開始。",
+    "retryDownload": "重試下載",
+    "retryAttempt": "第 {{count}} 次重試，共 {{max}} 次",
+    "errors": {
+      "invalidDateTime": "請選擇日期和時間",
+      "pastTime": "排程時間必須在未來",
+      "scheduleFailed": "無法排程下載"
+    }
   }
 }

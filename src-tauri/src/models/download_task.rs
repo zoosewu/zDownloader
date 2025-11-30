@@ -20,6 +20,12 @@ pub struct DownloadTask {
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
+    // Scheduling fields
+    pub scheduled_start: Option<DateTime<Utc>>, // When to automatically start this download
+    // Retry fields
+    pub retry_count: u32,                       // Current retry attempt (0 = first attempt)
+    pub max_retries: Option<u32>,               // Override max retries from settings (None = use settings)
+    pub last_retry_at: Option<DateTime<Utc>>,  // Last retry timestamp
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,6 +58,10 @@ impl DownloadTask {
             started_at: None,
             completed_at: None,
             error_message: None,
+            scheduled_start: None,
+            retry_count: 0,
+            max_retries: None,
+            last_retry_at: None,
         }
     }
 }
