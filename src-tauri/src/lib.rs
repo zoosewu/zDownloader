@@ -20,6 +20,10 @@ use commands::proxy::{
     clear_all_proxies, get_active_proxy_count, get_proxy_list, import_proxy_list, remove_proxy,
     reset_failed_proxies,
 };
+use commands::settings::{
+    export_settings, get_settings, import_settings, load_settings_from_file, reset_settings,
+    update_settings, SettingsState,
+};
 use download::{scan_unfinished_downloads, DownloadEngine, DownloadQueue};
 use modules::captcha::CaptchaManager;
 use proxy::pool::ProxyPool;
@@ -36,6 +40,12 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize settings
+    let settings = Arc::new(Mutex::new(load_settings_from_file()));
+    let settings_state = SettingsState {
+        settings: Arc::clone(&settings),
+    };
+
     // Initialize proxy pool
     let proxy_pool = Arc::new(ProxyPool::new());
 
@@ -56,6 +66,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(app_state)
         .manage(captcha_manager)
+        .manage(settings_state)
         .invoke_handler(tauri::generate_handler![
             greet,
             create_download,
@@ -78,6 +89,11 @@ pub fn run() {
             submit_captcha_solution,
             cancel_captcha,
             get_active_captcha_count,
+            get_settings,
+            update_settings,
+            export_settings,
+            import_settings,
+            reset_settings,
         ])
         .setup(|app| {
             // Scan for unfinished downloads and restore them

@@ -85,9 +85,10 @@ async fn handle_add_download(
 
     // Get app state
     let state = app.state::<AppState>();
+    let settings_state = app.state::<crate::commands::settings::SettingsState>();
 
     // Create download task
-    match crate::commands::download::create_download(req.url.clone(), req.filename, state.clone())
+    match crate::commands::download::create_download(req.url.clone(), req.filename, state.clone(), settings_state)
         .await
     {
         Ok(task_id) => {

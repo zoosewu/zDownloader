@@ -1,7 +1,10 @@
 // Settings Page - App settings and Proxy management
 import { Box, Container, Typography, Tabs, Tab } from '@mui/material';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ProxySettings from '../components/ProxySettings';
+import GeneralSettings from '../components/GeneralSettings';
+import AdvancedSettings from '../components/AdvancedSettings';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -26,6 +29,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -35,31 +39,27 @@ export default function SettingsPage() {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        設定
+        {t('settings.title')}
       </Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs value={currentTab} onChange={handleTabChange}>
-          <Tab label="Proxy 管理" />
-          <Tab label="一般設定" />
-          <Tab label="進階設定" />
+          <Tab label={t('settings.general')} />
+          <Tab label={t('settings.proxy')} />
+          <Tab label={t('settings.advanced')} />
         </Tabs>
       </Box>
 
       <TabPanel value={currentTab} index={0}>
-        <ProxySettings />
+        <GeneralSettings />
       </TabPanel>
 
       <TabPanel value={currentTab} index={1}>
-        <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-          <Typography>一般設定功能開發中...</Typography>
-        </Box>
+        <ProxySettings />
       </TabPanel>
 
       <TabPanel value={currentTab} index={2}>
-        <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-          <Typography>進階設定功能開發中...</Typography>
-        </Box>
+        <AdvancedSettings />
       </TabPanel>
     </Container>
   );

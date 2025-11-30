@@ -1,4 +1,5 @@
 // Download command handlers - Tauri commands for download management
+use crate::commands::settings::SettingsState;
 use crate::download::{DownloadEngine, DownloadQueue};
 use crate::models::DownloadTask;
 use crate::proxy::pool::ProxyPool;
@@ -21,13 +22,27 @@ pub async fn create_download(
     url: String,
     filename: Option<String>,
     state: State<'_, AppState>,
+    settings_state: State<'_, SettingsState>,
 ) -> Result<String, String> {
     // Extract filename from URL if not provided
     let filename =
         filename.unwrap_or_else(|| url.split('/').next_back().unwrap_or("download").to_string());
 
-    // Create download directory
-    let downloads_dir = get_downloads_dir();
+    // Get download directory from settings
+    let downloads_dir = {
+        let settings = settings_state.settings.lock().await;
+        settings.default_download_dir.clone()
+    };
+
+    // Ensure download directory exists
+    if let Err(e) = std::fs::create_dir_all(&downloads_dir) {
+        eprintln!("Warning: Failed to create download directory: {}", e);
+        // Fall back to hardcoded directory if settings directory fails
+        let fallback_dir = get_downloads_dir();
+        std::fs::create_dir_all(&fallback_dir)
+            .map_err(|e| format!("Failed to create download directory: {}", e))?;
+    }
+
     let filepath = downloads_dir.join(&filename).to_string_lossy().to_string();
 
     // Create task

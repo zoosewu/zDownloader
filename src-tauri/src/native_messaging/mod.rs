@@ -75,6 +75,7 @@ async fn handle_message(app: &AppHandle, message: NativeMessage) -> NativeRespon
                 url.clone(),
                 Some(filename.clone()),
                 app.state(),
+                app.state(),
             )
             .await
             {
