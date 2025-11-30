@@ -8,11 +8,25 @@
     "pause": "Pause",
     "resume": "Resume",
     "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
     "settings": "Settings",
-    "history": "History"
+    "history": "History",
+    "close": "Close",
+    "save": "Save",
+    "add": "Add",
+    "edit": "Edit",
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "apply": "Apply",
+    "reset": "Reset"
   },
   "downloads": {
     "title": "Download List",
+    "addDownload": "Add Download",
     "noTasks": "No download tasks",
     "unknown": "Unknown",
     "urlLabel": "Download URL",
@@ -29,8 +43,10 @@
       "failed": "Failed",
       "cancelled": "Cancelled",
       "cancelling": "Cancelling",
-      "verifyingintegrity": "Verifying",
-      "mergingsegments": "Merging"
+      "verifyingintegrity": "Verifying Integrity",
+      "mergingsegments": "Merging Segments",
+      "active": "Active",
+      "pausedCount": "Paused"
     },
     "actions": {
       "download": "Start Download",
@@ -38,18 +54,148 @@
       "pause": "Pause",
       "resume": "Resume",
       "cancel": "Cancel",
-      "paste": "Paste"
+      "delete": "Delete",
+      "retry": "Retry",
+      "paste": "Paste",
+      "pauseAll": "Pause All",
+      "resumeAll": "Resume All",
+      "clearCompleted": "Clear Completed",
+      "openFile": "Open File",
+      "openFolder": "Open Folder",
+      "copyUrl": "Copy URL"
     },
     "errors": {
       "emptyUrl": "Please enter a download URL",
       "invalidUrl": "Invalid URL format, please enter HTTP/HTTPS URL",
       "invalidClipboard": "Clipboard content is not a valid URL",
-      "clipboardPermission": "Cannot access clipboard, please check browser permissions"
+      "clipboardPermission": "Cannot access clipboard, please check browser permissions",
+      "startFailed": "Failed to start download",
+      "pauseFailed": "Failed to pause download",
+      "resumeFailed": "Failed to resume download",
+      "cancelFailed": "Failed to cancel download",
+      "deleteFailed": "Failed to delete download",
+      "queueControlFailed": "Queue control failed: {{error}}",
+      "networkError": "Network error: {{error}}",
+      "fileAccessError": "File access error: {{error}}",
+      "insufficientSpace": "Insufficient disk space"
+    },
+    "batch": {
+      "import": "Batch Import",
+      "importSuccess": "Successfully imported {{count}} download tasks",
+      "importError": "Batch import failed: {{error}}",
+      "selectFile": "Select URL file",
+      "fileFormat": "Text file with one URL per line"
     },
     "clipboard": {
       "detected": "URL detected in clipboard",
       "accept": "Use this URL",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "monitoring": "Clipboard monitoring enabled"
+    },
+    "statistics": {
+      "totalDownloaded": "Total Downloaded",
+      "currentSpeed": "Current Speed",
+      "averageSpeed": "Average Speed",
+      "timeRemaining": "Time Remaining",
+      "timeElapsed": "Time Elapsed",
+      "activeDownloads": "Active Downloads",
+      "completedDownloads": "Completed Downloads",
+      "failedDownloads": "Failed Downloads"
+    },
+    "filters": {
+      "all": "All",
+      "downloading": "Downloading",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "download": "Download",
+    "proxy": "Proxy",
+    "advanced": "Advanced",
+    "about": "About",
+    "downloadPath": "Download Path",
+    "selectPath": "Select Folder",
+    "maxConcurrent": "Max Concurrent Downloads",
+    "maxThreads": "Max Threads per Download",
+    "autoStart": "Auto-start Downloads",
+    "clipboardMonitor": "Monitor Clipboard",
+    "notifications": "Enable Notifications",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto"
+  },
+  "proxy": {
+    "title": "Proxy Management",
+    "enabled": "Enable Proxy",
+    "addProxy": "Add Proxy",
+    "editProxy": "Edit Proxy",
+    "removeProxy": "Remove Proxy",
+    "testProxy": "Test Proxy",
+    "protocol": "Protocol",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "testing": "Testing",
+      "failed": "Failed"
+    },
+    "health": "Health",
+    "latency": "Latency",
+    "successRate": "Success Rate",
+    "errors": {
+      "invalidHost": "Invalid host address",
+      "invalidPort": "Invalid port number",
+      "testFailed": "Proxy test failed",
+      "connectionFailed": "Connection failed"
+    }
+  },
+  "captcha": {
+    "title": "CAPTCHA Verification",
+    "description": "Please solve the CAPTCHA to continue downloading",
+    "submit": "Submit",
+    "refresh": "Refresh",
+    "solving": "Solving CAPTCHA...",
+    "success": "CAPTCHA solved successfully",
+    "failed": "CAPTCHA verification failed",
+    "timeout": "CAPTCHA timeout"
+  },
+  "format": {
+    "speed": "{{value}}/s",
+    "size": "{{value}}",
+    "time": {
+      "seconds": "{{count}} second",
+      "seconds_plural": "{{count}} seconds",
+      "minutes": "{{count}} minute",
+      "minutes_plural": "{{count}} minutes",
+      "hours": "{{count}} hour",
+      "hours_plural": "{{hours}} hours",
+      "days": "{{count}} day",
+      "days_plural": "{{count}} days"
+    },
+    "percentage": "{{value}}%"
+  },
+  "notifications": {
+    "downloadStarted": "Download started",
+    "downloadCompleted": "Download completed: {{filename}}",
+    "downloadFailed": "Download failed: {{filename}}",
+    "allDownloadsCompleted": "All downloads completed",
+    "proxyFailed": "All proxies failed, switched to direct connection"
+  },
+  "dialogs": {
+    "deleteConfirm": "Are you sure you want to delete this download?",
+    "deleteTitle": "Confirm Delete",
+    "clearCompletedConfirm": "Are you sure you want to clear all completed downloads?",
+    "clearCompletedTitle": "Clear Completed",
+    "exitConfirm": "There are active downloads. Are you sure you want to exit?",
+    "exitTitle": "Confirm Exit"
   }
 }

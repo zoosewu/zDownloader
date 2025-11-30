@@ -8,11 +8,25 @@
     "pause": "暫停",
     "resume": "繼續",
     "cancel": "取消",
+    "delete": "刪除",
+    "retry": "重試",
     "settings": "設定",
-    "history": "歷史記錄"
+    "history": "歷史記錄",
+    "close": "關閉",
+    "save": "儲存",
+    "add": "新增",
+    "edit": "編輯",
+    "remove": "移除",
+    "confirm": "確認",
+    "yes": "是",
+    "no": "否",
+    "ok": "確定",
+    "apply": "套用",
+    "reset": "重設"
   },
   "downloads": {
     "title": "下載列表",
+    "addDownload": "新增下載",
     "noTasks": "暫無下載任務",
     "unknown": "未知",
     "urlLabel": "下載連結",
@@ -29,8 +43,8 @@
       "failed": "失敗",
       "cancelled": "已取消",
       "cancelling": "取消中",
-      "verifyingintegrity": "驗證中",
-      "mergingsegments": "合併中",
+      "verifyingintegrity": "驗證完整性中",
+      "mergingsegments": "合併分段中",
       "active": "進行中",
       "pausedCount": "已暫停"
     },
@@ -40,10 +54,15 @@
       "pause": "暫停",
       "resume": "繼續",
       "cancel": "取消",
+      "delete": "刪除",
+      "retry": "重試",
       "paste": "貼上",
       "pauseAll": "全部暫停",
       "resumeAll": "全部繼續",
-      "clearCompleted": "清除已完成"
+      "clearCompleted": "清除已完成",
+      "openFile": "開啟檔案",
+      "openFolder": "開啟資料夾",
+      "copyUrl": "複製連結"
     },
     "errors": {
       "emptyUrl": "請輸入下載連結",
@@ -51,17 +70,132 @@
       "invalidClipboard": "剪貼簿內容不是有效的網址",
       "clipboardPermission": "無法存取剪貼簿，請檢查瀏覽器權限",
       "startFailed": "無法開始下載",
-      "queueControlFailed": "佇列控制失敗: {{error}}"
+      "pauseFailed": "無法暫停下載",
+      "resumeFailed": "無法繼續下載",
+      "cancelFailed": "無法取消下載",
+      "deleteFailed": "無法刪除下載",
+      "queueControlFailed": "佇列控制失敗: {{error}}",
+      "networkError": "網路錯誤: {{error}}",
+      "fileAccessError": "檔案存取錯誤: {{error}}",
+      "insufficientSpace": "磁碟空間不足"
     },
     "batch": {
       "import": "批次匯入",
       "importSuccess": "成功匯入 {{count}} 個下載任務",
-      "importError": "批次匯入失敗: {{error}}"
+      "importError": "批次匯入失敗: {{error}}",
+      "selectFile": "選擇網址檔案",
+      "fileFormat": "文字檔案，每行一個網址"
     },
     "clipboard": {
       "detected": "偵測到剪貼簿中的連結",
       "accept": "使用此連結",
-      "dismiss": "忽略"
+      "dismiss": "忽略",
+      "monitoring": "剪貼簿監控已啟用"
+    },
+    "statistics": {
+      "totalDownloaded": "總下載量",
+      "currentSpeed": "目前速度",
+      "averageSpeed": "平均速度",
+      "timeRemaining": "剩餘時間",
+      "timeElapsed": "已用時間",
+      "activeDownloads": "進行中下載",
+      "completedDownloads": "已完成下載",
+      "failedDownloads": "失敗下載"
+    },
+    "filters": {
+      "all": "全部",
+      "downloading": "下載中",
+      "paused": "已暫停",
+      "completed": "已完成",
+      "failed": "失敗"
     }
+  },
+  "settings": {
+    "title": "設定",
+    "general": "一般",
+    "download": "下載",
+    "proxy": "代理",
+    "advanced": "進階",
+    "about": "關於",
+    "downloadPath": "下載路徑",
+    "selectPath": "選擇資料夾",
+    "maxConcurrent": "最大同時下載數",
+    "maxThreads": "每個下載的最大執行緒數",
+    "autoStart": "自動開始下載",
+    "clipboardMonitor": "監控剪貼簿",
+    "notifications": "啟用通知",
+    "language": "語言",
+    "theme": "主題",
+    "themeLight": "淺色",
+    "themeDark": "深色",
+    "themeAuto": "自動"
+  },
+  "proxy": {
+    "title": "代理管理",
+    "enabled": "啟用代理",
+    "addProxy": "新增代理",
+    "editProxy": "編輯代理",
+    "removeProxy": "移除代理",
+    "testProxy": "測試代理",
+    "protocol": "通訊協定",
+    "host": "主機",
+    "port": "連接埠",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "status": {
+      "active": "使用中",
+      "inactive": "未使用",
+      "testing": "測試中",
+      "failed": "失敗"
+    },
+    "health": "健康狀態",
+    "latency": "延遲",
+    "successRate": "成功率",
+    "errors": {
+      "invalidHost": "無效的主機位址",
+      "invalidPort": "無效的連接埠號碼",
+      "testFailed": "代理測試失敗",
+      "connectionFailed": "連線失敗"
+    }
+  },
+  "captcha": {
+    "title": "驗證碼驗證",
+    "description": "請解決驗證碼以繼續下載",
+    "submit": "提交",
+    "refresh": "重新整理",
+    "solving": "正在解決驗證碼...",
+    "success": "驗證碼驗證成功",
+    "failed": "驗證碼驗證失敗",
+    "timeout": "驗證碼逾時"
+  },
+  "format": {
+    "speed": "{{value}}/s",
+    "size": "{{value}}",
+    "time": {
+      "seconds": "{{count}} 秒",
+      "seconds_plural": "{{count}} 秒",
+      "minutes": "{{count}} 分鐘",
+      "minutes_plural": "{{count}} 分鐘",
+      "hours": "{{count}} 小時",
+      "hours_plural": "{{count}} 小時",
+      "days": "{{count}} 天",
+      "days_plural": "{{count}} 天"
+    },
+    "percentage": "{{value}}%"
+  },
+  "notifications": {
+    "downloadStarted": "下載已開始",
+    "downloadCompleted": "下載完成: {{filename}}",
+    "downloadFailed": "下載失敗: {{filename}}",
+    "allDownloadsCompleted": "所有下載已完成",
+    "proxyFailed": "所有代理失敗，已切換至直接連線"
+  },
+  "dialogs": {
+    "deleteConfirm": "確定要刪除此下載嗎？",
+    "deleteTitle": "確認刪除",
+    "clearCompletedConfirm": "確定要清除所有已完成的下載嗎？",
+    "clearCompletedTitle": "清除已完成",
+    "exitConfirm": "目前有進行中的下載，確定要結束嗎？",
+    "exitTitle": "確認結束"
   }
 }
