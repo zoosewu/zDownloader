@@ -3,6 +3,7 @@ mod commands;
 mod download;
 mod models;
 mod modules;
+pub mod native_messaging;
 mod proxy;
 mod storage;
 mod utils;
@@ -112,6 +113,15 @@ pub fn run() {
             let app_handle2 = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 start_clipboard_monitor(app_handle2).await;
+            });
+
+            // Start HTTP server for Chrome extension integration
+            let app_handle3 = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = native_messaging::http_server::start_http_server(app_handle3).await
+                {
+                    eprintln!("Failed to start HTTP server for Chrome extension: {}", e);
+                }
             });
 
             Ok(())

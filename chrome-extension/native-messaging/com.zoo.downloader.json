@@ -1,0 +1,9 @@
+{
+  "name": "com.zoo.downloader",
+  "description": "Zoo Downloader Native Messaging Host",
+  "path": "/path/to/zoo-downloader",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://EXTENSION_ID_HERE/"
+  ]
+}

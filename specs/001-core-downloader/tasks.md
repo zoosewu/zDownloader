@@ -248,15 +248,15 @@
 
 ### Chrome 擴充套件
 
-- [ ] T089 [P] [US6] 建立擴充套件結構在 chrome-extension/：manifest.json, background.js, content.js
-- [ ] T090 [P] [US6] 實作連結偵測在 chrome-extension/content.js：偵測頁面中的下載連結
-- [ ] T091 [US6] 實作背景腳本在 chrome-extension/background.js：與應用程式通訊
+- [X] T089 [P] [US6] 建立擴充套件結構在 chrome-extension/：manifest.json, background.js, content.js
+- [X] T090 [P] [US6] 實作連結偵測在 chrome-extension/content.js：偵測頁面中的下載連結
+- [X] T091 [US6] 實作背景腳本在 chrome-extension/background.js：與應用程式通訊
 
 ### Native Messaging
 
-- [ ] T092 [US6] 實作 Native Messaging host 在 src-tauri/src/native_messaging/：接收來自 Chrome 的訊息
-- [ ] T093 [US6] 配置 Native Messaging manifest 在 chrome-extension/native-messaging/：Windows/macOS/Linux 路徑
-- [ ] T094 [US6] 整合到下載引擎在 src-tauri/src/main.rs：處理從 Chrome 傳來的 URL
+- [X] T092 [US6] 實作 Native Messaging host 在 src-tauri/src/native_messaging/：接收來自 Chrome 的訊息
+- [X] T093 [US6] 配置 Native Messaging manifest 在 chrome-extension/native-messaging/：Windows/macOS/Linux 路徑
+- [X] T094 [US6] 整合到下載引擎在 src-tauri/src/main.rs：處理從 Chrome 傳來的 URL
 
 **Checkpoint**: User Story 6 完成 - Chrome 瀏覽器整合運作正常
 
