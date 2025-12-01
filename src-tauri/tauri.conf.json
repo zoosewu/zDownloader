@@ -12,13 +12,28 @@
   "app": {
     "windows": [
       {
-        "title": "zoo-downloader",
+        "label": "main",
+        "title": "Zoo Downloader",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "minWidth": 600,
+        "minHeight": 400,
+        "center": true,
+        "closable": true,
+        "minimizable": true,
+        "maximizable": true,
+        "decorations": true,
+        "transparent": false,
+        "skipTaskbar": false
       }
     ],
     "security": {
       "csp": null
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/icon.png",
+      "tooltip": "Zoo Downloader"
     }
   },
   "bundle": {

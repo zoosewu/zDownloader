@@ -5,3 +5,4 @@ pub mod error;
 pub mod events;
 pub mod notification;
 pub mod parser;
+pub mod tray;

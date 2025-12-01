@@ -68,6 +68,38 @@ function App() {
     };
   }, [setUnfinishedDownloads, setShowResumeDialog]);
 
+  // Listen for tray pause all event
+  useEffect(() => {
+    const unlisten = listen('tray-pause-all', async () => {
+      console.log('Tray pause all triggered');
+      try {
+        await invoke('pause_all_downloads');
+      } catch (error) {
+        console.error('Failed to pause all downloads:', error);
+      }
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, []);
+
+  // Listen for tray resume all event
+  useEffect(() => {
+    const unlisten = listen('tray-resume-all', async () => {
+      console.log('Tray resume all triggered');
+      try {
+        await invoke('resume_all_downloads');
+      } catch (error) {
+        console.error('Failed to resume all downloads:', error);
+      }
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, []);
+
   const handleResumeAll = async () => {
     try {
       for (const task of unfinishedDownloads) {

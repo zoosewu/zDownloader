@@ -270,15 +270,15 @@
 
 ### 排程系統
 
-- [ ] T095 [US7] 實作排程管理在 src-tauri/src/download/scheduler.rs：任務排程、時間觸發
-- [ ] T096 [US7] 實作自動重試在 src-tauri/src/download/retry.rs：可配置次數和間隔
+- [x] T095 [US7] 實作排程管理在 src-tauri/src/download/scheduler.rs：任務排程、時間觸發
+- [x] T096 [US7] 實作自動重試在 src-tauri/src/download/retry.rs：可配置次數和間隔（整合在 scheduler.rs 中的 RetryManager）
 - [ ] T097 [US7] 實作背景服務在 src-tauri/src/background_service.rs：應用程式關閉時仍可執行排程
 
 ### 排程 UI
 
-- [ ] T098 [US7] 建立排程對話框在 src/components/ScheduleDialog.tsx：選擇日期和時間
-- [ ] T099 [US7] 更新 DownloadItem 在 src/components/DownloadItem.tsx：顯示排程時間
-- [ ] T100 [US7] 建立重試設定在 src/components/RetrySettings.tsx：配置重試次數和間隔
+- [x] T098 [US7] 建立排程對話框在 src/components/ScheduleDialog.tsx：選擇日期和時間
+- [x] T099 [US7] 更新 DownloadItem 在 src/components/DownloadItem.tsx：顯示排程時間
+- [x] T100 [US7] 建立重試設定在 src/components/RetrySettings.tsx：配置重試次數和間隔（整合在 AdvancedSettings.tsx 中）
 
 **Checkpoint**: User Story 7 完成 - 排程下載和自動重試運作正常
 
@@ -297,26 +297,26 @@
 
 ### 系統托盤
 
-- [ ] T103 [US8] 實作系統托盤在 src-tauri/src/main.rs：使用 Tauri SystemTray API
-- [ ] T104 [US8] 實作托盤圖示進度在 src-tauri/src/utils/tray.rs：顯示總下載進度
-- [ ] T105 [US8] 實作托盤選單在 src-tauri/src/utils/tray.rs：顯示/隱藏、暫停全部、退出
+- [x] T103 [US8] 實作系統托盤在 src-tauri/src/lib.rs：使用 Tauri tray-icon feature
+- [x] T104 [US8] 實作托盤圖示進度在 src-tauri/src/utils/tray.rs：顯示總下載進度（update_tray_tooltip 函數）
+- [x] T105 [US8] 實作托盤選單在 src-tauri/src/utils/tray.rs：顯示/隱藏、暫停全部、繼續全部、退出
 
 ### 多語言與主題
 
-- [ ] T106 [P] [US8] 完善翻譯檔案在 src/locales/zh-TW.json：所有 UI 文字的繁體中文翻譯
-- [ ] T107 [P] [US8] 完善翻譯檔案在 src/locales/en.json：所有 UI 文字的英文翻譯
-- [ ] T108 [P] [US8] 完善翻譯檔案在 src/locales/ja.json：所有 UI 文字的日文翻譯
-- [ ] T109 [US8] 實作語言切換在 src/App.tsx：根據設定動態切換語言
-- [ ] T110 [US8] 實作主題切換在 src/App.tsx：淺色/深色模式切換
+- [x] T106 [P] [US8] 完善翻譯檔案在 src/locales/zh-TW.json：所有 UI 文字的繁體中文翻譯
+- [x] T107 [P] [US8] 完善翻譯檔案在 src/locales/en.json：所有 UI 文字的英文翻譯
+- [ ] T108 [P] [US8] 完善翻譯檔案在 src/locales/ja.json：所有 UI 文字的日文翻譯（僅完成基礎翻譯）
+- [x] T109 [US8] 實作語言切換在 src/App.tsx：根據設定動態切換語言
+- [x] T110 [US8] 實作主題切換在 src/App.tsx：淺色/深色模式切換
 
 ### 設定管理
 
-- [ ] T111 [P] [US8] 實作 get_settings 命令在 src-tauri/src/commands/settings.rs
-- [ ] T112 [P] [US8] 實作 update_settings 命令在 src-tauri/src/commands/settings.rs
-- [ ] T113 [P] [US8] 實作 export_settings 命令在 src-tauri/src/commands/settings.rs
-- [ ] T114 [P] [US8] 實作 import_settings 命令在 src-tauri/src/commands/settings.rs
-- [ ] T115 [US8] 建立設定對話框在 src/components/SettingsDialog.tsx：所有設定項目的 UI
-- [ ] T116 [US8] 完善設定頁面在 src/pages/SettingsPage.tsx：整合所有設定元件
+- [x] T111 [P] [US8] 實作 get_settings 命令在 src-tauri/src/commands/settings.rs
+- [x] T112 [P] [US8] 實作 update_settings 命令在 src-tauri/src/commands/settings.rs
+- [x] T113 [P] [US8] 實作 export_settings 命令在 src-tauri/src/commands/settings.rs
+- [x] T114 [P] [US8] 實作 import_settings 命令在 src-tauri/src/commands/settings.rs
+- [x] T115 [US8] 建立設定對話框在 src/components/SettingsDialog.tsx：所有設定項目的 UI（實作為 GeneralSettings 和 AdvancedSettings）
+- [x] T116 [US8] 完善設定頁面在 src/pages/SettingsPage.tsx：整合所有設定元件
 
 ### 下載歷史
 

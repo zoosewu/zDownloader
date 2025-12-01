@@ -155,6 +155,11 @@ pub fn run() {
                 }
             });
 
+            // Initialize system tray
+            if let Err(e) = utils::tray::create_tray(app.handle()) {
+                eprintln!("Failed to create system tray: {}", e);
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())
