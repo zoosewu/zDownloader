@@ -1,5 +1,4 @@
 // HTTP bridge for development - allows browser to communicate with Tauri backend
-use std::sync::Arc;
 use warp::Filter;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
