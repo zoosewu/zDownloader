@@ -1,5 +1,5 @@
 // Scheduler API - Tauri command wrappers for download scheduling and retry
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 import { DownloadTask } from '../types/download';
 
 /**

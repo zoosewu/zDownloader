@@ -1,6 +1,6 @@
 // Custom hook for download control logic - calling Tauri commands
 import { useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 import { useSetAtom } from 'jotai';
 import { removeTaskAtom, setTasksAtom } from '../stores/downloadStore';
 import { DownloadTask } from '../types/download';

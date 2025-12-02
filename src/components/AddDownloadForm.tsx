@@ -8,7 +8,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { useAtomValue } from 'jotai';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 import { useNavigation } from '../hooks/useNavigation';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { settingsAtom } from '../stores/settingsStore';

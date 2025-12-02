@@ -12,7 +12,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useAtom } from 'jotai';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 import {
   currentCaptchaAtom,
   showCaptchaDialogAtom,

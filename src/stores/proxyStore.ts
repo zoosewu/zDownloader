@@ -1,6 +1,6 @@
 // Jotai atoms for proxy state management
 import { atom } from 'jotai';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 import { ProxyInfo, ProxyStatus } from '../types/proxy';
 
 // Proxy list atom - all proxies

@@ -1,5 +1,5 @@
 // Zoo Downloader - Main Application Component
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import {
   ThemeProvider,
   CssBaseline,
@@ -8,6 +8,7 @@ import {
   Toolbar,
   Typography,
   Button,
+  CircularProgress,
 } from '@mui/material';
 import { useAtom } from 'jotai';
 import { listen } from '@tauri-apps/api/event';
@@ -27,12 +28,38 @@ import {
   showResumeDialogAtom,
   downloadTasksAtom,
 } from './stores/downloadStore';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, waitForTauri } from './utils/tauri';
 import { getSettings } from './api/settings';
 import './i18n';
 
 function App() {
-  useClipboard(); // Start clipboard monitoring
+  const [tauriReady, setTauriReady] = useState(false);
+
+  // Wait for Tauri to be ready
+  useEffect(() => {
+    const initTauri = async () => {
+      const ready = await waitForTauri();
+      if (ready) {
+        // Verify with a test command
+        try {
+          await invoke('greet', { name: 'Test' });
+          setTauriReady(true);
+        } catch (error) {
+          console.error('[App] Failed to invoke test command:', error);
+          // Still set ready to true to allow the app to load
+          setTauriReady(true);
+        }
+      } else {
+        console.error('[App] Tauri failed to initialize');
+        // Set ready anyway to show error state instead of infinite loading
+        setTauriReady(true);
+      }
+    };
+
+    initTauri();
+  }, []);
+
+  useClipboard(tauriReady); // Start clipboard monitoring only when Tauri is ready
   const { currentPage, navigateTo } = useNavigation();
   const [currentTheme] = useAtom(themeAtom);
   const [, setSettings] = useAtom(settingsAtom);
@@ -138,6 +165,31 @@ function App() {
   const handleCloseDialog = () => {
     setShowResumeDialog(false);
   };
+
+  // Show loading screen while Tauri is initializing
+  if (!tauriReady) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h6" color="text.secondary">
+            正在初始化 Zoo Downloader...
+          </Typography>
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>

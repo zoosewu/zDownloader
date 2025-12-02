@@ -5,7 +5,7 @@
   "identifier": "com.zoo.zoo-downloader",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:10020",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },

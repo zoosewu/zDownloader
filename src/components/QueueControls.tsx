@@ -7,7 +7,7 @@ import {
   DeleteSweep as ClearIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 
 interface QueueControlsProps {
   activeCount: number;

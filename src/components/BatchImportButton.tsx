@@ -4,7 +4,7 @@ import { Button, CircularProgress } from '@mui/material';
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 
 interface BatchImportButtonProps {
   onImportSuccess?: (taskIds: string[]) => void;

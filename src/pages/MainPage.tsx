@@ -42,7 +42,12 @@ const MainPage: React.FC = () => {
 
   // Load initial download list
   useEffect(() => {
-    refreshDownloadList();
+    // Add a small delay to ensure Tauri API is ready
+    const timer = setTimeout(() => {
+      refreshDownloadList();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [refreshDownloadList]);
 
   const handleBatchImportSuccess = (taskIds: string[]) => {

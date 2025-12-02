@@ -1,5 +1,5 @@
 // Settings API - Tauri command wrappers for settings management
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauri';
 import { AppSettings } from '../types/settings';
 
 /**
