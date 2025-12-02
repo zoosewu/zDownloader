@@ -65,12 +65,19 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     setLoading(true);
 
     try {
-      // Validate URL with backend detector
-      const detectionResult = await invoke<UrlDetectionResult>('detect_url', { url: url.trim() });
-      if (!detectionResult.isValid) {
-        setError('此網址不是有效的下載連結');
-        setLoading(false);
-        return;
+      // Try to validate URL with backend detector (optional)
+      // If Tauri API is not ready, skip validation and let backend handle it
+      try {
+        const detectionResult = await invoke<UrlDetectionResult>('detect_url', { url: url.trim() });
+        if (!detectionResult.isValid) {
+          setError('此網址不是有效的下載連結');
+          setLoading(false);
+          return;
+        }
+      } catch (detectionError) {
+        // Silently skip frontend validation if detect_url fails
+        // Backend will validate the URL when creating the download
+        console.log('[AddDownloadForm] URL detection unavailable, skipping frontend validation');
       }
 
       const taskId = await invoke<string>('create_download_with_path', {

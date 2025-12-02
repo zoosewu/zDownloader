@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "./scripts/run-tauri-dev.sh",
-    "build:win": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc"
+    "build:win": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "build:debug": "tauri build --debug --runner cargo-xwin --target x86_64-pc-windows-msvc"
   },
   "dependencies": {
     "@emotion/react": "^11.0.0",

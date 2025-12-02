@@ -42,7 +42,12 @@ export function useClipboard(tauriReady: boolean = false) {
       if (processingRef.current) return;
 
       try {
-        const content = await invoke<string>('get_clipboard_content');
+        const content = await invoke<string>('get_clipboard_content').catch(err => {
+          console.log('[useClipboard] Failed to get clipboard content (Tauri may not be ready):', err);
+          return '';
+        });
+
+        if (!content) return;
 
         if (content !== lastContentRef.current) {
           processingRef.current = true;
@@ -76,8 +81,10 @@ export function useClipboard(tauriReady: boolean = false) {
             } else {
               console.log('[useClipboard] URL detected but not valid for download');
             }
-          } catch (e) {
-            console.log('[useClipboard] URL detection failed:', e);
+          } catch (e: any) {
+            // Silently handle errors during detection
+            // This can happen if Tauri API is not fully ready or in non-Tauri environments
+            console.log('[useClipboard] URL detection failed (this is normal if Tauri is not ready):', e?.message || e);
           } finally {
             processingRef.current = false;
           }
