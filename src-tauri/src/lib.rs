@@ -1,6 +1,7 @@
 // Zoo Downloader - Cross-platform downloader
 mod commands;
 mod download;
+mod http_bridge;
 mod models;
 mod modules;
 pub mod native_messaging;
@@ -170,6 +171,23 @@ pub fn run() {
                     eprintln!("Failed to start HTTP server for Chrome extension: {}", e);
                 }
             });
+
+            // Start HTTP bridge for development (browser-based frontend)
+            // Check environment variable to enable this
+            let enable_http_bridge = std::env::var("TAURI_HTTP_BRIDGE")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse::<bool>()
+                .unwrap_or(false);
+
+            if enable_http_bridge {
+                let app_handle4 = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    println!("[Tauri] HTTP Bridge enabled for development");
+                    http_bridge::start_http_bridge(app_handle4, 3030).await;
+                });
+            } else {
+                println!("[Tauri] HTTP Bridge disabled (production mode)");
+            }
 
             // Initialize system tray
             if let Err(e) = utils::tray::create_tray(app.handle()) {

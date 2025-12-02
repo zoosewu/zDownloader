@@ -1,4 +1,5 @@
 #!/bin/bash
+export TAURI_HTTP_BRIDGE=true
 
 echo "========================================="
 echo "Tauri Dev Mode Launcher for Docker"
