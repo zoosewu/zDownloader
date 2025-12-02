@@ -5,6 +5,7 @@ use crate::models::DownloadTask;
 use crate::proxy::pool::ProxyPool;
 use crate::storage::get_downloads_dir;
 use crate::utils::parser::parse_url_file;
+use crate::utils::url_validator;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
@@ -44,6 +45,50 @@ pub async fn create_download(
     }
 
     let filepath = downloads_dir.join(&filename).to_string_lossy().to_string();
+
+    // Create task
+    let task = DownloadTask::new(url, filename, filepath);
+    let task_id = task.id;
+
+    // Add to queue
+    let mut queue = state.queue.lock().await;
+    queue.add_task(task);
+
+    Ok(task_id.to_string())
+}
+
+#[tauri::command]
+pub async fn create_download_with_path(
+    url: String,
+    filename: Option<String>,
+    download_path: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    // Validate URL format using url_validator utility
+    url_validator::validate_url_format(&url)?;
+
+    // Extract filename from URL if not provided
+    let filename =
+        filename.unwrap_or_else(|| url.split('/').next_back().unwrap_or("download").to_string());
+
+    // Validate download path
+    let path = PathBuf::from(&download_path);
+    if !path.exists() {
+        return Err(format!("Download path does not exist: {}", download_path));
+    }
+    if !path.is_dir() {
+        return Err(format!("Download path is not a directory: {}", download_path));
+    }
+
+    // Check write permission by attempting to create a test file
+    let test_file = path.join(".zoo_downloader_test");
+    if std::fs::write(&test_file, b"test").is_err() {
+        return Err(format!("Download path is not writable: {}", download_path));
+    }
+    std::fs::remove_file(&test_file).ok();
+
+    // Build full file path
+    let filepath = path.join(&filename).to_string_lossy().to_string();
 
     // Create task
     let task = DownloadTask::new(url, filename, filepath);

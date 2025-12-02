@@ -1,17 +1,16 @@
 // Main page - integrates UrlInput, BatchImport, QueueControls and DownloadList
 import React, { useEffect } from 'react';
-import { Container, Box, Typography, Snackbar, Alert } from '@mui/material';
+import { Container, Box, Typography, Snackbar, Alert, Button } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from 'react-i18next';
-import { useAtom, useAtomValue } from 'jotai';
-import UrlInput from '../components/UrlInput';
+import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
 import BatchImportButton from '../components/BatchImportButton';
 import QueueControls from '../components/QueueControls';
 import useTauriEvents from '../hooks/useTauriEvents';
 import useDownloads from '../hooks/useDownloads';
+import { useNavigation } from '../hooks/useNavigation';
 import {
-  clipboardUrlAtom,
-  showClipboardHintAtom,
   activeDownloadsAtom,
   pausedDownloadsAtom,
   completedDownloadsAtom,
@@ -19,9 +18,8 @@ import {
 
 const MainPage: React.FC = () => {
   const { t } = useTranslation();
-  const { createAndStartDownload, refreshDownloadList } = useDownloads();
-  const [clipboardUrl, setClipboardUrl] = useAtom(clipboardUrlAtom);
-  const [showClipboardHint, setShowClipboardHint] = useAtom(showClipboardHintAtom);
+  const { refreshDownloadList } = useDownloads();
+  const { navigateTo } = useNavigation();
 
   // Get download counts for queue controls
   const activeDownloads = useAtomValue(activeDownloadsAtom);
@@ -46,27 +44,6 @@ const MainPage: React.FC = () => {
   useEffect(() => {
     refreshDownloadList();
   }, [refreshDownloadList]);
-
-  const handleSubmit = async (url: string, filename?: string) => {
-    const success = await createAndStartDownload(url, filename);
-    if (!success) {
-      setSnackbar({
-        open: true,
-        message: t('downloads.errors.startFailed'),
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleAcceptClipboard = () => {
-    setShowClipboardHint(false);
-    // The URL will be set in UrlInput component
-  };
-
-  const handleDismissClipboard = () => {
-    setShowClipboardHint(false);
-    setClipboardUrl(null);
-  };
 
   const handleBatchImportSuccess = (taskIds: string[]) => {
     setSnackbar({
@@ -104,7 +81,7 @@ const MainPage: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ paddingY: 4 }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Page title and batch import */}
+        {/* Page title and action buttons */}
         <Box
           sx={{
             display: 'flex',
@@ -115,20 +92,20 @@ const MainPage: React.FC = () => {
           <Typography variant="h4" component="h1">
             {t('app.title')}
           </Typography>
-          <BatchImportButton
-            onImportSuccess={handleBatchImportSuccess}
-            onImportError={handleBatchImportError}
-          />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigateTo('add-download')}
+            >
+              新增下載
+            </Button>
+            <BatchImportButton
+              onImportSuccess={handleBatchImportSuccess}
+              onImportError={handleBatchImportError}
+            />
+          </Box>
         </Box>
-
-        {/* URL input */}
-        <UrlInput
-          onSubmit={handleSubmit}
-          showClipboardHint={showClipboardHint}
-          clipboardUrl={clipboardUrl || undefined}
-          onAcceptClipboard={handleAcceptClipboard}
-          onDismissClipboard={handleDismissClipboard}
-        />
 
         {/* Queue controls */}
         <QueueControls

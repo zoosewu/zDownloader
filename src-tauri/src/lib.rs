@@ -11,10 +11,11 @@ mod utils;
 use commands::captcha::{
     cancel_captcha, get_active_captcha_count, get_pending_captchas, submit_captcha_solution,
 };
+use commands::clipboard::{detect_url, get_clipboard_content};
 use commands::download::{
-    cancel_download, clear_completed_downloads, create_download, get_download_list,
-    import_batch_downloads, pause_all_downloads, pause_download, resume_all_downloads,
-    retry_download_direct, start_download, AppState,
+    cancel_download, clear_completed_downloads, create_download, create_download_with_path,
+    get_download_list, import_batch_downloads, pause_all_downloads, pause_download,
+    resume_all_downloads, retry_download_direct, start_download, AppState,
 };
 use commands::proxy::{
     clear_all_proxies, get_active_proxy_count, get_proxy_list, import_proxy_list, remove_proxy,
@@ -30,11 +31,17 @@ use commands::settings::{
 };
 use download::{scan_unfinished_downloads, DownloadEngine, DownloadQueue, DownloadScheduler};
 use modules::captcha::CaptchaManager;
+use modules::url_detector::ModuleRegistry;
 use proxy::pool::ProxyPool;
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 use utils::clipboard::start_clipboard_monitor;
+
+// State for URL detector module registry
+pub struct ModuleRegistryState {
+    pub registry: Arc<Mutex<ModuleRegistry>>,
+}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -69,6 +76,11 @@ pub fn run() {
         scheduler: Arc::clone(&scheduler),
     };
 
+    // Initialize URL detector module registry
+    let module_registry_state = ModuleRegistryState {
+        registry: Arc::new(Mutex::new(ModuleRegistry::new())),
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -78,9 +90,11 @@ pub fn run() {
         .manage(captcha_manager)
         .manage(settings_state)
         .manage(scheduler_state)
+        .manage(module_registry_state)
         .invoke_handler(tauri::generate_handler![
             greet,
             create_download,
+            create_download_with_path,
             start_download,
             pause_download,
             cancel_download,
@@ -90,6 +104,8 @@ pub fn run() {
             resume_all_downloads,
             clear_completed_downloads,
             retry_download_direct,
+            get_clipboard_content,
+            detect_url,
             import_proxy_list,
             get_proxy_list,
             remove_proxy,

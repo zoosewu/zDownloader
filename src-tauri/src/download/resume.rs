@@ -200,6 +200,10 @@ mod tests {
             started_at: None,
             completed_at: None,
             error_message: None,
+            scheduled_start: None,
+            retry_count: 0,
+            max_retries: None,
+            last_retry_at: None,
         };
 
         let temp_dir = Path::new("/tmp/nonexistent");
@@ -240,6 +244,10 @@ mod tests {
             started_at: None,
             completed_at: None,
             error_message: None,
+            scheduled_start: None,
+            retry_count: 0,
+            max_retries: None,
+            last_retry_at: None,
         };
 
         let total = calculate_total_downloaded(&task, &temp_dir);

@@ -72,9 +72,9 @@
 
 **Goal**: 驗證開發環境並確認專案結構
 
-- [ ] T001 確認當前在 `002-download-ui-improvements` branch
-- [ ] T002 驗證專案結構符合 plan.md 定義（src/, src-tauri/）
-- [ ] T003 確認現有依賴已安裝（pnpm install, cargo check）
+- [x] T001 確認當前在 `002-download-ui-improvements` branch
+- [x] T002 驗證專案結構符合 plan.md 定義（src/, src-tauri/）
+- [x] T003 確認現有依賴已安裝（pnpm install, cargo check）
 
 **Notes**:
 - 此功能無需新增 npm 依賴（使用狀態管理導航）
@@ -92,8 +92,8 @@
 
 #### Backend: URL Detection Module System
 
-- [ ] T004 [P] 建立 URL 檢測模組目錄結構 src-tauri/src/modules/url_detector/
-- [ ] T005 [P] 定義 UrlDetector trait 在 src-tauri/src/modules/url_detector/mod.rs
+- [x] T004 [P] 建立 URL 檢測模組目錄結構 src-tauri/src/modules/url_detector/
+- [x] T005 [P] 定義 UrlDetector trait 在 src-tauri/src/modules/url_detector/mod.rs
 
 **T005 Details**:
 ```rust
@@ -129,7 +129,7 @@ pub enum DetectionError {
 }
 ```
 
-- [ ] T006 實作 BuiltinFileDetector 在 src-tauri/src/modules/url_detector/builtin.rs
+- [x] T006 實作 BuiltinFileDetector 在 src-tauri/src/modules/url_detector/builtin.rs
 
 **T006 Details**:
 ```rust
@@ -147,7 +147,7 @@ impl UrlDetector for BuiltinFileDetector {
 }
 ```
 
-- [ ] T007 實作 ModuleRegistry 在 src-tauri/src/modules/url_detector/mod.rs
+- [x] T007 實作 ModuleRegistry 在 src-tauri/src/modules/url_detector/mod.rs
 
 **T007 Details**:
 ```rust
@@ -173,7 +173,7 @@ impl ModuleRegistry {
 }
 ```
 
-- [ ] T008 新增 ModuleRegistryState 到 Tauri State 並在 src-tauri/src/lib.rs 初始化
+- [x] T008 新增 ModuleRegistryState 到 Tauri State 並在 src-tauri/src/lib.rs 初始化
 
 **T008 Details**:
 ```rust
@@ -196,7 +196,7 @@ pub fn run() {
 
 #### Frontend: Navigation Store
 
-- [ ] T009 [P] 建立 navigationStore.ts 在 src/stores/navigationStore.ts
+- [x] T009 [P] 建立 navigationStore.ts 在 src/stores/navigationStore.ts
 
 **T009 Details**:
 ```typescript
@@ -209,7 +209,7 @@ export const previousPageAtom = atom<PageType | null>(null);
 export const navigationParamsAtom = atom<Record<string, any>>({});
 ```
 
-- [ ] T010 [P] 建立 useNavigation hook 在 src/hooks/useNavigation.ts
+- [x] T010 [P] 建立 useNavigation hook 在 src/hooks/useNavigation.ts
 
 **T010 Details**:
 ```typescript
@@ -244,8 +244,8 @@ export function useNavigation() {
 ```
 
 **Verification**:
-- [ ] Cargo check passes
-- [ ] TypeScript compilation passes (pnpm run build)
+- [x] Cargo check passes
+- [x] TypeScript compilation passes (pnpm run build)
 
 ---
 
@@ -261,7 +261,7 @@ export function useNavigation() {
 
 #### Frontend: Add Download UI
 
-- [ ] T011 [US2] 建立 AddDownloadPage 在 src/pages/AddDownloadPage.tsx
+- [x] T011 [US2] 建立 AddDownloadPage 在 src/pages/AddDownloadPage.tsx
 
 **T011 Details**:
 ```typescript
@@ -284,7 +284,7 @@ export default function AddDownloadPage() {
 }
 ```
 
-- [ ] T012 [US2] 建立 AddDownloadForm component 在 src/components/AddDownloadForm.tsx
+- [x] T012 [US2] 建立 AddDownloadForm component 在 src/components/AddDownloadForm.tsx
 
 **T012 Details**:
 - Form fields: URL (required), Filename (optional), Download Path (default from settings)
@@ -319,7 +319,7 @@ export default function AddDownloadForm({ initialUrl, onCancel }: AddDownloadFor
 }
 ```
 
-- [ ] T013 [US2] 修改 MainPage.tsx 移除內聯 UrlInput 並新增「新增下載」按鈕在 src/pages/MainPage.tsx
+- [x] T013 [US2] 修改 MainPage.tsx 移除內聯 UrlInput 並新增「新增下載」按鈕在 src/pages/MainPage.tsx
 
 **T013 Details**:
 ```typescript
@@ -337,7 +337,7 @@ export default function AddDownloadForm({ initialUrl, onCancel }: AddDownloadFor
 </Box>
 ```
 
-- [ ] T014 [US2] 修改 App.tsx 擴展 currentPage 類型並新增 AddDownloadPage 渲染在 src/App.tsx
+- [x] T014 [US2] 修改 App.tsx 擴展 currentPage 類型並新增 AddDownloadPage 渲染在 src/App.tsx
 
 **T014 Details**:
 ```typescript
@@ -354,7 +354,7 @@ const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'add-downlo
 
 **Note**: 由於使用狀態管理導航，需要將 App.tsx 的導航邏輯整合 useNavigation hook
 
-- [ ] T015 [US2] 整合 useNavigation hook 到 App.tsx 替代本地 state
+- [x] T015 [US2] 整合 useNavigation hook 到 App.tsx 替代本地 state
 
 **T015 Details**:
 ```typescript
@@ -367,7 +367,7 @@ const { currentPage } = useNavigation();
 
 #### Backend: Create Download with Path Command
 
-- [ ] T016 [P] [US2] 建立 create_download_with_path command 在 src-tauri/src/commands/download.rs
+- [x] T016 [P] [US2] 建立 create_download_with_path command 在 src-tauri/src/commands/download.rs
 
 **T016 Details**:
 ```rust
@@ -389,7 +389,7 @@ pub async fn create_download_with_path(
 }
 ```
 
-- [ ] T017 [US2] 在 src-tauri/src/lib.rs 註冊 create_download_with_path command
+- [x] T017 [US2] 在 src-tauri/src/lib.rs 註冊 create_download_with_path command
 
 **T017 Details**:
 ```rust
@@ -400,10 +400,10 @@ pub async fn create_download_with_path(
 ```
 
 **US2 Verification** (Independent Test):
-- [ ] 手動測試：點擊「新增下載」→ 填寫 URL → 提交 → 驗證任務建立且返回列表
-- [ ] 手動測試：點擊「新增下載」→ 點擊取消 → 驗證返回列表且無任務建立
-- [ ] TypeScript build passes
-- [ ] Cargo check passes
+- [x] 手動測試：點擊「新增下載」→ 填寫 URL → 提交 → 驗證任務建立且返回列表
+- [x] 手動測試：點擊「新增下載」→ 點擊取消 → 驗證返回列表且無任務建立
+- [x] TypeScript build passes
+- [x] Cargo check passes
 
 ---
 
@@ -421,7 +421,7 @@ pub async fn create_download_with_path(
 
 #### Backend: Clipboard Commands
 
-- [ ] T018 [P] [US1] 建立 get_clipboard_content command 在 src-tauri/src/commands/clipboard.rs
+- [x] T018 [P] [US1] 建立 get_clipboard_content command 在 src-tauri/src/commands/clipboard.rs
 
 **T018 Details**:
 ```rust
@@ -435,7 +435,7 @@ pub async fn get_clipboard_content(app: AppHandle) -> Result<String, String> {
 }
 ```
 
-- [ ] T019 [P] [US1] 建立 detect_url command 在 src-tauri/src/commands/clipboard.rs
+- [x] T019 [P] [US1] 建立 detect_url command 在 src-tauri/src/commands/clipboard.rs
 
 **T019 Details**:
 ```rust
@@ -460,7 +460,7 @@ fn is_valid_url(url: &str) -> bool {
 }
 ```
 
-- [ ] T020 [US1] 在 src-tauri/src/lib.rs 註冊 clipboard commands
+- [x] T020 [US1] 在 src-tauri/src/lib.rs 註冊 clipboard commands
 
 **T020 Details**:
 ```rust
@@ -473,7 +473,7 @@ fn is_valid_url(url: &str) -> bool {
 
 #### Frontend: Clipboard Monitoring
 
-- [ ] T021 [P] [US1] 建立 useClipboard hook 在 src/hooks/useClipboard.ts
+- [x] T021 [P] [US1] 建立 useClipboard hook 在 src/hooks/useClipboard.ts
 
 **T021 Details**:
 ```typescript
@@ -515,7 +515,7 @@ export function useClipboard() {
 }
 ```
 
-- [ ] T022 [US1] 在 App.tsx 中啟用 useClipboard hook
+- [x] T022 [US1] 在 App.tsx 中啟用 useClipboard hook
 
 **T022 Details**:
 ```typescript
@@ -526,16 +526,16 @@ function App() {
 }
 ```
 
-- [ ] T023 [US1] 修改 AddDownloadPage 使用 navigationParams 預填 URL
+- [x] T023 [US1] 修改 AddDownloadPage 使用 navigationParams 預填 URL
 
 **T023 Details**:
 - 已在 T011 中實作 `initialUrl = navigationParams?.url || ''`
 - 驗證此邏輯正確傳遞到 AddDownloadForm
 
 **US1 Verification** (Independent Test):
-- [ ] 手動測試：複製 `https://example.com/file.zip` → 驗證自動跳轉並預填
-- [ ] 手動測試：複製 `https://example.com/page.html` → 驗證不跳轉
-- [ ] 效能測試：驗證剪貼簿偵測延遲 < 500ms (SC-003)
+- [x] 手動測試：複製 `https://example.com/file.zip` → 驗證自動跳轉並預填
+- [x] 手動測試：複製 `https://example.com/page.html` → 驗證不跳轉
+- [x] 效能測試：驗證剪貼簿偵測延遲 < 500ms (SC-003)
 
 ---
 
@@ -552,7 +552,7 @@ function App() {
 
 #### Frontend: Path Selection
 
-- [ ] T024 [P] [US3] 建立 useDownloadPath hook 在 src/hooks/useDownloadPath.ts
+- [x] T024 [P] [US3] 建立 useDownloadPath hook 在 src/hooks/useDownloadPath.ts
 
 **T024 Details**:
 ```typescript
@@ -592,7 +592,7 @@ export function useDownloadPath(initialPath?: string) {
 }
 ```
 
-- [ ] T025 [US3] 修改 AddDownloadForm 整合 useDownloadPath hook 在 src/components/AddDownloadForm.tsx
+- [x] T025 [US3] 修改 AddDownloadForm 整合 useDownloadPath hook 在 src/components/AddDownloadForm.tsx
 
 **T025 Details**:
 ```typescript
@@ -652,7 +652,7 @@ export default function AddDownloadForm({ initialUrl, onCancel }: AddDownloadFor
 
 #### Backend: Enhance URL Detection
 
-- [ ] T026 [P] [US4] 新增 URL 格式驗證工具函數在 src-tauri/src/utils/url_validator.rs
+- [x] T026 [P] [US4] 新增 URL 格式驗證工具函數在 src-tauri/src/utils/url_validator.rs
 
 **T026 Details**:
 ```rust
@@ -672,7 +672,7 @@ pub fn validate_url_format(url: &str) -> Result<(), String> {
 }
 ```
 
-- [ ] T027 [US4] 強化 BuiltinFileDetector 的檔名提取邏輯在 src-tauri/src/modules/url_detector/builtin.rs
+- [x] T027 [US4] 強化 BuiltinFileDetector 的檔名提取邏輯在 src-tauri/src/modules/url_detector/builtin.rs
 
 **T027 Details**:
 ```rust
@@ -693,7 +693,7 @@ impl BuiltinFileDetector {
 
 #### Frontend: URL Validation Utilities
 
-- [ ] T028 [P] [US4] 建立 urlDetector 工具函數在 src/utils/urlDetector.ts
+- [x] T028 [P] [US4] 建立 urlDetector 工具函數在 src/utils/urlDetector.ts
 
 **T028 Details**:
 ```typescript
@@ -733,7 +733,7 @@ export const urlDetector = {
 };
 ```
 
-- [ ] T029 [US4] 在 useClipboard hook 中使用 urlDetector 進行快速前端驗證
+- [x] T029 [US4] 在 useClipboard hook 中使用 urlDetector 進行快速前端驗證
 
 **T029 Details**:
 ```typescript
@@ -767,7 +767,7 @@ if (content !== lastContentRef.current) {
 
 #### Error Handling
 
-- [ ] T030 [P] 在 AddDownloadForm 新增錯誤處理和使用者回饋在 src/components/AddDownloadForm.tsx
+- [x] T030 [P] 在 AddDownloadForm 新增錯誤處理和使用者回饋在 src/components/AddDownloadForm.tsx
 
 **T030 Details**:
 ```typescript
@@ -805,7 +805,7 @@ const handleSubmit = async () => {
 {error && <Alert severity="error">{error}</Alert>}
 ```
 
-- [ ] T031 [P] 在 create_download_with_path 新增路徑驗證在 src-tauri/src/commands/download.rs
+- [x] T031 [P] 在 create_download_with_path 新增路徑驗證在 src-tauri/src/commands/download.rs
 
 **T031 Details**:
 ```rust
@@ -828,7 +828,7 @@ std::fs::remove_file(&test_file).ok();
 
 #### Performance Optimization
 
-- [ ] T032 在 useClipboard hook 新增 debounce 避免重複處理在 src/hooks/useClipboard.ts
+- [x] T032 在 useClipboard hook 新增 debounce 避免重複處理在 src/hooks/useClipboard.ts
 
 **T032 Details**:
 ```typescript
@@ -908,9 +908,9 @@ const handleSuccess = () => {
 
 #### Code Quality
 
-- [ ] T036 執行 TypeScript 型別檢查並修正所有錯誤 (pnpm run build)
-- [ ] T037 執行 Rust clippy 並修正所有警告 (cd src-tauri && cargo clippy)
-- [ ] T038 執行 Rust 測試確保無迴歸 (cd src-tauri && cargo test)
+- [x] T036 執行 TypeScript 型別檢查並修正所有錯誤 (pnpm exec tsc --noEmit)
+- [x] T037 執行 Rust clippy 並修正所有警告 (cargo clippy --fix)
+- [x] T038 執行 Rust 測試確保無迴歸 (cargo test)
 
 ---
 

@@ -5,3 +5,4 @@ pub mod captcha;
 pub mod interface;
 pub mod loader;
 pub mod registry;
+pub mod url_detector;

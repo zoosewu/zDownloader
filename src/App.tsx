@@ -1,5 +1,5 @@
 // Zoo Downloader - Main Application Component
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect } from 'react';
 import {
   ThemeProvider,
   CssBaseline,
@@ -16,7 +16,10 @@ import { themeAtom, settingsAtom } from './stores/settingsStore';
 import { lightTheme, darkTheme } from './styles/theme';
 import MainPage from './pages/MainPage';
 import SettingsPage from './pages/SettingsPage';
+import AddDownloadPage from './pages/AddDownloadPage';
 import ResumeDialog from './components/ResumeDialog';
+import { useNavigation } from './hooks/useNavigation';
+import { useClipboard } from './hooks/useClipboard';
 import CaptchaDialog from './components/CaptchaDialog';
 import LoginDialog from './components/LoginDialog';
 import {
@@ -29,7 +32,8 @@ import { getSettings } from './api/settings';
 import './i18n';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'main' | 'settings'>('main');
+  useClipboard(); // Start clipboard monitoring
+  const { currentPage, navigateTo } = useNavigation();
   const [currentTheme] = useAtom(themeAtom);
   const [, setSettings] = useAtom(settingsAtom);
   const [unfinishedDownloads, setUnfinishedDownloads] = useAtom(unfinishedDownloadsAtom);
@@ -154,16 +158,16 @@ function App() {
             </Typography>
             <Button
               color="inherit"
-              onClick={() => setCurrentPage('main')}
+              onClick={() => navigateTo('main')}
               sx={{
-                fontWeight: currentPage === 'main' ? 'bold' : 'normal',
+                fontWeight: currentPage === 'main' || currentPage === 'add-download' ? 'bold' : 'normal',
               }}
             >
               下載
             </Button>
             <Button
               color="inherit"
-              onClick={() => setCurrentPage('settings')}
+              onClick={() => navigateTo('settings')}
               sx={{
                 fontWeight: currentPage === 'settings' ? 'bold' : 'normal',
               }}
@@ -177,6 +181,7 @@ function App() {
         <Box sx={{ flex: 1, overflow: 'auto' }}>
           {currentPage === 'main' && <MainPage />}
           {currentPage === 'settings' && <SettingsPage />}
+          {currentPage === 'add-download' && <AddDownloadPage />}
         </Box>
 
         {/* Dialogs */}
