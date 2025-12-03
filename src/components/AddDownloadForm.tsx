@@ -1,5 +1,5 @@
 // Add Download Form - Form for adding new downloads with validation
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -38,7 +38,88 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   const { path: downloadPath, openDirectoryPicker, errorMessage: pathError } = useDownloadPath(settings.defaultDownloadDir);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isUserEditedFilename, setIsUserEditedFilename] = useState(false); // Track if user manually edited filename
   const { navigateTo } = useNavigation();
+
+  // Auto-paste from clipboard when form opens (if no initialUrl)
+  useEffect(() => {
+    const checkClipboard = async () => {
+      // Skip if we already have an initial URL
+      if (initialUrl) {
+        console.log('[AddDownloadForm] Initial URL provided, skipping clipboard check');
+        return;
+      }
+
+      // Check if Tauri is available
+      if (!isTauriAvailable()) {
+        console.log('[AddDownloadForm] Tauri not available, skipping clipboard check');
+        return;
+      }
+
+      try {
+        console.log('[AddDownloadForm] Checking clipboard for download URL...');
+        const content = await invoke<string>('get_clipboard_content');
+
+        if (!content) {
+          console.log('[AddDownloadForm] Clipboard is empty');
+          return;
+        }
+
+        console.log('[AddDownloadForm] Clipboard content:', content.substring(0, 100));
+
+        // Validate if it's a download URL
+        const result = await invoke<UrlDetectionResult>('detect_url', { url: content });
+        console.log('[AddDownloadForm] Detection result:', result);
+
+        if (result.isValid) {
+          console.log('[AddDownloadForm] Valid download URL found in clipboard, auto-filling');
+          setUrl(content);
+          if (result.suggestedFilename) {
+            setFilename(result.suggestedFilename);
+          }
+        } else {
+          console.log('[AddDownloadForm] Clipboard content is not a valid download URL');
+        }
+      } catch (e) {
+        // Silently fail - clipboard auto-paste is optional
+        console.log('[AddDownloadForm] Failed to check clipboard:', e);
+      }
+    };
+
+    checkClipboard();
+  }, []); // Only run once on mount
+
+  // Auto-parse filename when URL changes
+  useEffect(() => {
+    // Skip if URL is empty or if user has manually edited the filename
+    if (!url || isUserEditedFilename) {
+      return;
+    }
+
+    // Skip if Tauri is not available
+    if (!isTauriAvailable()) {
+      return;
+    }
+
+    // Debounce the URL detection
+    const timeoutId = setTimeout(async () => {
+      try {
+        console.log('[AddDownloadForm] URL changed, detecting filename...');
+        const result = await invoke<UrlDetectionResult>('detect_url', { url: url.trim() });
+        console.log('[AddDownloadForm] Detection result:', result);
+
+        if (result.isValid && result.suggestedFilename) {
+          console.log('[AddDownloadForm] Auto-filling filename:', result.suggestedFilename);
+          setFilename(result.suggestedFilename);
+        }
+      } catch (e) {
+        // Silently fail - auto-parsing is optional
+        console.log('[AddDownloadForm] Failed to auto-parse filename:', e);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [url, isUserEditedFilename]);
 
   const isValidUrl = (urlString: string): boolean => {
     try {
@@ -161,7 +242,10 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       <TextField
         label="檔案名稱（選填）"
         value={filename}
-        onChange={(e) => setFilename(e.target.value)}
+        onChange={(e) => {
+          setFilename(e.target.value);
+          setIsUserEditedFilename(true); // Mark as user-edited to prevent auto-overwrite
+        }}
         onKeyPress={handleKeyPress}
         fullWidth
         margin="normal"

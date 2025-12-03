@@ -17,8 +17,9 @@ interface UrlDetectionResult {
 
 export function useClipboard(tauriReady: boolean = false) {
   const [detectedUrl, setDetectedUrl] = useState<string | null>(null);
-  const lastContentRef = useRef<string>('');
+  const lastContentRef = useRef<string | null>(null); // null = initial state, not yet checked
   const processingRef = useRef<boolean>(false);
+  const isFirstCheckRef = useRef<boolean>(true); // Track if this is the first clipboard check
   const { navigateTo } = useNavigation();
   const settings = useAtomValue(settingsAtom);
 
@@ -51,7 +52,16 @@ export function useClipboard(tauriReady: boolean = false) {
 
         if (content !== lastContentRef.current) {
           processingRef.current = true;
+          const isInitialLoad = isFirstCheckRef.current;
+          isFirstCheckRef.current = false;
           lastContentRef.current = content;
+
+          if (isInitialLoad) {
+            console.log('[useClipboard] Initial clipboard check (app startup), content detected but not navigating');
+            processingRef.current = false;
+            return;
+          }
+
           console.log('[useClipboard] New clipboard content detected:', content.substring(0, 100));
 
           // Quick client-side validation using urlDetector
