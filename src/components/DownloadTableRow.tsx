@@ -17,6 +17,7 @@ interface DownloadTableRowProps {
   task: DownloadTask;
   isSelected: boolean;
   onClick: (taskId: string) => void;
+  columnWidths?: Record<string, number>;
 }
 
 /**
@@ -66,7 +67,7 @@ function getStatusIcon(status: DownloadStatus) {
  * Only re-renders when task data actually changes
  */
 const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
-  ({ task, isSelected, onClick }) => {
+  ({ task, isSelected, onClick, columnWidths }) => {
     const { t } = useTranslation();
 
     // Format task data for display
@@ -77,6 +78,16 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
     const handleClick = () => {
       onClick(task.id);
     };
+
+    // Helper to get cell width styles
+    const getCellWidthStyle = (columnKey: string) =>
+      columnWidths
+        ? {
+            width: columnWidths[columnKey],
+            minWidth: columnWidths[columnKey],
+            maxWidth: columnWidths[columnKey],
+          }
+        : {};
 
     return (
       <TableRow
@@ -94,11 +105,10 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         }}
       >
         {/* Filename Column */}
-        <TableCell>
+        <TableCell sx={getCellWidthStyle('filename')}>
           <Tooltip title={task.filename} arrow placement="top-start">
             <Box
               sx={{
-                maxWidth: 300,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -110,11 +120,13 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         </TableCell>
 
         {/* File Size Column */}
-        <TableCell align="right">{displayData.filesizeFormatted}</TableCell>
+        <TableCell align="right" sx={getCellWidthStyle('fileSize')}>
+          {displayData.filesizeFormatted}
+        </TableCell>
 
         {/* Progress Column */}
-        <TableCell>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 120 }}>
+        <TableCell sx={getCellWidthStyle('progress')}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box sx={{ flex: 1 }}>
               <LinearProgress
                 variant="determinate"
@@ -136,10 +148,12 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         </TableCell>
 
         {/* Speed Column */}
-        <TableCell align="right">{displayData.speedFormatted}</TableCell>
+        <TableCell align="right" sx={getCellWidthStyle('currentSpeed')}>
+          {displayData.speedFormatted}
+        </TableCell>
 
         {/* Status Column */}
-        <TableCell>
+        <TableCell sx={getCellWidthStyle('status')}>
           <Chip
             label={displayData.statusLabel}
             color={getStatusColor(task.status)}
@@ -149,19 +163,19 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         </TableCell>
 
         {/* Priority Column */}
-        <TableCell align="center">
+        <TableCell align="center" sx={getCellWidthStyle('priority')}>
           {formatSpeedPriority(task.speedPriority, t)}
         </TableCell>
 
         {/* Created At Column */}
-        <TableCell>
+        <TableCell sx={getCellWidthStyle('createdAt')}>
           <Tooltip title={task.createdAt} arrow>
             <span>{createdAtFormatted}</span>
           </Tooltip>
         </TableCell>
 
         {/* Remaining Time Column */}
-        <TableCell align="right">
+        <TableCell align="right" sx={getCellWidthStyle('timeRemaining')}>
           {task.status === 'Downloading' && displayData.remainingTimeFormatted !== '--' ? (
             <Tooltip title={t('downloads.statistics.timeRemaining')} arrow>
               <span>{displayData.remainingTimeFormatted}</span>
@@ -185,7 +199,8 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
       prevProps.task.filesize === nextProps.task.filesize &&
       prevProps.task.createdAt === nextProps.task.createdAt &&
       prevProps.task.speedPriority === nextProps.task.speedPriority &&
-      prevProps.isSelected === nextProps.isSelected
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.columnWidths === nextProps.columnWidths
     );
   }
 );

@@ -1,12 +1,13 @@
 // Main page - integrates UrlInput, BatchImport, QueueControls and DownloadList
 import React, { useEffect } from 'react';
-import { Container, Box, Typography, Snackbar, Alert, Button } from '@mui/material';
+import { Box, Snackbar, Alert, Button } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
 import BatchImportButton from '../components/BatchImportButton';
 import QueueControls from '../components/QueueControls';
+import Footer from '../components/Footer';
 import useTauriEvents from '../hooks/useTauriEvents';
 import useDownloads from '../hooks/useDownloads';
 import { useNavigation } from '../hooks/useNavigation';
@@ -98,35 +99,20 @@ const MainPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ paddingY: 4 }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Page title and action buttons */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Typography variant="h4" component="h1">
-            {t('app.title')}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigateTo('add-download')}
-            >
-              新增下載
-            </Button>
-            <BatchImportButton
-              onImportSuccess={handleBatchImportSuccess}
-              onImportError={handleBatchImportError}
-            />
-          </Box>
-        </Box>
-
-        {/* Queue controls */}
+    <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Action buttons bar */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          px: 2,
+          py: 1.5,
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        {/* Queue controls on the left */}
         <QueueControls
           activeCount={activeDownloads.length}
           pausedCount={pausedDownloads.length}
@@ -135,9 +121,30 @@ const MainPage: React.FC = () => {
           onControlError={handleQueueControlError}
         />
 
-        {/* Download list */}
+        {/* Action buttons on the right */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigateTo('add-download')}
+            size="small"
+          >
+            新增下載
+          </Button>
+          <BatchImportButton
+            onImportSuccess={handleBatchImportSuccess}
+            onImportError={handleBatchImportError}
+          />
+        </Box>
+      </Box>
+
+      {/* Download list - fills remaining space */}
+      <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <DownloadList />
       </Box>
+
+      {/* Footer - app info and statistics */}
+      <Footer />
 
       {/* Snackbar for notifications */}
       <Snackbar
@@ -154,7 +161,7 @@ const MainPage: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 };
 

@@ -1,5 +1,5 @@
-// Download table component - table view for all download items
-import React from 'react';
+// Download table component - table view for all download items with resizable columns
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -20,18 +20,73 @@ interface DownloadTableProps {
   tasks: DownloadTask[];
 }
 
+// Column identifiers and default widths
+type ColumnKey = 'filename' | 'fileSize' | 'progress' | 'currentSpeed' | 'status' | 'priority' | 'createdAt' | 'timeRemaining';
+const DEFAULT_COLUMN_WIDTHS: Record<ColumnKey, number> = {
+  filename: 200,
+  fileSize: 100,
+  progress: 180,
+  currentSpeed: 100,
+  status: 120,
+  priority: 80,
+  createdAt: 130,
+  timeRemaining: 120,
+};
+
 /**
- * Download table component with sticky header
+ * Download table component with sticky header and resizable columns
  * Displays all download tasks in a tabular format
  */
 const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
   const { t } = useTranslation();
   const { selectedTaskId, toggleSelection } = useSelectedDownload();
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(DEFAULT_COLUMN_WIDTHS);
+  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
 
   // Handle row click - toggle selection
   const handleRowClick = (taskId: string) => {
     toggleSelection(taskId);
   };
+
+  // Handle resize start
+  const handleResizeStart = (e: React.MouseEvent, column: ColumnKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingColumn(column);
+    startXRef.current = e.clientX;
+    startWidthRef.current = columnWidths[column];
+  };
+
+  // Handle mouse move during resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingColumn) return;
+
+      const diff = e.clientX - startXRef.current;
+      const newWidth = Math.max(50, startWidthRef.current + diff); // Minimum 50px
+
+      setColumnWidths((prev) => ({
+        ...prev,
+        [resizingColumn]: newWidth,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setResizingColumn(null);
+    };
+
+    if (resizingColumn) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingColumn]);
 
   // Empty state
   if (tasks.length === 0) {
@@ -52,6 +107,47 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
     );
   }
 
+  // Render resizable header cell
+  const renderHeaderCell = (
+    column: ColumnKey,
+    label: string,
+    align: 'left' | 'right' | 'center' = 'left'
+  ) => (
+    <TableCell
+      key={column}
+      align={align}
+      sx={{
+        fontWeight: 'bold',
+        width: columnWidths[column],
+        minWidth: columnWidths[column],
+        maxWidth: columnWidths[column],
+        position: 'relative',
+        paddingRight: '24px',
+        userSelect: 'none',
+      }}
+    >
+      {label}
+      {/* Resize handle */}
+      <Box
+        onMouseDown={(e) => handleResizeStart(e, column)}
+        sx={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '8px',
+          cursor: 'col-resize',
+          backgroundColor: resizingColumn === column ? 'primary.main' : 'transparent',
+          '&:hover': {
+            backgroundColor: 'primary.light',
+          },
+          transition: 'background-color 0.2s',
+          zIndex: 1,
+        }}
+      />
+    </TableCell>
+  );
+
   return (
     <TableContainer
       component={Paper}
@@ -63,31 +159,15 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
       <Table stickyHeader aria-label="download table">
         <TableHead>
           <TableRow>
-            {/* Column Headers */}
-            <TableCell sx={{ fontWeight: 'bold', minWidth: 200 }}>
-              {t('downloads.details.filename', '檔案名稱')}
-            </TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold', minWidth: 100 }}>
-              {t('downloads.details.fileSize')}
-            </TableCell>
-            <TableCell sx={{ fontWeight: 'bold', minWidth: 180 }}>
-              {t('common.progress', '進度')}
-            </TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold', minWidth: 100 }}>
-              {t('downloads.statistics.currentSpeed')}
-            </TableCell>
-            <TableCell sx={{ fontWeight: 'bold', minWidth: 120 }}>
-              {t('downloads.status.title', '狀態')}
-            </TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-              {t('downloads.priority.title', '優先度')}
-            </TableCell>
-            <TableCell sx={{ fontWeight: 'bold', minWidth: 130 }}>
-              {t('downloads.details.createdAt')}
-            </TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold', minWidth: 120 }}>
-              {t('downloads.statistics.timeRemaining')}
-            </TableCell>
+            {/* Column Headers with resize handles */}
+            {renderHeaderCell('filename', t('downloads.details.filename', '檔案名稱'))}
+            {renderHeaderCell('fileSize', t('downloads.details.fileSize'), 'right')}
+            {renderHeaderCell('progress', t('common.progress', '進度'))}
+            {renderHeaderCell('currentSpeed', t('downloads.statistics.currentSpeed'), 'right')}
+            {renderHeaderCell('status', t('downloads.status.title', '狀態'))}
+            {renderHeaderCell('priority', t('downloads.priority.title', '優先度'), 'center')}
+            {renderHeaderCell('createdAt', t('downloads.details.createdAt'))}
+            {renderHeaderCell('timeRemaining', t('downloads.statistics.timeRemaining'), 'right')}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -97,6 +177,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
               task={task}
               isSelected={selectedTaskId === task.id}
               onClick={handleRowClick}
+              columnWidths={columnWidths}
             />
           ))}
         </TableBody>
