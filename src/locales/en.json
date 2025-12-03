@@ -23,7 +23,8 @@
     "no": "No",
     "ok": "OK",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "progress": "Progress"
   },
   "downloads": {
     "title": "Download List",
@@ -36,6 +37,7 @@
     "filenamePlaceholder": "Auto-extract from URL",
     "filenameHelp": "Leave empty to auto-extract filename from URL",
     "status": {
+      "title": "Status",
       "pending": "Pending",
       "initializing": "Initializing",
       "downloading": "Downloading",
@@ -109,6 +111,36 @@
       "paused": "Paused",
       "completed": "Completed",
       "failed": "Failed"
+    },
+    "details": {
+      "selectItem": "Please select a download item to view details",
+      "basicInfo": "Basic Info",
+      "segmentVisualization": "Segment Visualization",
+      "errorInfo": "Error Info",
+      "advancedInfo": "Advanced Info",
+      "url": "Download URL",
+      "filePath": "File Path",
+      "fileSize": "File Size",
+      "filename": "Filename",
+      "createdAt": "Created At",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
+      "noError": "No error message",
+      "retryInfo": "Retry Info",
+      "retryCount": "Retry Count",
+      "maxRetries": "Max Retries",
+      "lastRetryAt": "Last Retry At",
+      "scheduledStart": "Scheduled Start",
+      "notScheduled": "Not Scheduled",
+      "segments": "Segments",
+      "segmentCount": "{{count}} segments",
+      "segmentId": "Segment {{id}}",
+      "sizeRange": "Size Range",
+      "downloaded": "Downloaded",
+      "segmentProgress": "Segment Progress",
+      "proxy": "Proxy",
+      "noProxy": "No Proxy",
+      "noSegments": "No segment information"
     }
   },
   "settings": {

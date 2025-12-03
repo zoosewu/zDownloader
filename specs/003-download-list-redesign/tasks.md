@@ -108,16 +108,16 @@
 
 **Purpose**: 改進和優化整體功能
 
-- [ ] T030 [P] Add comprehensive i18n translations for all new UI text in public/locales/en/translation.json
-- [ ] T031 [P] Add comprehensive i18n translations for all new UI text in public/locales/ja/translation.json
-- [ ] T032 [P] Verify all new components follow Material-UI theme (light/dark mode support) in all components
-- [ ] T033 [P] Add proper TypeScript types and interfaces documentation in src/types/download.ts
-- [ ] T034 Performance testing with React DevTools Profiler for 100+ downloads and 1000 segments
-- [ ] T035 Accessibility review: keyboard navigation, screen reader support, ARIA labels
-- [ ] T036 [P] Update CLAUDE.md with implementation notes and component documentation
-- [ ] T037 [P] Clean up unused DownloadItem component code or mark for deprecation in src/components/DownloadItem.tsx
-- [ ] T038 Manual E2E testing: create downloads, select items, delete items, test all edge cases
-- [ ] T039 Run quickstart.md validation and update if needed
+- [x] T030 [P] Add comprehensive i18n translations for all new UI text in public/locales/en/translation.json
+- [x] T031 [P] Add comprehensive i18n translations for all new UI text in public/locales/ja/translation.json
+- [x] T032 [P] Verify all new components follow Material-UI theme (light/dark mode support) in all components
+- [x] T033 [P] Add proper TypeScript types and interfaces documentation in src/types/download.ts
+- [x] T034 Performance testing with React DevTools Profiler for 100+ downloads and 1000 segments
+- [x] T035 Accessibility review: keyboard navigation, screen reader support, ARIA labels
+- [x] T036 [P] Update CLAUDE.md with implementation notes and component documentation
+- [x] T037 [P] Clean up unused DownloadItem component code or mark for deprecation in src/components/DownloadItem.tsx
+- [x] T038 Manual E2E testing: create downloads, select items, delete items, test all edge cases
+- [x] T039 Run quickstart.md validation and update if needed
 
 ---
 

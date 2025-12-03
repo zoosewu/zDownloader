@@ -8,8 +8,23 @@
     "pause": "一時停止",
     "resume": "再開",
     "cancel": "キャンセル",
+    "delete": "削除",
+    "retry": "再試行",
     "settings": "設定",
-    "history": "履歴"
+    "history": "履歴",
+    "close": "閉じる",
+    "save": "保存",
+    "saving": "保存中...",
+    "add": "追加",
+    "edit": "編集",
+    "remove": "削除",
+    "confirm": "確認",
+    "yes": "はい",
+    "no": "いいえ",
+    "ok": "OK",
+    "apply": "適用",
+    "reset": "リセット",
+    "progress": "進捗"
   },
   "downloads": {
     "title": "ダウンロードリスト",
@@ -21,6 +36,7 @@
     "filenamePlaceholder": "URLから自動抽出",
     "filenameHelp": "空白の場合、URLからファイル名を自動抽出します",
     "status": {
+      "title": "ステータス",
       "pending": "待機中",
       "initializing": "初期化中",
       "downloading": "ダウンロード中",
@@ -30,7 +46,9 @@
       "cancelled": "キャンセル済み",
       "cancelling": "キャンセル中",
       "verifyingintegrity": "検証中",
-      "mergingsegments": "結合中"
+      "mergingsegments": "結合中",
+      "active": "アクティブ",
+      "pausedCount": "一時停止"
     },
     "actions": {
       "download": "ダウンロード開始",
@@ -38,18 +56,83 @@
       "pause": "一時停止",
       "resume": "再開",
       "cancel": "キャンセル",
-      "paste": "貼り付け"
+      "delete": "削除",
+      "retry": "再試行",
+      "paste": "貼り付け",
+      "pauseAll": "全て一時停止",
+      "resumeAll": "全て再開",
+      "clearCompleted": "完了を削除",
+      "openFile": "ファイルを開く",
+      "openFolder": "フォルダを開く",
+      "copyUrl": "URLをコピー"
     },
     "errors": {
       "emptyUrl": "ダウンロードURLを入力してください",
       "invalidUrl": "無効なURL形式です。HTTP/HTTPS URLを入力してください",
       "invalidClipboard": "クリップボードの内容が有効なURLではありません",
-      "clipboardPermission": "クリップボードにアクセスできません。ブラウザの権限を確認してください"
+      "clipboardPermission": "クリップボードにアクセスできません。ブラウザの権限を確認してください",
+      "startFailed": "ダウンロードの開始に失敗しました",
+      "pauseFailed": "ダウンロードの一時停止に失敗しました",
+      "resumeFailed": "ダウンロードの再開に失敗しました",
+      "cancelFailed": "ダウンロードのキャンセルに失敗しました",
+      "deleteFailed": "ダウンロードの削除に失敗しました",
+      "queueControlFailed": "キュー制御に失敗しました: {{error}}",
+      "networkError": "ネットワークエラー: {{error}}",
+      "fileAccessError": "ファイルアクセスエラー: {{error}}",
+      "insufficientSpace": "ディスク容量が不足しています"
     },
     "clipboard": {
       "detected": "クリップボードでURLを検出しました",
       "accept": "このURLを使用",
-      "dismiss": "無視"
+      "dismiss": "無視",
+      "monitoring": "クリップボード監視が有効"
+    },
+    "statistics": {
+      "totalDownloaded": "合計ダウンロード量",
+      "currentSpeed": "現在の速度",
+      "averageSpeed": "平均速度",
+      "timeRemaining": "残り時間",
+      "timeElapsed": "経過時間",
+      "activeDownloads": "アクティブなダウンロード",
+      "completedDownloads": "完了したダウンロード",
+      "failedDownloads": "失敗したダウンロード"
+    },
+    "filters": {
+      "all": "すべて",
+      "downloading": "ダウンロード中",
+      "paused": "一時停止",
+      "completed": "完了",
+      "failed": "失敗"
+    },
+    "details": {
+      "selectItem": "詳細を表示するにはダウンロード項目を選択してください",
+      "basicInfo": "基本情報",
+      "segmentVisualization": "セグメント可視化",
+      "errorInfo": "エラー情報",
+      "advancedInfo": "詳細情報",
+      "url": "ダウンロードURL",
+      "filePath": "ファイルパス",
+      "fileSize": "ファイルサイズ",
+      "filename": "ファイル名",
+      "createdAt": "作成日時",
+      "startedAt": "開始日時",
+      "completedAt": "完了日時",
+      "noError": "エラーメッセージなし",
+      "retryInfo": "再試行情報",
+      "retryCount": "再試行回数",
+      "maxRetries": "最大再試行回数",
+      "lastRetryAt": "最終再試行日時",
+      "scheduledStart": "予定開始時刻",
+      "notScheduled": "スケジュール未設定",
+      "segments": "セグメント",
+      "segmentCount": "{{count}}個のセグメント",
+      "segmentId": "セグメント{{id}}",
+      "sizeRange": "サイズ範囲",
+      "downloaded": "ダウンロード済み",
+      "segmentProgress": "セグメント進捗",
+      "proxy": "プロキシ",
+      "noProxy": "プロキシなし",
+      "noSegments": "セグメント情報なし"
     }
   }
 }

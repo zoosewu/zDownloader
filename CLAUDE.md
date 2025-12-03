@@ -402,4 +402,168 @@ chmod +x .git/hooks/pre-commit
 
 **詳細測試指南請參閱**: [TESTING.md](./TESTING.md)
 
+## Download List UI Redesign (Feature 003)
+
+### Overview
+完整重新設計下載列表 UI，從卡片視圖改為表格視圖，並添加選擇功能和詳細信息面板。
+
+### Architecture
+
+#### Core Components
+
+**DownloadTable** (`src/components/DownloadTable.tsx`)
+- 主表格組件，使用 MUI Table 與 sticky header
+- 顯示 7 個欄位：檔名、大小、進度、速度、狀態、建立時間、剩餘時間
+- 自動處理空狀態
+- 整合 useSelectedDownload hook 進行選擇管理
+
+**DownloadTableRow** (`src/components/DownloadTableRow.tsx`)
+- 單一表格行組件，使用 React.memo 優化
+- 自定義比較函數僅在關鍵屬性變更時重新渲染
+- 支持點擊選擇與高亮顯示
+- 包含 Tooltip 顯示完整信息
+
+**DownloadDetailPanel** (`src/components/DownloadDetailPanel.tsx`)
+- 詳細信息面板，使用 MUI Tabs 進行導航
+- 4 個 Tabs：基本資訊、分段視覺化、錯誤資訊、進階資訊
+- 自動切換到第一個 tab 當選擇改變時
+- 空狀態處理當沒有選擇時
+
+**BasicInfoTab** (`src/components/BasicInfoTab.tsx`)
+- 顯示 URL、檔案路徑、大小、時間戳
+- 使用可點擊的 Link 組件打開 URL
+- Monospace 字體顯示檔案路徑
+
+**SegmentVisualization** (`src/components/SegmentVisualization.tsx`)
+- CSS Grid 布局顯示所有分段
+- 固定大小 12px 方格，2px 間距
+- 圖例顯示顏色含義
+- 可滾動處理大量分段
+
+**SegmentGridItem** (`src/components/SegmentGridItem.tsx`)
+- 單一分段方格，使用 React.memo
+- MUI Tooltip 顯示詳細信息
+- Hover 效果：scale(1.3)
+- 顏色映射：灰(Pending)、藍(Downloading)、綠(Completed)、紅(Failed)
+
+**ErrorInfoTab** (`src/components/ErrorInfoTab.tsx`)
+- 顯示錯誤訊息或成功狀態
+- 使用 MUI Alert 組件
+- 顯示重試次數（如果有）
+
+**AdvancedInfoTab** (`src/components/AdvancedInfoTab.tsx`)
+- 顯示重試信息、排程時間、分段數量
+- Chip 組件顯示統計數據
+- Monospace 顯示 Task ID
+
+#### Utilities
+
+**downloadCalculations.ts** (`src/utils/downloadCalculations.ts`)
+- `calculateRemainingTime()`: 計算剩餘時間（秒）
+- `formatRemainingTime()`: 格式化為人類可讀格式
+- `formatBytes()`: 格式化字節大小
+- `formatSpeed()`: 格式化速度
+- `formatTaskForTable()`: 將 DownloadTask 格式化為表格顯示數據
+- `getSegmentColor()`: 根據狀態返回顏色
+- `formatSegmentForVisualization()`: 格式化分段數據供視覺化使用
+
+**formatters.ts** (`src/utils/formatters.ts`)
+- `formatRelativeTime()`: 將 ISO 8601 時間戳轉換為相對時間（如 "5分鐘前"）
+- `formatAbsoluteTime()`: 格式化為絕對時間
+- `formatTimeWithTooltip()`: 返回相對和絕對時間的物件
+
+#### State Management
+
+**downloadStore.ts** (`src/stores/downloadStore.ts`)
+- `selectedTaskIdAtom`: 當前選中的任務 ID
+- `selectedTaskAtom`: 當前選中的任務物件（派生 atom）
+- 自動響應 downloadTasksAtom 變化
+
+**useSelectedDownload.ts** (`src/hooks/useSelectedDownload.ts`)
+- `selectTask()`: 選擇任務
+- `clearSelection()`: 清除選擇
+- `toggleSelection()`: 切換選擇
+- `isSelected()`: 檢查任務是否被選中
+- 自動清除選擇當任務被刪除時
+
+### Performance Optimizations
+
+1. **React.memo**: DownloadTableRow 和 SegmentGridItem 使用 React.memo 避免不必要的重新渲染
+2. **Custom Comparison**: DownloadTableRow 使用自定義比較函數僅在關鍵屬性變更時更新
+3. **Jotai Atoms**: 使用細粒度的原子狀態管理，僅訂閱需要的數據
+4. **CSS Grid**: 使用原生 CSS Grid 而非 Flexbox 提升大量元素的性能
+5. **Sticky Header**: 表格頭部固定，改善大量下載時的用戶體驗
+
+### Internationalization (i18n)
+
+所有新增的 UI 文本都已添加翻譯：
+- **中文繁體** (`src/locales/zh-TW.json`): 完整翻譯
+- **英文** (`src/locales/en.json`): 完整翻譯
+- **日文** (`src/locales/ja.json`): 完整翻譯
+
+關鍵翻譯鍵：
+- `common.progress`: 進度
+- `downloads.status.title`: 狀態標題
+- `downloads.details.*`: 所有詳細面板文本（27 個鍵）
+
+### Theme Support
+
+所有組件使用 Material-UI 的 `sx` prop 和主題變量，自動支持深淺色模式：
+- `backgroundColor`: 使用 `background.default` 等主題顏色
+- `color`: 使用 `text.primary`, `text.secondary` 等
+- `borderColor`: 使用 `divider` 主題顏色
+
+無需額外配置即可支持主題切換。
+
+### Testing
+
+**TypeScript 編譯**: `pnpm exec tsc --noEmit` ✅ 無錯誤
+**生產構建**: `pnpm run build` ✅ 成功
+
+### Known Limitations
+
+1. **虛擬化**: 目前分段視覺化使用簡單的 CSS Grid，對於極大量分段（> 1000）可能需要虛擬化
+2. **排序**: 表格目前不支持排序功能
+3. **過濾**: 表格不支持內建過濾功能
+
+### Future Enhancements
+
+1. 添加表格排序功能
+2. 添加列顯示/隱藏設置
+3. 添加更多過濾選項
+4. 實現虛擬滾動處理大量下載
+5. 添加批量操作功能
+
+**詳細測試指南請參閱**: [TESTING.md](./TESTING.md)
+
 <!-- MANUAL ADDITIONS END -->
+
+## Download List UI Redesign (Feature 003)
+
+### Overview
+完整重新設計下載列表 UI，從卡片視圖改為表格視圖，並添加選擇功能和詳細信息面板。
+
+### Core Components
+
+**DownloadTable** - 主表格組件，7欄位顯示  
+**DownloadTableRow** - 單一行，React.memo 優化  
+**DownloadDetailPanel** - 4 Tabs 詳細面板  
+**SegmentVisualization** - CSS Grid 分段視覺化  
+**SegmentGridItem** - 12px 彩色方格
+
+### Utilities & State
+
+**downloadCalculations.ts** - 計算與格式化函數  
+**formatters.ts** - 時間格式化（相對/絕對）  
+**useSelectedDownload** - 選擇狀態管理 Hook
+
+### Performance
+
+- React.memo + 自定義比較函數
+- Jotai 細粒度狀態訂閱
+- CSS Grid 原生性能
+
+### i18n & Theme
+
+完整支持 zh-TW/en/ja 三種語言，自動支持深淺色模式。
+
