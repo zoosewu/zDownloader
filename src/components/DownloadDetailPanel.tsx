@@ -6,6 +6,7 @@ import { DownloadTask } from '../types/download';
 import BasicInfoTab from './BasicInfoTab';
 import ErrorInfoTab from './ErrorInfoTab';
 import AdvancedInfoTab from './AdvancedInfoTab';
+import SegmentVisualization from './SegmentVisualization';
 
 interface DownloadDetailPanelProps {
   task: DownloadTask | null;
@@ -59,6 +60,7 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
           sx={{ paddingX: 2 }}
         >
           <Tab label={t('downloads.details.basicInfo')} />
+          <Tab label={t('downloads.details.segmentVisualization')} />
           <Tab label={t('downloads.details.errorInfo')} />
           <Tab label={t('downloads.details.advancedInfo')} />
         </Tabs>
@@ -70,11 +72,15 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
       </Box>
 
       <Box role="tabpanel" hidden={activeTab !== 1}>
-        {activeTab === 1 && <ErrorInfoTab task={task} />}
+        {activeTab === 1 && <SegmentVisualization task={task} />}
       </Box>
 
       <Box role="tabpanel" hidden={activeTab !== 2}>
-        {activeTab === 2 && <AdvancedInfoTab task={task} />}
+        {activeTab === 2 && <ErrorInfoTab task={task} />}
+      </Box>
+
+      <Box role="tabpanel" hidden={activeTab !== 3}>
+        {activeTab === 3 && <AdvancedInfoTab task={task} />}
       </Box>
     </Paper>
   );

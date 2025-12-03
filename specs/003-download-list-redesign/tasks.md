@@ -91,14 +91,14 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [P] [US3] Create SegmentVisualizationData interface with color mapping logic in src/utils/downloadCalculations.ts
-- [ ] T023 [P] [US3] Create SegmentGridItem component with MUI Tooltip for hover info in src/components/SegmentGridItem.tsx
-- [ ] T024 [US3] Create SegmentVisualization component using CSS Grid layout (12px fixed size squares) in src/components/SegmentVisualization.tsx
-- [ ] T025 [US3] Add virtualization support for large segment counts (> 500) using react-window in src/components/SegmentVisualization.tsx
-- [ ] T026 [US3] Create tooltip content component for segment details (ID, size range, progress, status, retry count, proxy) in src/components/SegmentGridItem.tsx
-- [ ] T027 [US3] Integrate SegmentVisualization into DownloadDetailPanel as a Tab in src/components/DownloadDetailPanel.tsx
-- [ ] T028 [US3] Add hover effects (scale transform) and proper spacing (2px gap) to segment grid in src/components/SegmentGridItem.tsx
-- [ ] T029 [US3] Test with various segment counts: 10, 100, 500, 1000 segments, verify colors, hover tooltips, and performance
+- [x] T022 [P] [US3] Create SegmentVisualizationData interface with color mapping logic in src/utils/downloadCalculations.ts
+- [x] T023 [P] [US3] Create SegmentGridItem component with MUI Tooltip for hover info in src/components/SegmentGridItem.tsx
+- [x] T024 [US3] Create SegmentVisualization component using CSS Grid layout (12px fixed size squares) in src/components/SegmentVisualization.tsx
+- [x] T025 [US3] Add virtualization support for large segment counts (> 500) using react-window in src/components/SegmentVisualization.tsx
+- [x] T026 [US3] Create tooltip content component for segment details (ID, size range, progress, status, retry count, proxy) in src/components/SegmentGridItem.tsx
+- [x] T027 [US3] Integrate SegmentVisualization into DownloadDetailPanel as a Tab in src/components/DownloadDetailPanel.tsx
+- [x] T028 [US3] Add hover effects (scale transform) and proper spacing (2px gap) to segment grid in src/components/SegmentGridItem.tsx
+- [x] T029 [US3] Test with various segment counts: 10, 100, 500, 1000 segments, verify colors, hover tooltips, and performance
 
 **Checkpoint**: All user stories should now be independently functional - complete table view with selection, detail panel with all tabs including segment visualization
 
