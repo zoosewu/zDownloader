@@ -42,6 +42,7 @@ export function generateMockTask(
     speed?: number;
     segmentCount?: number;
     errorMessage?: string;
+    speedPriority?: number;
   } = {}
 ): DownloadTask {
   const now = new Date();
@@ -74,6 +75,7 @@ export function generateMockTask(
     maxRetries: 3,
     lastRetryAt: status === DownloadStatus.Failed ? new Date(now.getTime() - Math.random() * 300000).toISOString() : undefined,
     scheduledStart: undefined,
+    speedPriority: options.speedPriority ?? 10, // Default priority is 10
   };
 
   return task;
@@ -85,13 +87,14 @@ export function generateMockTask(
 export function generateMockTasks(): DownloadTask[] {
   const tasks: DownloadTask[] = [];
 
-  // Active downloads with various speeds
+  // Active downloads with various speeds and priorities
   tasks.push(generateMockTask('mock-1', DownloadStatus.Downloading, {
     filename: 'ubuntu-24.04-desktop-amd64.iso',
     filesize: 5_500_000_000, // 5.5 GB
     progress: 45.5,
     speed: 8.5 * 1024 * 1024, // 8.5 MB/s
     segmentCount: 8,
+    speedPriority: 20, // High priority
   }));
 
   tasks.push(generateMockTask('mock-2', DownloadStatus.Downloading, {
@@ -100,6 +103,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 78.2,
     speed: 2.3 * 1024 * 1024, // 2.3 MB/s
     segmentCount: 4,
+    speedPriority: 15, // Above default
   }));
 
   // Paused downloads
@@ -109,6 +113,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 33.8,
     speed: 0,
     segmentCount: 3,
+    speedPriority: 10, // Default priority
   }));
 
   // Completed downloads
@@ -118,6 +123,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 100,
     speed: 0,
     segmentCount: 6,
+    speedPriority: 10, // Default
   }));
 
   tasks.push(generateMockTask('mock-5', DownloadStatus.Completed, {
@@ -126,6 +132,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 100,
     speed: 0,
     segmentCount: 10,
+    speedPriority: 5, // Below default
   }));
 
   // Failed download
@@ -136,6 +143,7 @@ export function generateMockTasks(): DownloadTask[] {
     speed: 0,
     segmentCount: 12,
     errorMessage: 'Network error: Connection timeout after 30 seconds',
+    speedPriority: 0, // Lowest priority
   }));
 
   // Pending downloads
@@ -145,6 +153,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 0,
     speed: 0,
     segmentCount: 5,
+    speedPriority: 10, // Default
   }));
 
   // Download with very long URL and filename for testing CollapsibleField
@@ -154,6 +163,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 12.5,
     speed: 1.8 * 1024 * 1024,
     segmentCount: 6,
+    speedPriority: 8, // Slightly below default
   }));
 
   // Download with many segments for testing segment visualization
@@ -163,6 +173,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 23.4,
     speed: 12.5 * 1024 * 1024, // 12.5 MB/s
     segmentCount: 150, // Many segments to test performance
+    speedPriority: 25, // Very high priority
   }));
 
   // Cancelled download
@@ -172,6 +183,7 @@ export function generateMockTasks(): DownloadTask[] {
     progress: 15.7,
     speed: 0,
     segmentCount: 4,
+    speedPriority: 3, // Low priority
   }));
 
   return tasks;

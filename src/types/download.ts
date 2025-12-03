@@ -40,6 +40,8 @@ export interface DownloadTask {
   retryCount: number;  // Current retry attempt (0 = first attempt)
   maxRetries?: number;  // Override max retries from settings
   lastRetryAt?: string;  // ISO 8601 - last retry timestamp
+  // Speed priority field
+  speedPriority?: number;  // Speed priority (default: 10, 0 = lowest, higher = more priority)
 }
 
 export enum DownloadStatus {

@@ -79,6 +79,9 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
             <TableCell sx={{ fontWeight: 'bold', minWidth: 120 }}>
               {t('downloads.status.title', '狀態')}
             </TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+              {t('downloads.priority.title', '優先度')}
+            </TableCell>
             <TableCell sx={{ fontWeight: 'bold', minWidth: 130 }}>
               {t('downloads.details.createdAt')}
             </TableCell>

@@ -141,6 +141,15 @@
       "proxy": "Proxy",
       "noProxy": "No Proxy",
       "noSegments": "No segment information"
+    },
+    "priority": {
+      "title": "Priority",
+      "lowest": "Lowest Priority",
+      "low": "Low",
+      "belowDefault": "Below Default",
+      "default": "Default",
+      "aboveDefault": "Above Default",
+      "high": "High"
     }
   },
   "settings": {

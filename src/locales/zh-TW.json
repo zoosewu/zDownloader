@@ -141,6 +141,15 @@
       "proxy": "代理",
       "noProxy": "無代理",
       "noSegments": "無分段資訊"
+    },
+    "priority": {
+      "title": "優先度",
+      "lowest": "最低優先度",
+      "low": "低",
+      "belowDefault": "低於預設",
+      "default": "預設",
+      "aboveDefault": "高於預設",
+      "high": "高"
     }
   },
   "settings": {

@@ -11,7 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { DownloadTask, DownloadStatus } from '../types/download';
 import { formatTaskForTable } from '../utils/downloadCalculations';
-import { formatRelativeTime } from '../utils/formatters';
+import { formatRelativeTime, formatSpeedPriority } from '../utils/formatters';
 
 interface DownloadTableRowProps {
   task: DownloadTask;
@@ -148,6 +148,11 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
           />
         </TableCell>
 
+        {/* Priority Column */}
+        <TableCell align="center">
+          {formatSpeedPriority(task.speedPriority, t)}
+        </TableCell>
+
         {/* Created At Column */}
         <TableCell>
           <Tooltip title={task.createdAt} arrow>
@@ -179,6 +184,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
       prevProps.task.status === nextProps.task.status &&
       prevProps.task.filesize === nextProps.task.filesize &&
       prevProps.task.createdAt === nextProps.task.createdAt &&
+      prevProps.task.speedPriority === nextProps.task.speedPriority &&
       prevProps.isSelected === nextProps.isSelected
     );
   }

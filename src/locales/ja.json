@@ -133,6 +133,15 @@
       "proxy": "プロキシ",
       "noProxy": "プロキシなし",
       "noSegments": "セグメント情報なし"
+    },
+    "priority": {
+      "title": "優先度",
+      "lowest": "最低優先度",
+      "low": "低",
+      "belowDefault": "デフォルト以下",
+      "default": "デフォルト",
+      "aboveDefault": "デフォルト以上",
+      "high": "高"
     }
   },
   "settings": {
