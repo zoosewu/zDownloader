@@ -23,7 +23,8 @@
     "no": "否",
     "ok": "確定",
     "apply": "套用",
-    "reset": "重設"
+    "reset": "重設",
+    "progress": "進度"
   },
   "downloads": {
     "title": "下載列表",
@@ -36,6 +37,7 @@
     "filenamePlaceholder": "自動從網址提取",
     "filenameHelp": "留空則自動從網址提取檔案名稱",
     "status": {
+      "title": "狀態",
       "pending": "等待中",
       "initializing": "初始化中",
       "downloading": "下載中",
@@ -109,6 +111,36 @@
       "paused": "已暫停",
       "completed": "已完成",
       "failed": "失敗"
+    },
+    "details": {
+      "selectItem": "請選擇一個下載項目以查看詳細資訊",
+      "basicInfo": "基本資訊",
+      "segmentVisualization": "分段視覺化",
+      "errorInfo": "錯誤資訊",
+      "advancedInfo": "進階資訊",
+      "url": "下載網址",
+      "filePath": "檔案路徑",
+      "fileSize": "檔案大小",
+      "filename": "檔案名稱",
+      "createdAt": "建立時間",
+      "startedAt": "開始時間",
+      "completedAt": "完成時間",
+      "noError": "無錯誤訊息",
+      "retryInfo": "重試資訊",
+      "retryCount": "已重試次數",
+      "maxRetries": "最大重試次數",
+      "lastRetryAt": "上次重試時間",
+      "scheduledStart": "排程開始時間",
+      "notScheduled": "未排程",
+      "segments": "分段",
+      "segmentCount": "{{count}} 個分段",
+      "segmentId": "分段 {{id}}",
+      "sizeRange": "大小範圍",
+      "downloaded": "已下載",
+      "segmentProgress": "分段進度",
+      "proxy": "代理",
+      "noProxy": "無代理",
+      "noSegments": "無分段資訊"
     }
   },
   "settings": {

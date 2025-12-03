@@ -115,3 +115,13 @@ export const setTasksAtom = atom(
     set(downloadTasksAtom, tasks);
   }
 );
+
+// Selected task ID atom - tracks which download item is currently selected in the table
+export const selectedTaskIdAtom = atom<string | null>(null);
+
+// Selected task atom (derived) - the full task object of the selected item
+export const selectedTaskAtom = atom((get) => {
+  const selectedId = get(selectedTaskIdAtom);
+  const tasks = get(downloadTasksAtom);
+  return tasks.find((t) => t.id === selectedId) || null;
+});

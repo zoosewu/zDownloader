@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2025-11-27
 
 ## Active Technologies
 - JSON files (settings, download history) + file system (download data) (002-download-ui-improvements)
+- TypeScript 5.8.3 (frontend), Rust 1.75+ (backend - Tauri) (003-download-list-redesign)
+- JSON files (download history, settings) + in-memory state (Jotai atoms) (003-download-list-redesign)
 
 - (001-core-downloader)
 
@@ -28,6 +30,7 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 003-download-list-redesign: Added TypeScript 5.8.3 (frontend), Rust 1.75+ (backend - Tauri)
 - 002-download-ui-improvements: Added JSON files (settings, download history) + file system (download data)
 
 - 001-core-downloader: Added
