@@ -15,6 +15,7 @@ use tauri::State;
 
 /// Serializable challenge info for frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChallengeInfo {
     /// Unique challenge ID
     pub id: String,

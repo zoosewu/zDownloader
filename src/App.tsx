@@ -38,21 +38,38 @@ function App() {
   // Wait for Tauri to be ready
   useEffect(() => {
     const initTauri = async () => {
+      console.log('========================================');
+      console.log('Zoo Downloader Frontend Initializing...');
+      console.log('For debugging, keep this console open.');
+      console.log('Backend logs are saved to:');
+      console.log('  - Windows: %APPDATA%\\zoo-downloader\\logs\\');
+      console.log('  - macOS: ~/Library/Logs/zoo-downloader/');
+      console.log('  - Linux: ~/.local/share/zoo-downloader/logs/');
+      console.log('========================================');
+
+      console.log('[App] Waiting for Tauri API to be ready...');
       const ready = await waitForTauri();
-      if (ready) {
-        // Verify with a test command
-        try {
-          await invoke('greet', { name: 'Test' });
-          setTauriReady(true);
-        } catch (error) {
-          console.error('[App] Failed to invoke test command:', error);
-          // Still set ready to true to allow the app to load
-          setTauriReady(true);
-        }
-      } else {
-        console.error('[App] Tauri failed to initialize');
-        // Set ready anyway to show error state instead of infinite loading
+
+      if (!ready) {
+        console.error('[App] ✗ Tauri failed to initialize - API not available');
+        console.error('[App] The application may not function correctly');
+        // Don't set tauriReady to true if Tauri is not available
+        // This will keep showing the loading screen
+        return;
+      }
+
+      console.log('[App] Tauri API is ready, verifying with test command...');
+
+      // Verify with a test command
+      try {
+        const result = await invoke('greet', { name: 'Test' });
+        console.log('[App] ✓ Test command succeeded:', result);
+        console.log('[App] ✓ Tauri initialized successfully');
         setTauriReady(true);
+      } catch (error) {
+        console.error('[App] ✗ Failed to invoke test command:', error);
+        console.error('[App] Tauri API seems available but commands are failing');
+        // Don't set tauriReady to true if commands are failing
       }
     };
 

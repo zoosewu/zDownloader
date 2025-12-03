@@ -64,40 +64,61 @@ pub async fn create_download_with_path(
     download_path: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    log::info!("========== create_download_with_path called ==========");
+    log::info!("URL: {}", url);
+    log::info!("Filename: {:?}", filename);
+    log::info!("Download Path: {}", download_path);
+
     // Validate URL format using url_validator utility
+    log::info!("Validating URL format...");
     url_validator::validate_url_format(&url)?;
+    log::info!("✓ URL format validation passed");
 
     // Extract filename from URL if not provided
     let filename =
         filename.unwrap_or_else(|| url.split('/').next_back().unwrap_or("download").to_string());
+    log::info!("Final filename: {}", filename);
 
     // Validate download path
+    log::info!("Validating download path...");
     let path = PathBuf::from(&download_path);
     if !path.exists() {
+        log::error!("✗ Download path does not exist: {}", download_path);
         return Err(format!("Download path does not exist: {}", download_path));
     }
     if !path.is_dir() {
+        log::error!("✗ Download path is not a directory: {}", download_path);
         return Err(format!("Download path is not a directory: {}", download_path));
     }
+    log::info!("✓ Download path is valid");
 
     // Check write permission by attempting to create a test file
+    log::info!("Checking write permissions...");
     let test_file = path.join(".zoo_downloader_test");
     if std::fs::write(&test_file, b"test").is_err() {
+        log::error!("✗ Download path is not writable: {}", download_path);
         return Err(format!("Download path is not writable: {}", download_path));
     }
     std::fs::remove_file(&test_file).ok();
+    log::info!("✓ Write permissions verified");
 
     // Build full file path
     let filepath = path.join(&filename).to_string_lossy().to_string();
+    log::info!("Full file path: {}", filepath);
 
     // Create task
+    log::info!("Creating download task...");
     let task = DownloadTask::new(url, filename, filepath);
     let task_id = task.id;
+    log::info!("✓ Task created with ID: {}", task_id);
 
     // Add to queue
+    log::info!("Adding task to queue...");
     let mut queue = state.queue.lock().await;
     queue.add_task(task);
+    log::info!("✓ Task added to queue");
 
+    log::info!("========== create_download_with_path completed ==========");
     Ok(task_id.to_string())
 }
 
@@ -107,19 +128,38 @@ pub async fn start_download(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<(), String> {
-    let uuid = Uuid::parse_str(&task_id).map_err(|e| e.to_string())?;
+    log::info!("========== start_download called ==========");
+    log::info!("Task ID: {}", task_id);
+
+    log::info!("Parsing task ID as UUID...");
+    let uuid = Uuid::parse_str(&task_id).map_err(|e| {
+        log::error!("✗ Failed to parse task ID: {}", e);
+        e.to_string()
+    })?;
+    log::info!("✓ Task ID parsed successfully");
 
     // Get task from queue
+    log::info!("Retrieving task from queue...");
     let task = {
         let queue = state.queue.lock().await;
-        queue.get_task(&uuid).ok_or("Task not found")?
+        let task_result = queue.get_task(&uuid);
+        if task_result.is_none() {
+            log::error!("✗ Task not found in queue");
+            return Err("Task not found".to_string());
+        }
+        log::info!("✓ Task retrieved from queue");
+        task_result.unwrap()
     }; // Lock is released here
 
+    log::info!("Task details: url={}, filename={}", task.url, task.filename);
+
     // Start download in background
+    log::info!("Starting download in background...");
     let queue_clone = Arc::clone(&state.queue);
     let engine = Arc::clone(&state.engine);
 
     tokio::spawn(async move {
+        log::info!("Download background task started for task: {}", task.id);
         let mut task = task.clone();
         let app_clone = app.clone();
         let app_clone2 = app.clone();

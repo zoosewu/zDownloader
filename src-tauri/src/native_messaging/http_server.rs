@@ -28,9 +28,31 @@ struct StatusResponse {
     version: String,
 }
 
+/// Check if a port is available for binding
+fn is_port_available(port: u16) -> bool {
+    use std::net::TcpListener;
+    TcpListener::bind(("127.0.0.1", port)).is_ok()
+}
+
 /// Start HTTP server for Chrome extension communication
 pub async fn start_http_server(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let port = 45677; // Fixed port for Chrome extension to connect to
+
+    // Check if port is available before starting server
+    if !is_port_available(port) {
+        let error_msg = format!(
+            "Cannot start Native Messaging HTTP server: port {} is already in use.\n\
+             This is normal if:\n\
+             - Another instance of Zoo Downloader is running\n\
+             - Chrome extension is still connected\n\
+             \n\
+             The application will continue without Native Messaging support.\n\
+             To disable this check, set DISABLE_NATIVE_MESSAGING_SERVER=1",
+            port
+        );
+        log::warn!("{}", error_msg);
+        return Err(error_msg.into());
+    }
 
     // CORS configuration - allow requests from Chrome extension
     let cors = warp::cors()

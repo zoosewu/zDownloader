@@ -16,15 +16,36 @@ pub async fn detect_url(
     url: String,
     state: State<'_, ModuleRegistryState>,
 ) -> Result<UrlDetectionInfo, String> {
+    log::info!("========== detect_url called ==========");
+    log::info!("URL: {}", url);
+
     // Validate URL format
+    log::info!("Validating URL format...");
     if !is_valid_url(&url) {
+        log::error!("✗ Invalid URL format");
         return Err(format!("Invalid URL format: {}", url));
     }
+    log::info!("✓ URL format is valid");
 
+    log::info!("Checking URL detection modules...");
     let registry = state.registry.lock().await;
-    registry
+    let result = registry
         .detect_url(&url)
-        .map_err(|e| format!("Detection failed: {:?}", e))
+        .map_err(|e| {
+            log::error!("✗ Detection failed: {:?}", e);
+            format!("Detection failed: {:?}", e)
+        });
+
+    if let Ok(ref info) = result {
+        log::info!("✓ URL detection completed:");
+        log::info!("  - Valid: {}", info.is_valid);
+        log::info!("  - Detector: {}", info.detector_name);
+        log::info!("  - Mode: {:?}", info.detection_mode);
+        log::info!("  - Suggested filename: {:?}", info.suggested_filename);
+    }
+
+    log::info!("========== detect_url completed ==========");
+    result
 }
 
 fn is_valid_url(url: &str) -> bool {

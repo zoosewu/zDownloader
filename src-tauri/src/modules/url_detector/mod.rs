@@ -22,6 +22,7 @@ pub trait UrlDetector: Send + Sync {
 
 /// Information extracted from URL detection
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UrlDetectionInfo {
     pub url: String,
     pub is_valid: bool,
@@ -33,6 +34,7 @@ pub struct UrlDetectionInfo {
 
 /// Detection mode type
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum DetectionMode {
     FileExtension,
     ModuleCustom,
@@ -117,5 +119,129 @@ impl ModuleRegistry {
 impl Default for ModuleRegistry {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test: 確保序列化輸出使用 camelCase
+    /// 這個測試確保後端返回的 JSON 格式與前端期望的一致
+    #[test]
+    fn test_url_detection_info_serialization_uses_camel_case() {
+        let info = UrlDetectionInfo {
+            url: "https://example.com/test-file.zip".to_string(),
+            is_valid: true,
+            detector_name: "BuiltinFileDetector".to_string(),
+            detection_mode: DetectionMode::FileExtension,
+            suggested_filename: Some("test-file.zip".to_string()),
+            file_extension: Some("zip".to_string()),
+        };
+
+        let json = serde_json::to_string(&info).expect("Failed to serialize");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&json).expect("Failed to parse JSON");
+
+        // 驗證所有欄位都使用 camelCase
+        assert!(parsed.get("url").is_some(), "Missing 'url' field");
+        assert!(
+            parsed.get("isValid").is_some(),
+            "Missing 'isValid' field (should be camelCase, not is_valid)"
+        );
+        assert!(
+            parsed.get("detectorName").is_some(),
+            "Missing 'detectorName' field (should be camelCase, not detector_name)"
+        );
+        assert!(
+            parsed.get("detectionMode").is_some(),
+            "Missing 'detectionMode' field (should be camelCase, not detection_mode)"
+        );
+        assert!(
+            parsed.get("suggestedFilename").is_some(),
+            "Missing 'suggestedFilename' field (should be camelCase, not suggested_filename)"
+        );
+        assert!(
+            parsed.get("fileExtension").is_some(),
+            "Missing 'fileExtension' field (should be camelCase, not file_extension)"
+        );
+
+        // 確保沒有 snake_case 欄位
+        assert!(
+            parsed.get("is_valid").is_none(),
+            "Found snake_case field 'is_valid' - should be 'isValid'"
+        );
+        assert!(
+            parsed.get("detector_name").is_none(),
+            "Found snake_case field 'detector_name' - should be 'detectorName'"
+        );
+    }
+
+    /// Test: 確保可以從前端的 camelCase JSON 反序列化
+    #[test]
+    fn test_url_detection_info_deserialization_from_camel_case() {
+        let json = r#"{
+            "url": "https://example.com/test-file.zip",
+            "isValid": true,
+            "detectorName": "BuiltinFileDetector",
+            "detectionMode": "fileExtension",
+            "suggestedFilename": "test-file.zip",
+            "fileExtension": "zip"
+        }"#;
+
+        let info: UrlDetectionInfo =
+            serde_json::from_str(json).expect("Failed to deserialize from camelCase JSON");
+
+        assert_eq!(info.url, "https://example.com/test-file.zip");
+        assert_eq!(info.is_valid, true);
+        assert_eq!(info.detector_name, "BuiltinFileDetector");
+        assert_eq!(info.suggested_filename, Some("test-file.zip".to_string()));
+        assert_eq!(info.file_extension, Some("zip".to_string()));
+    }
+
+    /// Test: 確保 enum 也使用 camelCase
+    #[test]
+    fn test_detection_mode_serialization_uses_camel_case() {
+        let mode = DetectionMode::FileExtension;
+        let json = serde_json::to_string(&mode).expect("Failed to serialize");
+
+        // FileExtension 應該序列化為 "fileExtension"
+        assert_eq!(json, r#""fileExtension""#);
+
+        let mode = DetectionMode::ModuleCustom;
+        let json = serde_json::to_string(&mode).expect("Failed to serialize");
+
+        // ModuleCustom 應該序列化為 "moduleCustom"
+        assert_eq!(json, r#""moduleCustom""#);
+    }
+
+    /// Test: 完整的序列化/反序列化往返測試
+    #[test]
+    fn test_url_detection_info_roundtrip() {
+        let original = UrlDetectionInfo {
+            url: "https://example.com/test.pdf".to_string(),
+            is_valid: true,
+            detector_name: "TestDetector".to_string(),
+            detection_mode: DetectionMode::FileExtension,
+            suggested_filename: Some("test.pdf".to_string()),
+            file_extension: Some("pdf".to_string()),
+        };
+
+        // 序列化
+        let json = serde_json::to_string(&original).expect("Failed to serialize");
+
+        // 反序列化
+        let deserialized: UrlDetectionInfo =
+            serde_json::from_str(&json).expect("Failed to deserialize");
+
+        // 驗證資料完整性
+        assert_eq!(original.url, deserialized.url);
+        assert_eq!(original.is_valid, deserialized.is_valid);
+        assert_eq!(original.detector_name, deserialized.detector_name);
+        assert_eq!(
+            original.suggested_filename,
+            deserialized.suggested_filename
+        );
+        assert_eq!(original.file_extension, deserialized.file_extension);
     }
 }

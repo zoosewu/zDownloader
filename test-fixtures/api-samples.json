@@ -1,0 +1,36 @@
+{
+  "urlDetectionInfo": {
+    "description": "URL detection result - 前後端共享的測試資料",
+    "rust_input": {
+      "url": "https://example.com/test-file.zip",
+      "is_valid": true,
+      "detector_name": "BuiltinFileDetector",
+      "detection_mode": "FileExtension",
+      "suggested_filename": "test-file.zip",
+      "file_extension": "zip"
+    },
+    "json_output": {
+      "url": "https://example.com/test-file.zip",
+      "isValid": true,
+      "detectorName": "BuiltinFileDetector",
+      "detectionMode": "fileExtension",
+      "suggestedFilename": "test-file.zip",
+      "fileExtension": "zip"
+    },
+    "typescript_interface": "UrlDetectionResult"
+  },
+  "downloadTask": {
+    "description": "Download task - 前後端共享的測試資料",
+    "json_output": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "url": "https://example.com/file.pdf",
+      "filename": "test.pdf",
+      "filepath": "/downloads/test.pdf",
+      "status": "downloading",
+      "progress": 0.5,
+      "downloadedBytes": 524288,
+      "totalBytes": 1048576,
+      "createdAt": "2025-12-03T00:00:00Z"
+    }
+  }
+}

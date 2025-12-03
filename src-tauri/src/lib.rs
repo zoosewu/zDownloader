@@ -83,6 +83,19 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ))
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("zoo-downloader".to_string()),
+                    },
+                ))
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
@@ -128,6 +141,16 @@ pub fn run() {
             retry_download,
         ])
         .setup(|app| {
+            // Log initialization complete
+            log::info!("========================================");
+            log::info!("Zoo Downloader v{} starting...", env!("CARGO_PKG_VERSION"));
+            log::info!("Log files are saved to the app's log directory");
+            log::info!("You can find logs in:");
+            log::info!("  - Windows: %APPDATA%\\zoo-downloader\\logs\\");
+            log::info!("  - macOS: ~/Library/Logs/zoo-downloader/");
+            log::info!("  - Linux: ~/.local/share/zoo-downloader/logs/");
+            log::info!("========================================");
+
             // Scan for unfinished downloads and restore them
             let app_handle = app.handle().clone();
             let app_state = app.state::<AppState>();
@@ -163,14 +186,29 @@ pub fn run() {
                 start_clipboard_monitor(app_handle2).await;
             });
 
-            // Start HTTP server for Chrome extension integration
-            let app_handle3 = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = native_messaging::http_server::start_http_server(app_handle3).await
-                {
-                    eprintln!("Failed to start HTTP server for Chrome extension: {}", e);
-                }
-            });
+            // Start HTTP server for Chrome extension integration (optional)
+            // Can be disabled with DISABLE_NATIVE_MESSAGING_SERVER=1 environment variable
+            let disable_native_messaging = std::env::var("DISABLE_NATIVE_MESSAGING_SERVER")
+                .unwrap_or_default()
+                == "1";
+
+            if !disable_native_messaging {
+                let app_handle3 = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    match native_messaging::http_server::start_http_server(app_handle3).await {
+                        Ok(_) => {
+                            log::info!("Native Messaging HTTP server started successfully on port 45677");
+                        }
+                        Err(e) => {
+                            // Log warning but don't panic - app can continue without Native Messaging
+                            log::warn!("Native Messaging HTTP server failed to start:");
+                            log::warn!("{}", e);
+                        }
+                    }
+                });
+            } else {
+                log::info!("Native messaging HTTP server disabled (DISABLE_NATIVE_MESSAGING_SERVER=1)");
+            }
 
             // Start HTTP bridge for development (browser-based frontend)
             // Check environment variable to enable this

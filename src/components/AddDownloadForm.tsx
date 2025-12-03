@@ -12,6 +12,7 @@ import { invoke } from '../utils/tauri';
 import { useNavigation } from '../hooks/useNavigation';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { settingsAtom } from '../stores/settingsStore';
+import { isTauriAvailable } from '../utils/tauri';
 
 interface UrlDetectionResult {
   url: string;
@@ -51,44 +52,80 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('[AddDownloadForm] ========== Form Submission Started ==========');
+    console.log('[AddDownloadForm] URL:', url);
+    console.log('[AddDownloadForm] Filename:', filename);
+    console.log('[AddDownloadForm] Download Path:', downloadPath);
+
     if (!url.trim()) {
+      console.log('[AddDownloadForm] ✗ Validation failed: URL is empty');
       setError('請輸入下載網址');
       return;
     }
 
     if (!isValidUrl(url.trim())) {
+      console.log('[AddDownloadForm] ✗ Validation failed: Invalid URL format');
       setError('無效的網址格式');
       return;
     }
+
+    console.log('[AddDownloadForm] ✓ Basic validation passed');
 
     setError(null);
     setLoading(true);
 
     try {
+      // Check if Tauri API is available
+      console.log('[AddDownloadForm] Checking Tauri API availability...');
+      const tauriAvailable = isTauriAvailable();
+      console.log('[AddDownloadForm] Tauri API available:', tauriAvailable);
+
+      if (!tauriAvailable) {
+        console.log('[AddDownloadForm] ✗ Tauri API not available, aborting');
+        setError('下載管理器尚未準備就緒，請稍後再試');
+        setLoading(false);
+        return;
+      }
+
       // Try to validate URL with backend detector (optional)
       // If Tauri API is not ready, skip validation and let backend handle it
+      console.log('[AddDownloadForm] Calling detect_url command...');
       try {
         const detectionResult = await invoke<UrlDetectionResult>('detect_url', { url: url.trim() });
+        console.log('[AddDownloadForm] detect_url result:', detectionResult);
+
         if (!detectionResult.isValid) {
+          console.log('[AddDownloadForm] ✗ URL is not a valid download link');
           setError('此網址不是有效的下載連結');
           setLoading(false);
           return;
         }
+        console.log('[AddDownloadForm] ✓ URL validation passed');
       } catch (detectionError) {
         // Silently skip frontend validation if detect_url fails
         // Backend will validate the URL when creating the download
-        console.log('[AddDownloadForm] URL detection unavailable, skipping frontend validation');
+        console.log('[AddDownloadForm] ⚠ URL detection unavailable, skipping frontend validation:', detectionError);
       }
 
+      console.log('[AddDownloadForm] Calling create_download_with_path command...');
       const taskId = await invoke<string>('create_download_with_path', {
         url: url.trim(),
         filename: filename.trim() || undefined,
         downloadPath,
       });
+      console.log('[AddDownloadForm] ✓ Download task created, taskId:', taskId);
 
+      console.log('[AddDownloadForm] Calling start_download command...');
       await invoke('start_download', { taskId });
+      console.log('[AddDownloadForm] ✓ Download started successfully');
+
+      console.log('[AddDownloadForm] Navigating to main page...');
       navigateTo('main');
+      console.log('[AddDownloadForm] ========== Form Submission Completed ==========');
     } catch (e: any) {
+      console.error('[AddDownloadForm] ✗ Error during form submission:', e);
+      console.error('[AddDownloadForm] Error message:', e.message);
+      console.error('[AddDownloadForm] Error stack:', e.stack);
       setError(e.message || '建立下載任務失敗');
     } finally {
       setLoading(false);

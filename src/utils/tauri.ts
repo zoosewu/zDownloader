@@ -4,6 +4,8 @@
  * Supports both production (Tauri IPC) and development (HTTP bridge) modes
  */
 
+import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+
 // Check if we're in development mode (browser-based)
 const isDevelopment = import.meta.env.VITE_DEV_MODE === 'true';
 const httpBridgeUrl = import.meta.env.VITE_TAURI_HTTP_URL || 'http://localhost:3030';
@@ -17,13 +19,24 @@ export async function invoke<T = unknown>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
-  // Development mode: Use HTTP bridge
-  if (isDevelopment) {
-    return invokeViaHttp<T>(cmd, args);
-  }
+  console.log(`[invoke] Calling command '${cmd}'`, { args, isDevelopment });
 
-  // Production mode: Use Tauri IPC
-  return invokeViaTauri<T>(cmd, args);
+  try {
+    // Development mode: Use HTTP bridge
+    if (isDevelopment) {
+      const result = await invokeViaHttp<T>(cmd, args);
+      console.log(`[invoke] ✓ Command '${cmd}' completed successfully via HTTP bridge`);
+      return result;
+    }
+
+    // Production mode: Use Tauri IPC
+    const result = await invokeViaTauri<T>(cmd, args);
+    console.log(`[invoke] ✓ Command '${cmd}' completed successfully via Tauri IPC`);
+    return result;
+  } catch (error) {
+    console.error(`[invoke] ✗ Command '${cmd}' failed:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -64,81 +77,58 @@ async function invokeViaHttp<T = unknown>(
 
 /**
  * Invoke command via Tauri IPC (production mode)
+ * Uses the official @tauri-apps/api package
  */
 async function invokeViaTauri<T = unknown>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
-  // Check if we're in a Tauri environment
-  if (typeof window === 'undefined') {
-    throw new Error('[Tauri] Not running in a browser environment');
+  console.log(`[Tauri] Invoking '${cmd}' via @tauri-apps/api`);
+
+  try {
+    // Use the official Tauri API
+    const result = await tauriInvoke<T>(cmd, args);
+    console.log(`[Tauri] ✓ Command '${cmd}' succeeded`);
+    return result;
+  } catch (error) {
+    console.error(`[Tauri] ✗ Failed to invoke command '${cmd}':`, error);
+    throw error;
   }
-
-  const windowWithTauri = window as any;
-
-  // First try: Use window.__TAURI__.invoke (Tauri 2.x)
-  if (windowWithTauri.__TAURI__?.invoke) {
-    try {
-      console.log(`[Tauri] Invoking '${cmd}' via __TAURI__.invoke`);
-      return await windowWithTauri.__TAURI__.invoke(cmd, args);
-    } catch (error) {
-      console.error(`[Tauri] Failed to invoke command '${cmd}' via __TAURI__.invoke:`, error);
-      throw error;
-    }
-  }
-
-  // Second try: Use window.__TAURI__.core.invoke
-  if (windowWithTauri.__TAURI__?.core?.invoke) {
-    try {
-      console.log(`[Tauri] Invoking '${cmd}' via __TAURI__.core.invoke`);
-      return await windowWithTauri.__TAURI__.core.invoke(cmd, args);
-    } catch (error) {
-      console.error(`[Tauri] Failed to invoke command '${cmd}' via __TAURI__.core.invoke:`, error);
-      throw error;
-    }
-  }
-
-  // Third try: Use window.__TAURI_INVOKE__ (older Tauri versions)
-  if (windowWithTauri.__TAURI_INVOKE__) {
-    try {
-      console.log(`[Tauri] Invoking '${cmd}' via __TAURI_INVOKE__`);
-      return await windowWithTauri.__TAURI_INVOKE__(cmd, args);
-    } catch (error) {
-      console.error(`[Tauri] Failed to invoke command '${cmd}' via __TAURI_INVOKE__:`, error);
-      throw error;
-    }
-  }
-
-  // If none of the above work, throw a descriptive error
-  console.error('[Tauri] No invoke method available. __TAURI__ object:', windowWithTauri.__TAURI__);
-  throw new Error(`[Tauri] Cannot invoke command '${cmd}': Tauri API not available`);
 }
 
 /**
  * Check if Tauri API is available
- * In development mode, always returns true (uses HTTP bridge)
- * In production mode, checks for window.__TAURI__
+ * In development mode with HTTP bridge, always returns true
+ * In production mode, checks if the Tauri API package is loaded
  */
 export function isTauriAvailable(): boolean {
-  // Development mode: HTTP bridge is always available
+  console.log('[isTauriAvailable] Checking Tauri availability...');
+  console.log('[isTauriAvailable] Environment:', {
+    isDevelopment,
+    VITE_DEV_MODE: import.meta.env.VITE_DEV_MODE,
+    VITE_TAURI_HTTP_URL: import.meta.env.VITE_TAURI_HTTP_URL,
+    hasWindow: typeof window !== 'undefined',
+  });
+
+  // Development mode: HTTP bridge mode
   if (isDevelopment) {
+    console.log('[isTauriAvailable] ✓ Development mode - HTTP bridge will be used');
     return true;
   }
 
-  // Production mode: Check for Tauri IPC
+  // Production mode: Check if Tauri API is available
+  // In Tauri 2.x, the @tauri-apps/api package handles availability internally
+  // We just need to check if we're in a browser environment
   if (typeof window === 'undefined') {
+    console.log('[isTauriAvailable] ✗ Not in browser environment');
     return false;
   }
 
-  const windowWithTauri = window as any;
-
-  // Check if any of the invoke methods are available
-  const hasInvoke =
-    windowWithTauri.__TAURI__?.invoke ||
-    windowWithTauri.__TAURI__?.core?.invoke ||
-    windowWithTauri.__TAURI_INVOKE__;
-
-  return !!hasInvoke;
+  // The @tauri-apps/api package will work if properly loaded
+  // We can't easily check this synchronously, so we assume it's available
+  // The actual check happens in waitForTauri()
+  console.log('[isTauriAvailable] ✓ Assuming Tauri API is available (will verify with test command)');
+  return true;
 }
 
 /**
@@ -146,10 +136,14 @@ export function isTauriAvailable(): boolean {
  * In development mode, checks HTTP bridge availability
  * In production mode, waits for window.__TAURI__
  */
-export async function waitForTauri(maxAttempts = 50): Promise<boolean> {
+export async function waitForTauri(maxAttempts = 100): Promise<boolean> {
+  console.log('[waitForTauri] Starting Tauri initialization check...');
+  console.log('[waitForTauri] isDevelopment:', isDevelopment);
+  console.log('[waitForTauri] maxAttempts:', maxAttempts);
+
   // Development mode: Check HTTP bridge
   if (isDevelopment) {
-    console.log(`[Tauri] Development mode - checking HTTP bridge at ${httpBridgeUrl}`);
+    console.log(`[waitForTauri] Development mode - checking HTTP bridge at ${httpBridgeUrl}`);
 
     for (let i = 0; i < maxAttempts; i++) {
       try {
@@ -158,34 +152,45 @@ export async function waitForTauri(maxAttempts = 50): Promise<boolean> {
         });
 
         if (response.ok) {
-          console.log('[Tauri] HTTP Bridge is ready');
+          console.log('[waitForTauri] ✓ HTTP Bridge is ready');
           return true;
         }
       } catch (error) {
-        console.log(`[Tauri] Waiting for HTTP Bridge... (${i + 1}/${maxAttempts})`);
+        if (i % 10 === 0) {  // Log every 10 attempts to reduce spam
+          console.log(`[waitForTauri] Waiting for HTTP Bridge... (${i + 1}/${maxAttempts})`);
+        }
       }
 
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    console.error('[Tauri] HTTP Bridge failed to connect');
+    console.error('[waitForTauri] ✗ HTTP Bridge failed to connect after', maxAttempts, 'attempts');
     return false;
   }
 
   // Production mode: Wait for Tauri IPC
+  // In Tauri 2.x with @tauri-apps/api, we test by actually calling the API
+  console.log('[waitForTauri] Production mode - testing Tauri API with actual invoke...');
+
   for (let i = 0; i < maxAttempts; i++) {
-    if (isTauriAvailable()) {
-      const windowWithTauri = window as any;
-      console.log('[Tauri] API is ready. Available methods:', {
-        hasDirectInvoke: !!windowWithTauri.__TAURI__?.invoke,
-        hasCoreInvoke: !!windowWithTauri.__TAURI__?.core?.invoke,
-        hasLegacyInvoke: !!windowWithTauri.__TAURI_INVOKE__,
-      });
+    try {
+      // Try to invoke a simple command to test if API is ready
+      // We use the imported tauriInvoke directly to bypass our wrapper
+      await tauriInvoke('greet', { name: 'availability-test' });
+
+      console.log('[waitForTauri] ✓ Tauri API is ready!');
+      console.log('[waitForTauri] Successfully invoked test command');
       return true;
+    } catch (error) {
+      if (i % 10 === 0) {  // Log every 10 attempts to reduce spam
+        console.log(`[waitForTauri] Attempt ${i + 1}/${maxAttempts} - API not ready yet`);
+        console.log(`[waitForTauri] Error:`, error);
+      }
     }
-    console.log(`[Tauri] Waiting for API... (${i + 1}/${maxAttempts})`);
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  console.error('[Tauri] API failed to initialize');
+
+  console.error('[waitForTauri] ✗ Tauri API failed to initialize after', maxAttempts, 'attempts');
   return false;
 }

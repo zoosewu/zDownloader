@@ -29,6 +29,7 @@ pub struct DownloadTask {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum DownloadStatus {
     Pending,
     Initializing,
