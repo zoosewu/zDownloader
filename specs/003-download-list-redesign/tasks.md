@@ -69,15 +69,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [P] [US2] Create BasicInfoTab component displaying URL, filepath, timestamps in src/components/BasicInfoTab.tsx
-- [ ] T014 [P] [US2] Create ErrorInfoTab component displaying error message (or "無錯誤訊息") in src/components/ErrorInfoTab.tsx
-- [ ] T015 [P] [US2] Create AdvancedInfoTab component displaying retry info and scheduled time in src/components/AdvancedInfoTab.tsx
-- [ ] T016 [US2] Create DownloadDetailPanel component with MUI Tabs integration in src/components/DownloadDetailPanel.tsx
-- [ ] T017 [US2] Update DownloadTableRow to handle onClick and pass selectedTaskId to parent in src/components/DownloadTableRow.tsx
-- [ ] T018 [US2] Integrate DownloadDetailPanel into DownloadList below the table in src/components/DownloadList.tsx
-- [ ] T019 [US2] Implement selection state management and auto-clear when selected task is deleted in src/hooks/useSelectedDownload.ts
-- [ ] T020 [US2] Add proper spacing and layout between table and detail panel in src/components/DownloadList.tsx
-- [ ] T021 [US2] Test selection: click different items, verify highlighting, verify detail panel updates, delete selected item and verify panel clears
+- [x] T013 [P] [US2] Create BasicInfoTab component displaying URL, filepath, timestamps in src/components/BasicInfoTab.tsx
+- [x] T014 [P] [US2] Create ErrorInfoTab component displaying error message (or "無錯誤訊息") in src/components/ErrorInfoTab.tsx
+- [x] T015 [P] [US2] Create AdvancedInfoTab component displaying retry info and scheduled time in src/components/AdvancedInfoTab.tsx
+- [x] T016 [US2] Create DownloadDetailPanel component with MUI Tabs integration in src/components/DownloadDetailPanel.tsx
+- [x] T017 [US2] Update DownloadTableRow to handle onClick and pass selectedTaskId to parent in src/components/DownloadTableRow.tsx
+- [x] T018 [US2] Integrate DownloadDetailPanel into DownloadList below the table in src/components/DownloadList.tsx
+- [x] T019 [US2] Implement selection state management and auto-clear when selected task is deleted in src/hooks/useSelectedDownload.ts
+- [x] T020 [US2] Add proper spacing and layout between table and detail panel in src/components/DownloadList.tsx
+- [x] T021 [US2] Test selection: click different items, verify highlighting, verify detail panel updates, delete selected item and verify panel clears
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - table view with selection and detail panel with tabs
 
