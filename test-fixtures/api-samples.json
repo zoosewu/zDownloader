@@ -1,14 +1,6 @@
 {
   "urlDetectionInfo": {
     "description": "URL detection result - 前後端共享的測試資料",
-    "rust_input": {
-      "url": "https://example.com/test-file.zip",
-      "is_valid": true,
-      "detector_name": "BuiltinFileDetector",
-      "detection_mode": "FileExtension",
-      "suggested_filename": "test-file.zip",
-      "file_extension": "zip"
-    },
     "json_output": {
       "url": "https://example.com/test-file.zip",
       "isValid": true,
@@ -16,21 +8,40 @@
       "detectionMode": "fileExtension",
       "suggestedFilename": "test-file.zip",
       "fileExtension": "zip"
-    },
-    "typescript_interface": "UrlDetectionResult"
+    }
   },
   "downloadTask": {
-    "description": "Download task - 前後端共享的測試資料",
+    "description": "Download task status - 下載任務狀態",
     "json_output": {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "url": "https://example.com/file.pdf",
-      "filename": "test.pdf",
-      "filepath": "/downloads/test.pdf",
+      "url": "https://example.com/file.zip",
+      "filename": "file.zip",
       "status": "downloading",
-      "progress": 0.5,
-      "downloadedBytes": 524288,
-      "totalBytes": 1048576,
-      "createdAt": "2025-12-03T00:00:00Z"
+      "progress": 45.5,
+      "currentSpeed": 1048576
+    }
+  },
+  "settings": {
+    "description": "App settings - 應用設定",
+    "json_output": {
+      "language": "zh-TW",
+      "theme": "dark",
+      "speedLimitMode": "unlimited",
+      "enableClipboardMonitoring": true
+    }
+  },
+  "proxyInfo": {
+    "description": "Proxy information - 代理資訊",
+    "json_output": {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "host": "proxy.example.com",
+      "port": 8080,
+      "proxyType": "http",
+      "status": "active",
+      "avgLatencyMs": 150.5,
+      "successfulRequests": 100,
+      "failedRequests": 5,
+      "healthScore": 0.85
     }
   }
 }

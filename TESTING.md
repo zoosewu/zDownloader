@@ -4,6 +4,11 @@
 
 本專案包含完整的前後端資料一致性測試，確保 API 契約在前後端之間保持同步。
 
+**重要**：測試文件不會包含在生產構建中。
+- `tsconfig.json` 的 `exclude` 配置確保構建時排除測試文件
+- Vitest 使用自己的配置（`vitest.config.ts`）來運行測試
+- 這樣測試文件可以用於 CI/CD，但不會被打包到生產環境
+
 ## 測試結構
 
 ```
@@ -20,6 +25,8 @@ zoo-downloader/
     └── api-samples.json           # 共享測試資料
 ```
 
+---
+
 ## 後端測試（Rust）
 
 ### 運行測試
@@ -27,6 +34,11 @@ zoo-downloader/
 ```bash
 cd src-tauri
 cargo test
+```
+
+運行特定模組的測試：
+```bash
+cargo test url_detector::tests
 ```
 
 ### 測試覆蓋
@@ -49,7 +61,7 @@ cargo test
 4. ✓ `test_url_detection_info_roundtrip`
    - 完整的序列化/反序列化往返測試
 
-**測試資料範例**：
+**範例輸出**：
 ```json
 {
   "url": "https://example.com/test-file.zip",
@@ -73,14 +85,21 @@ test modules::url_detector::tests::test_url_detection_info_roundtrip ... ok
 test result: ok. 4 passed; 0 failed; 0 ignored
 ```
 
+---
+
 ## 前端測試（TypeScript + Vitest）
 
 ### 運行測試
 
 ```bash
-npm run test
-# 或
-npx vitest
+# 運行所有測試
+pnpm test
+
+# 運行測試一次（CI 模式）
+pnpm test:run
+
+# 開啟測試 UI
+pnpm test:ui
 ```
 
 ### 測試覆蓋
@@ -108,6 +127,17 @@ npx vitest
 6. `TypeScript should catch snake_case usage at compile time`
    - 型別安全測試
 
+### 測試結果
+
+```
+✓ src/__tests__/api-serialization.test.ts (6 tests) 3ms
+
+Test Files  1 passed (1)
+     Tests  6 passed (6)
+  Start at  10:06:55
+  Duration  31.25s
+```
+
 ### 驗證函數
 
 提供了 `validateBackendResponse()` 輔助函數，用於執行時驗證：
@@ -120,6 +150,8 @@ if (!validateBackendResponse(response)) {
   console.error('Backend response validation failed');
 }
 ```
+
+---
 
 ## 測試資料共享
 
@@ -143,70 +175,115 @@ if (!validateBackendResponse(response)) {
 }
 ```
 
-## 測試流程
+---
 
-### 開發新 API 時
+## 開發新 API 時的測試流程
 
-1. **定義 Rust 資料結構**
-   ```rust
-   #[derive(Serialize, Deserialize)]
-   #[serde(rename_all = "camelCase")]  // ← 必須！
-   pub struct NewApi {
-       pub some_field: String,
-   }
-   ```
+### 1. 定義 Rust 資料結構
 
-2. **撰寫後端測試**
-   ```rust
-   #[test]
-   fn test_new_api_serialization() {
-       let data = NewApi { some_field: "test".to_string() };
-       let json = serde_json::to_string(&data).unwrap();
-       let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
-       assert!(parsed.get("someField").is_some());
-       assert!(parsed.get("some_field").is_none());
-   }
-   ```
+```rust
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]  // ← 必須添加
+pub struct MyApiResponse {
+    pub user_name: String,      // → userName
+    pub is_active: bool,         // → isActive
+    pub created_at: DateTime,    // → createdAt
+}
+```
 
-3. **定義 TypeScript 介面**
-   ```typescript
-   interface NewApi {
-     someField: string;  // camelCase
-   }
-   ```
+### 2. 添加後端序列化測試
 
-4. **撰寫前端測試**
-   ```typescript
-   test('should parse NewApi', () => {
-       const json = '{"someField": "test"}';
-       const data: NewApi = JSON.parse(json);
-       expect(data.someField).toBe('test');
-   });
-   ```
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-5. **運行所有測試**
-   ```bash
-   cargo test && npm run test
-   ```
+    #[test]
+    fn test_my_api_response_serialization() {
+        let response = MyApiResponse {
+            user_name: "test".to_string(),
+            is_active: true,
+            created_at: Utc::now(),
+        };
 
-### 修改現有 API 時
+        let json = serde_json::to_string(&response).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-1. 修改 Rust 結構
-2. 運行測試：`cargo test`
-3. 如果測試失敗，檢查是否：
-   - 忘記添加 `#[serde(rename_all = "camelCase")]`
-   - 欄位名稱不符合 snake_case
-   - 破壞了 API 契約
-4. 同步更新 TypeScript 介面
-5. 同步更新前端測試
-6. 再次運行所有測試
+        // 確保是 camelCase
+        assert!(parsed.get("userName").is_some());
+        assert!(parsed.get("isActive").is_some());
+
+        // 確保沒有 snake_case
+        assert!(parsed.get("user_name").is_none());
+        assert!(parsed.get("is_active").is_none());
+    }
+
+    #[test]
+    fn test_my_api_response_roundtrip() {
+        let original = MyApiResponse { /* ... */ };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: MyApiResponse = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(original.user_name, deserialized.user_name);
+    }
+}
+```
+
+### 3. 定義前端 TypeScript 介面
+
+```typescript
+interface MyApiResponse {
+  userName: string;    // ✅ 正確
+  isActive: boolean;   // ✅ 正確
+  createdAt: string;   // ✅ 正確
+}
+```
+
+### 4. 添加前端測試
+
+```typescript
+// src/__tests__/my-api.test.ts
+import { describe, test, expect } from 'vitest';
+
+describe('MyApiResponse', () => {
+  test('should parse backend camelCase JSON', () => {
+    const json = '{"userName":"test","isActive":true}';
+    const result: MyApiResponse = JSON.parse(json);
+
+    expect(result.userName).toBe('test');
+    expect(result.isActive).toBe(true);
+  });
+});
+```
+
+### 5. 運行測試
+
+```bash
+# 後端測試
+cd src-tauri && cargo test
+
+# 前端測試
+pnpm test:run
+```
+
+### 6. 提交前檢查
+
+```bash
+# 確保所有測試通過
+cd src-tauri && cargo test && cd .. && pnpm test:run
+
+# 確保構建成功
+pnpm build
+```
+
+---
 
 ## CI/CD 整合
 
 ### GitHub Actions 範例
 
 ```yaml
-name: API Consistency Tests
+name: Tests
 
 on: [push, pull_request]
 
@@ -215,116 +292,161 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
       - name: Run Rust tests
         run: |
           cd src-tauri
-          cargo test
+          cargo test --all-features
 
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm install
-      - run: npm run test
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run frontend tests
+        run: pnpm test:run
 ```
 
 ### Pre-commit Hook
 
+創建 `.git/hooks/pre-commit`：
+
 ```bash
 #!/bin/bash
-# .git/hooks/pre-commit
 
-echo "🧪 Running API consistency tests..."
+echo "Running tests..."
 
-# Backend
-echo "Testing Rust..."
-cd src-tauri && cargo test --quiet || {
+# 後端測試
+echo "→ Rust tests"
+cd src-tauri
+cargo test --quiet
+if [ $? -ne 0 ]; then
     echo "❌ Rust tests failed"
     exit 1
-}
+fi
+cd ..
 
-# Frontend
-echo "Testing TypeScript..."
-cd .. && npm run test -- --run || {
-    echo "❌ TypeScript tests failed"
+# 前端測試
+echo "→ Frontend tests"
+pnpm test:run
+if [ $? -ne 0 ]; then
+    echo "❌ Frontend tests failed"
     exit 1
-}
+fi
 
 echo "✅ All tests passed!"
 ```
 
-## 常見問題排查
-
-### 測試失敗：找不到 camelCase 欄位
-
-**症狀**：
-```
-assertion failed: parsed.get("isValid").is_some()
-Missing 'isValid' field (should be camelCase, not is_valid)
+使其可執行：
+```bash
+chmod +x .git/hooks/pre-commit
 ```
 
-**原因**：Rust 結構缺少 `#[serde(rename_all = "camelCase")]`
+---
 
-**修復**：
-```rust
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]  // ← 添加這行
-pub struct YourStruct {
-    pub is_valid: bool,
+## 構建配置說明
+
+### tsconfig.json
+
+測試文件會被排除在 TypeScript 編譯之外：
+
+```json
+{
+  "exclude": [
+    "src/**/__tests__",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
+  ]
 }
 ```
 
-### 測試失敗：前端收到 undefined
+這確保：
+- ✅ `pnpm build` 不會嘗試編譯測試文件
+- ✅ 測試文件不會被打包到生產環境
+- ✅ 開發和生產構建都不會出錯
 
-**症狀**：前端測試中 `result.isValid` 是 `undefined`
+### vitest.config.ts
 
-**原因**：後端返回的是 `is_valid` 而不是 `isValid`
+Vitest 使用自己的配置來運行測試：
 
-**診斷**：
-```bash
-# 檢查序列化輸出
-cargo test -- --nocapture | grep -A 10 "serialization"
+```typescript
+export default defineConfig({
+  test: {
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+    exclude: ['node_modules', 'dist', 'src-tauri'],
+  },
+});
 ```
 
-**修復**：同上，添加 `#[serde(rename_all = "camelCase")]`
+這確保：
+- ✅ `pnpm test` 能找到並運行所有測試
+- ✅ 測試環境獨立於構建環境
+- ✅ 可以在 CI/CD 中運行測試
 
-### 新增欄位後測試失敗
+---
 
-**症狀**：添加新欄位後，測試報告欄位缺失
+## 常見問題
 
-**檢查清單**：
-- [ ] Rust 結構是否添加了新欄位
-- [ ] TypeScript 介面是否同步更新
-- [ ] 測試資料是否包含新欄位
-- [ ] 命名是否一致（Rust snake_case，JSON camelCase）
+### Q: 為什麼測試文件不會包含在構建中？
 
-## 測試統計
+A: `tsconfig.json` 的 `exclude` 配置確保 TypeScript 編譯器忽略測試文件。Vitest 使用自己的配置（`vitest.config.ts`）來運行測試，不受 tsconfig 影響。
 
-| 模組 | 測試數量 | 覆蓋率 | 狀態 |
-|------|---------|--------|------|
-| URL Detector (Backend) | 4 | 100% | ✅ |
-| URL Detector (Frontend) | 6 | 100% | ✅ |
+### Q: 如何確保前端收到正確的資料？
 
-## 維護建議
+A:
+1. 後端測試確保輸出是 camelCase JSON
+2. 前端測試驗證能正確解析 camelCase JSON
+3. 共享測試資料（test-fixtures）確保前後端使用相同格式
+4. TypeScript interface 提供編譯時型別檢查
 
-1. **每次 API 變更都要更新測試**
-2. **測試失敗必須修復，不能跳過**
-3. **定期檢查測試覆蓋率**
-4. **新增 API 必須包含測試**
-5. **破壞性變更必須在測試中標註**
+### Q: 測試失敗時如何除錯？
 
-## 相關文件
+A:
+1. 檢查後端測試：`cd src-tauri && cargo test -- --nocapture`
+2. 檢查前端測試：`pnpm test:ui`（開啟視覺化介面）
+3. 檢查 test-fixtures 中的測試資料是否一致
+4. 確認結構有 `#[serde(rename_all = "camelCase")]`
 
-- [CLAUDE.md](./CLAUDE.md) - 開發規範和命名約定
-- [LOGGING.md](./LOGGING.md) - 日誌系統說明
-- [test-fixtures/](./test-fixtures/) - 共享測試資料
+### Q: 為什麼 `cargo test` 會運行其他測試？
+
+A: `cargo test` 預設運行所有測試。使用 `cargo test url_detector::tests` 只運行序列化相關測試。
+
+### Q: 如何新增其他 API 的測試？
+
+A: 參考 `url_detector/mod.rs` 和 `src/__tests__/api-serialization.test.ts` 中的測試範例，為新的結構添加類似的測試。
+
+---
+
+## 測試檢查清單
+
+開發新 API 時，請確保：
+
+- [ ] Rust struct/enum 已添加 `#[serde(rename_all = "camelCase")]`
+- [ ] 已添加後端序列化測試（檢查 camelCase 輸出）
+- [ ] 已添加後端反序列化測試（檢查能解析 camelCase 輸入）
+- [ ] 已添加後端往返測試（確保資料完整性）
+- [ ] `cargo test` 全部通過
+- [ ] 前端 TypeScript interface 使用 camelCase 欄位名
+- [ ] 已添加前端解析測試
+- [ ] `pnpm test:run` 全部通過
+- [ ] `pnpm build` 構建成功（測試文件被排除）
+- [ ] 在瀏覽器中手動測試功能
 
 ---
 
 **最後更新**：2025-12-03
-**測試框架**：Rust (cargo test) + TypeScript (Vitest)
-**狀態**：✅ 所有測試通過
+**維護者**：開發團隊

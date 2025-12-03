@@ -1,28 +1,27 @@
 /**
  * API Serialization Tests
- * 確保前端能正確解析後端返回的 JSON 資料
- * 使用與後端相同的測試資料，確保前後端一致性
+ *
+ * These tests verify that the backend correctly serializes data to camelCase JSON
+ * and that the frontend can properly parse the responses.
  */
 
 import { describe, test, expect } from 'vitest';
 
-// 前端的 TypeScript 介面定義
+/**
+ * TypeScript interface matching the backend's UrlDetectionInfo
+ */
 interface UrlDetectionResult {
   url: string;
   isValid: boolean;
-  detectorName?: string;
-  detectionMode?: string;
+  detectorName: string;
+  detectionMode: 'fileExtension' | 'moduleCustom';
   suggestedFilename?: string;
   fileExtension?: string;
 }
 
 describe('API Serialization - UrlDetectionResult', () => {
-  /**
-   * Test: 確保能正確解析後端返回的 camelCase JSON
-   * 這個 JSON 格式應該與後端序列化輸出完全一致
-   */
   test('should correctly parse backend camelCase JSON', () => {
-    // 這個 JSON 來自後端的序列化輸出
+    // This JSON format should match what the Rust backend outputs
     const backendJson = `{
       "url": "https://example.com/test-file.zip",
       "isValid": true,
@@ -34,7 +33,6 @@ describe('API Serialization - UrlDetectionResult', () => {
 
     const result: UrlDetectionResult = JSON.parse(backendJson);
 
-    // 驗證所有欄位都能正確解析
     expect(result.url).toBe('https://example.com/test-file.zip');
     expect(result.isValid).toBe(true);
     expect(result.detectorName).toBe('BuiltinFileDetector');
@@ -43,11 +41,8 @@ describe('API Serialization - UrlDetectionResult', () => {
     expect(result.fileExtension).toBe('zip');
   });
 
-  /**
-   * Test: 驗證前端不應該使用 snake_case 欄位
-   */
   test('should not use snake_case field names', () => {
-    // 錯誤的 snake_case JSON（舊版本或未配置 serde 的後端）
+    // This demonstrates what happens if the backend doesn't use rename_all
     const incorrectJson = `{
       "url": "https://example.com/test.zip",
       "is_valid": true,
@@ -56,93 +51,62 @@ describe('API Serialization - UrlDetectionResult', () => {
 
     const result: UrlDetectionResult = JSON.parse(incorrectJson);
 
-    // 這些欄位應該是 undefined，因為前端使用 camelCase
+    // These will be undefined because TypeScript expects camelCase
     expect(result.isValid).toBeUndefined();
     expect(result.detectorName).toBeUndefined();
-
-    // 這個測試展示了為什麼必須使用 #[serde(rename_all = "camelCase")]
   });
 
-  /**
-   * Test: 完整的往返測試
-   */
   test('should maintain data integrity in roundtrip', () => {
-    const original: UrlDetectionResult = {
-      url: 'https://example.com/test.pdf',
+    const original = {
+      url: 'https://example.com/file.pdf',
       isValid: true,
-      detectorName: 'TestDetector',
-      detectionMode: 'fileExtension',
-      suggestedFilename: 'test.pdf',
+      detectorName: 'BuiltinFileDetector',
+      detectionMode: 'fileExtension' as const,
+      suggestedFilename: 'file.pdf',
       fileExtension: 'pdf',
     };
 
-    // 序列化
     const json = JSON.stringify(original);
+    const parsed: UrlDetectionResult = JSON.parse(json);
 
-    // 反序列化
-    const deserialized: UrlDetectionResult = JSON.parse(json);
-
-    // 驗證資料完整性
-    expect(deserialized).toEqual(original);
+    expect(parsed).toEqual(original);
   });
 
-  /**
-   * Test: 測試可選欄位
-   */
   test('should handle optional fields correctly', () => {
     const minimalJson = `{
-      "url": "https://example.com/test",
-      "isValid": false
+      "url": "https://example.com/unknown",
+      "isValid": false,
+      "detectorName": "UnknownDetector",
+      "detectionMode": "moduleCustom"
     }`;
 
     const result: UrlDetectionResult = JSON.parse(minimalJson);
 
-    expect(result.url).toBe('https://example.com/test');
+    expect(result.url).toBe('https://example.com/unknown');
     expect(result.isValid).toBe(false);
-    expect(result.detectorName).toBeUndefined();
-    expect(result.detectionMode).toBeUndefined();
     expect(result.suggestedFilename).toBeUndefined();
     expect(result.fileExtension).toBeUndefined();
   });
 
-  /**
-   * Test: 驗證 enum 值的格式
-   */
   test('should correctly parse enum values in camelCase', () => {
-    const jsonWithFileExtension = `{
-      "url": "https://example.com/test.zip",
-      "isValid": true,
-      "detectionMode": "fileExtension"
-    }`;
+    const json1 = '{"detectionMode": "fileExtension"}';
+    const json2 = '{"detectionMode": "moduleCustom"}';
 
-    const result1: UrlDetectionResult = JSON.parse(jsonWithFileExtension);
+    const result1 = JSON.parse(json1);
+    const result2 = JSON.parse(json2);
+
     expect(result1.detectionMode).toBe('fileExtension');
-
-    const jsonWithModuleCustom = `{
-      "url": "https://example.com/test",
-      "isValid": true,
-      "detectionMode": "moduleCustom"
-    }`;
-
-    const result2: UrlDetectionResult = JSON.parse(jsonWithModuleCustom);
     expect(result2.detectionMode).toBe('moduleCustom');
   });
-});
 
-describe('API Serialization - Type Safety', () => {
-  /**
-   * Test: TypeScript 型別檢查應該捕捉命名錯誤
-   */
   test('TypeScript should catch snake_case usage at compile time', () => {
-    // 這段代碼應該在 TypeScript 編譯時報錯
-    // 但在測試中我們可以展示正確的用法
-
     const data: UrlDetectionResult = {
       url: 'https://example.com/test.zip',
-      isValid: true, // ✓ 正確
-      // is_valid: true, // ✗ TypeScript 會報錯
-      detectorName: 'Test', // ✓ 正確
-      // detector_name: 'Test', // ✗ TypeScript 會報錯
+      isValid: true, // ✓ Correct camelCase
+      detectorName: 'Test', // ✓ Correct camelCase
+      detectionMode: 'fileExtension', // ✓ Correct camelCase
+      // is_valid: true, // ✗ This would cause TypeScript compile error
+      // detector_name: 'Test', // ✗ This would cause TypeScript compile error
     };
 
     expect(data.isValid).toBe(true);
@@ -151,39 +115,43 @@ describe('API Serialization - Type Safety', () => {
 });
 
 /**
- * Integration Test Helper
- * 用於驗證前後端資料一致性的輔助函數
+ * Helper function to validate backend responses at runtime
  */
 export function validateBackendResponse(response: unknown): response is UrlDetectionResult {
-  if (typeof response !== 'object' || response === null) {
-    console.error('[API Validation] Response is not an object:', response);
-    return false;
-  }
-
   const r = response as any;
 
-  // 必須欄位檢查
+  // Check required fields exist and have correct types
   if (typeof r.url !== 'string') {
     console.error('[API Validation] Missing or invalid "url" field');
     return false;
   }
 
   if (typeof r.isValid !== 'boolean') {
-    console.error('[API Validation] Missing or invalid "isValid" field (should be camelCase)');
+    console.error('[API Validation] Missing or invalid "isValid" field');
     return false;
   }
 
-  // 警告：檢測到 snake_case 欄位
+  if (typeof r.detectorName !== 'string') {
+    console.error('[API Validation] Missing or invalid "detectorName" field');
+    return false;
+  }
+
+  if (typeof r.detectionMode !== 'string') {
+    console.error('[API Validation] Missing or invalid "detectionMode" field');
+    return false;
+  }
+
+  // Warn if snake_case fields are found (indicates backend issue)
   if ('is_valid' in r) {
-    console.warn(
-      '[API Validation] ⚠️ Found snake_case field "is_valid" - backend may be missing #[serde(rename_all = "camelCase")]'
-    );
+    console.warn('[API Validation] ⚠️ Found snake_case field "is_valid" - backend may be missing #[serde(rename_all = "camelCase")]');
   }
 
   if ('detector_name' in r) {
-    console.warn(
-      '[API Validation] ⚠️ Found snake_case field "detector_name" - backend may be missing #[serde(rename_all = "camelCase")]'
-    );
+    console.warn('[API Validation] ⚠️ Found snake_case field "detector_name" - backend may be missing #[serde(rename_all = "camelCase")]');
+  }
+
+  if ('detection_mode' in r) {
+    console.warn('[API Validation] ⚠️ Found snake_case field "detection_mode" - backend may be missing #[serde(rename_all = "camelCase")]');
   }
 
   return true;

@@ -109,19 +109,14 @@ $ pnpm build
    - 4 個測試確保 camelCase 輸出
    - 包含序列化、反序列化和往返測試
 
-2. **前端驗證測試** (`src/__tests__/api-serialization.test.ts`)
-   - 6 個測試確保正確解析 camelCase
-   - 包含驗證輔助函數
-
-3. **共享測試數據** (`test-fixtures/api-samples.json`)
-   - 前後端使用相同測試資料
-   - 確保資料格式一致性
-
 ### 測試覆蓋範圍
 - ✅ 序列化測試（Rust → JSON）
 - ✅ 反序列化測試（JSON → Rust）
 - ✅ 往返測試（Rust → JSON → Rust）
-- ✅ 前端解析測試（JSON → TypeScript）
+
+### 構建配置
+- ✅ TypeScript 配置已更新排除測試文件
+- ✅ `tsconfig.json` 添加 `exclude` 規則防止測試文件被編譯
 
 ---
 
