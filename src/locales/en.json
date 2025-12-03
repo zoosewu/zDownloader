@@ -149,6 +149,7 @@
     "download": "Download",
     "proxy": "Proxy",
     "advanced": "Advanced",
+    "developer": "Developer",
     "about": "About",
     "downloadPath": "Download Path",
     "selectPath": "Select Folder",
@@ -280,6 +281,42 @@
       "invalidDateTime": "Please select date and time",
       "pastTime": "Scheduled time must be in the future",
       "scheduleFailed": "Failed to schedule download"
+    }
+  },
+  "dev": {
+    "banner": {
+      "title": "Development Mode",
+      "description": "You are using development mode features. This mode is for development and testing only. Go to Settings > Developer to adjust settings.",
+      "usingMockTasks": "Using Mock Tasks",
+      "mockModeEnabled": "Mock Mode Enabled",
+      "autoProgressEnabled": "Auto Progress Update"
+    },
+    "settings": {
+      "notAvailable": "Developer Options Not Available",
+      "productionMode": "Developer options are only available in development environment",
+      "warningTitle": "Developer Options",
+      "warningDescription": "These settings are for development and testing purposes only. Modifying these settings may affect normal application operation.",
+      "mockMode": {
+        "title": "Mock Mode",
+        "description": "When enabled, all download commands will not actually execute but will be shown in the UI. This allows you to test the UI without actually downloading files.",
+        "enableLabel": "Enable Mock Mode (downloads will not execute)",
+        "enabledMessage": "Mock mode enabled - download commands will not actually execute, but will display normally in the UI"
+      },
+      "mockTasks": {
+        "title": "Mock Tasks",
+        "description": "Display default mock download tasks for testing various UI states (in progress, completed, failed, etc.).",
+        "enableLabel": "Use Mock Tasks",
+        "autoProgressLabel": "Auto Update Progress (simulate download progress)",
+        "loadButton": "Load Mock Tasks",
+        "clearButton": "Clear All Tasks"
+      },
+      "info": {
+        "title": "Usage Instructions",
+        "item1": "Mock Mode: Prevents actual downloads but allows testing UI interactions",
+        "item2": "Mock Tasks: Load default test data with various download states",
+        "item3": "Auto Progress: Mock tasks will automatically update progress like real downloads",
+        "item4": "These settings are stored locally in the browser and do not affect production"
+      }
     }
   }
 }

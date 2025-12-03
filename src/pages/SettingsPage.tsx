@@ -2,9 +2,12 @@
 import { Box, Container, Typography, Tabs, Tab } from '@mui/material';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAtomValue } from 'jotai';
 import ProxySettings from '../components/ProxySettings';
 import GeneralSettings from '../components/GeneralSettings';
 import AdvancedSettings from '../components/AdvancedSettings';
+import DeveloperSettings from '../components/DeveloperSettings';
+import { isDevEnvironmentAtom } from '../stores/devStore';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -31,6 +34,7 @@ function TabPanel(props: TabPanelProps) {
 export default function SettingsPage() {
   const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState(0);
+  const isDev = useAtomValue(isDevEnvironmentAtom);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -47,6 +51,7 @@ export default function SettingsPage() {
           <Tab label={t('settings.general')} />
           <Tab label={t('settings.proxy')} />
           <Tab label={t('settings.advanced')} />
+          {isDev && <Tab label={t('settings.developer')} />}
         </Tabs>
       </Box>
 
@@ -61,6 +66,12 @@ export default function SettingsPage() {
       <TabPanel value={currentTab} index={2}>
         <AdvancedSettings />
       </TabPanel>
+
+      {isDev && (
+        <TabPanel value={currentTab} index={3}>
+          <DeveloperSettings />
+        </TabPanel>
+      )}
     </Container>
   );
 }

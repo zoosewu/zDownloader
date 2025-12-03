@@ -149,6 +149,7 @@
     "download": "下載",
     "proxy": "代理",
     "advanced": "進階",
+    "developer": "開發者",
     "about": "關於",
     "downloadPath": "下載路徑",
     "selectPath": "選擇資料夾",
@@ -280,6 +281,42 @@
       "invalidDateTime": "請選擇日期和時間",
       "pastTime": "排程時間必須在未來",
       "scheduleFailed": "無法排程下載"
+    }
+  },
+  "dev": {
+    "banner": {
+      "title": "開發模式",
+      "description": "您正在使用開發模式功能。此模式僅用於開發和測試，請前往「設定 > 開發者」調整設定。",
+      "usingMockTasks": "使用模擬任務",
+      "mockModeEnabled": "模擬模式已啟用",
+      "autoProgressEnabled": "自動進度更新"
+    },
+    "settings": {
+      "notAvailable": "開發者選項不可用",
+      "productionMode": "開發者選項僅在開發環境中可用",
+      "warningTitle": "開發者選項",
+      "warningDescription": "這些設定僅用於開發和測試目的。修改這些設定可能會影響應用程式的正常運作。",
+      "mockMode": {
+        "title": "模擬模式",
+        "description": "啟用後，所有下載命令都不會實際執行，但會顯示在 UI 中。這讓您可以測試 UI 而不實際下載檔案。",
+        "enableLabel": "啟用模擬模式（下載不會實際執行）",
+        "enabledMessage": "模擬模式已啟用 - 下載命令不會實際執行，但會在 UI 中正常顯示"
+      },
+      "mockTasks": {
+        "title": "模擬任務",
+        "description": "顯示預設的模擬下載任務，用於測試 UI 的各種狀態（進行中、已完成、失敗等）。",
+        "enableLabel": "使用模擬任務",
+        "autoProgressLabel": "自動更新進度（模擬下載進度）",
+        "loadButton": "載入模擬任務",
+        "clearButton": "清除所有任務"
+      },
+      "info": {
+        "title": "使用說明",
+        "item1": "模擬模式：防止實際下載，但允許測試 UI 互動",
+        "item2": "模擬任務：載入預設的測試資料，包含各種下載狀態",
+        "item3": "自動進度：模擬任務會自動更新進度，就像真實下載一樣",
+        "item4": "這些設定儲存在瀏覽器本地，不會影響生產環境"
+      }
     }
   }
 }

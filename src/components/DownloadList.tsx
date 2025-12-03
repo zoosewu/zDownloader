@@ -5,6 +5,7 @@ import { useAtom } from 'jotai';
 import { downloadTasksAtom } from '../stores/downloadStore';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
+import DevModeBanner from './DevModeBanner';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +20,9 @@ const DownloadList: React.FC<DownloadListProps> = ({ className }) => {
 
   return (
     <Box className={className} sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Dev Mode Banner - only shows in dev mode with mock features enabled */}
+      <DevModeBanner />
+
       {/* Header */}
       <Paper
         elevation={0}
