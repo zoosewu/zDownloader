@@ -1,10 +1,11 @@
 // Basic info tab component - displays basic download information
 import React from 'react';
-import { Box, Typography, Stack, Link } from '@mui/material';
+import { Box, Typography, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { DownloadTask } from '../types/download';
 import { formatBytes } from '../utils/downloadCalculations';
 import { formatAbsoluteTime } from '../utils/formatters';
+import CollapsibleField from './CollapsibleField';
 
 interface BasicInfoTabProps {
   task: DownloadTask;
@@ -18,43 +19,20 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ task }) => {
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Stack spacing={2.5}>
-        {/* URL */}
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {t('downloads.details.url')}
-          </Typography>
-          <Link
-            href={task.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{
-              wordBreak: 'break-all',
-              fontSize: '0.875rem',
-            }}
-          >
-            {task.url}
-          </Link>
-        </Box>
+      <Stack spacing={0.5}>
+        {/* URL - Collapsible */}
+        <CollapsibleField
+          label={t('downloads.details.url')}
+          content={task.url}
+          contentStyle="link"
+        />
 
-        {/* File Path */}
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {t('downloads.details.filePath')}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              fontFamily: 'monospace',
-              wordBreak: 'break-all',
-              backgroundColor: 'action.hover',
-              padding: 1,
-              borderRadius: 1,
-            }}
-          >
-            {task.filepath || task.filename}
-          </Typography>
-        </Box>
+        {/* File Path - Collapsible */}
+        <CollapsibleField
+          label={t('downloads.details.filePath')}
+          content={task.filepath || task.filename}
+          contentStyle="monospace"
+        />
 
         {/* File Size */}
         <Box>
