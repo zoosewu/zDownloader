@@ -248,7 +248,7 @@ function App() {
         </AppBar>
 
         {/* Page Content */}
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
           {currentPage === 'main' && <MainPage />}
           {currentPage === 'settings' && <SettingsPage />}
           {currentPage === 'add-download' && <AddDownloadPage />}
