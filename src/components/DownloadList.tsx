@@ -6,16 +6,29 @@ import { downloadTasksAtom } from '../stores/downloadStore';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
 import DevModeBanner from './DevModeBanner';
+import QueueControls from './QueueControls';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 
 interface DownloadListProps {
   className?: string;
+  activeCount: number;
+  pausedCount: number;
+  completedCount: number;
+  onControlSuccess: () => void;
+  onControlError: (error: string) => void;
 }
 
 const MIN_PANEL_HEIGHT = 200; // Minimum height for detail panel
 const DEFAULT_PANEL_HEIGHT = 300; // Default height for detail panel
 
-const DownloadList: React.FC<DownloadListProps> = ({ className }) => {
+const DownloadList: React.FC<DownloadListProps> = ({
+  className,
+  activeCount,
+  pausedCount,
+  completedCount,
+  onControlSuccess,
+  onControlError,
+}) => {
   const [tasks] = useAtom(downloadTasksAtom);
   const { selectedTask } = useSelectedDownload();
   const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
@@ -70,10 +83,26 @@ const DownloadList: React.FC<DownloadListProps> = ({ className }) => {
         position: 'relative',
       }}
     >
-      {/* Dev Mode Banner - only shows in dev mode with mock features enabled */}
-      <DevModeBanner />
+      {/* Queue Controls Header - fixed at top */}
+      <Box
+        sx={{
+          px: 2,
+          py: 1.5,
+          borderBottom: 1,
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
+        }}
+      >
+        <QueueControls
+          activeCount={activeCount}
+          pausedCount={pausedCount}
+          completedCount={completedCount}
+          onControlSuccess={onControlSuccess}
+          onControlError={onControlError}
+        />
+      </Box>
 
-      {/* Download Table - scrollable */}
+      {/* Scrollable Content Area - DevModeBanner + DownloadTable */}
       <Box
         sx={{
           flex: 1,
@@ -81,10 +110,14 @@ const DownloadList: React.FC<DownloadListProps> = ({ className }) => {
           minHeight: 200,
         }}
       >
+        {/* Dev Mode Banner - only shows in dev mode with mock features enabled */}
+        <DevModeBanner />
+
+        {/* Download Table */}
         <DownloadTable tasks={tasks} />
       </Box>
 
-      {/* Resize Handle */}
+      {/* Resize Handle and Detail Panel - fixed at bottom */}
       {selectedTask && (
         <>
           <Divider

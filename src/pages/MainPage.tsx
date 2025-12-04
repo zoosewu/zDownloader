@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
 import BatchImportButton from '../components/BatchImportButton';
-import QueueControls from '../components/QueueControls';
 import useTauriEvents from '../hooks/useTauriEvents';
 import useDownloads from '../hooks/useDownloads';
 import { useNavigation } from '../hooks/useNavigation';
@@ -103,7 +102,7 @@ const MainPage: React.FC = () => {
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           px: 2,
           py: 1.5,
@@ -111,16 +110,7 @@ const MainPage: React.FC = () => {
           borderColor: 'divider',
         }}
       >
-        {/* Queue controls on the left */}
-        <QueueControls
-          activeCount={activeDownloads.length}
-          pausedCount={pausedDownloads.length}
-          completedCount={completedDownloads.length}
-          onControlSuccess={handleQueueControlSuccess}
-          onControlError={handleQueueControlError}
-        />
-
-        {/* Action buttons on the right */}
+        {/* Action buttons */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="contained"
@@ -139,7 +129,13 @@ const MainPage: React.FC = () => {
 
       {/* Download list - fills remaining space */}
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        <DownloadList />
+        <DownloadList
+          activeCount={activeDownloads.length}
+          pausedCount={pausedDownloads.length}
+          completedCount={completedDownloads.length}
+          onControlSuccess={handleQueueControlSuccess}
+          onControlError={handleQueueControlError}
+        />
       </Box>
 
       {/* Snackbar for notifications */}
