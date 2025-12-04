@@ -50,9 +50,17 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
   }
 
   return (
-    <Paper elevation={0} sx={{ width: '100%', height: '100%' }}>
-      {/* Tabs Header */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+    <Paper
+      elevation={0}
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Tabs Header - Fixed at top */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
@@ -66,21 +74,28 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
         </Tabs>
       </Box>
 
-      {/* Tab Content */}
-      <Box role="tabpanel" hidden={activeTab !== 0}>
-        {activeTab === 0 && <BasicInfoTab task={task} />}
-      </Box>
+      {/* Tab Content - Scrollable */}
+      <Box
+        sx={{
+          flex: 1,
+          overflow: 'auto',
+        }}
+      >
+        <Box role="tabpanel" hidden={activeTab !== 0}>
+          {activeTab === 0 && <BasicInfoTab task={task} />}
+        </Box>
 
-      <Box role="tabpanel" hidden={activeTab !== 1}>
-        {activeTab === 1 && <SegmentVisualization task={task} />}
-      </Box>
+        <Box role="tabpanel" hidden={activeTab !== 1}>
+          {activeTab === 1 && <SegmentVisualization task={task} />}
+        </Box>
 
-      <Box role="tabpanel" hidden={activeTab !== 2}>
-        {activeTab === 2 && <ErrorInfoTab task={task} />}
-      </Box>
+        <Box role="tabpanel" hidden={activeTab !== 2}>
+          {activeTab === 2 && <ErrorInfoTab task={task} />}
+        </Box>
 
-      <Box role="tabpanel" hidden={activeTab !== 3}>
-        {activeTab === 3 && <AdvancedInfoTab task={task} />}
+        <Box role="tabpanel" hidden={activeTab !== 3}>
+          {activeTab === 3 && <AdvancedInfoTab task={task} />}
+        </Box>
       </Box>
     </Paper>
   );

@@ -145,11 +145,11 @@ const DownloadList: React.FC<DownloadListProps> = ({
             }}
           />
 
-          {/* Download Detail Panel - fixed height, scrollable content */}
+          {/* Download Detail Panel - fixed height */}
           <Box
             sx={{
               height: `${panelHeight}px`,
-              overflow: 'auto',
+              overflow: 'hidden',
               backgroundColor: 'background.paper',
             }}
           >
