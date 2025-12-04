@@ -1,12 +1,14 @@
 // Download list component - displays all download tasks in table view with resizable detail panel
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Divider } from '@mui/material';
+import { Box, Divider, Button } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useAtom } from 'jotai';
 import { downloadTasksAtom } from '../stores/downloadStore';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
 import DevModeBanner from './DevModeBanner';
 import QueueControls from './QueueControls';
+import BatchImportButton from './BatchImportButton';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 
 interface DownloadListProps {
@@ -16,6 +18,9 @@ interface DownloadListProps {
   completedCount: number;
   onControlSuccess: () => void;
   onControlError: (error: string) => void;
+  onAddDownload: () => void;
+  onBatchImportSuccess: (taskIds: string[]) => void;
+  onBatchImportError: (error: string) => void;
 }
 
 const MIN_PANEL_HEIGHT = 200; // Minimum height for detail panel
@@ -28,6 +33,9 @@ const DownloadList: React.FC<DownloadListProps> = ({
   completedCount,
   onControlSuccess,
   onControlError,
+  onAddDownload,
+  onBatchImportSuccess,
+  onBatchImportError,
 }) => {
   const [tasks] = useAtom(downloadTasksAtom);
   const { selectedTask } = useSelectedDownload();
@@ -83,9 +91,12 @@ const DownloadList: React.FC<DownloadListProps> = ({
         position: 'relative',
       }}
     >
-      {/* Queue Controls Header - fixed at top */}
+      {/* Queue Controls and Action Buttons Header - fixed at top */}
       <Box
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           px: 2,
           py: 1.5,
           borderBottom: 1,
@@ -93,6 +104,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
           backgroundColor: 'background.paper',
         }}
       >
+        {/* Queue controls on the left */}
         <QueueControls
           activeCount={activeCount}
           pausedCount={pausedCount}
@@ -100,6 +112,22 @@ const DownloadList: React.FC<DownloadListProps> = ({
           onControlSuccess={onControlSuccess}
           onControlError={onControlError}
         />
+
+        {/* Action buttons on the right */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={onAddDownload}
+            size="small"
+          >
+            新增下載
+          </Button>
+          <BatchImportButton
+            onImportSuccess={onBatchImportSuccess}
+            onImportError={onBatchImportError}
+          />
+        </Box>
       </Box>
 
       {/* Scrollable Content Area - DevModeBanner + DownloadTable */}

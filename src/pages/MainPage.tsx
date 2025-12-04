@@ -1,11 +1,9 @@
 // Main page - integrates UrlInput, BatchImport, QueueControls and DownloadList
 import React, { useEffect } from 'react';
-import { Box, Snackbar, Alert, Button } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, Snackbar, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
-import BatchImportButton from '../components/BatchImportButton';
 import useTauriEvents from '../hooks/useTauriEvents';
 import useDownloads from '../hooks/useDownloads';
 import { useNavigation } from '../hooks/useNavigation';
@@ -98,36 +96,7 @@ const MainPage: React.FC = () => {
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Action buttons bar */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          px: 2,
-          py: 1.5,
-          borderBottom: 1,
-          borderColor: 'divider',
-        }}
-      >
-        {/* Action buttons */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigateTo('add-download')}
-            size="small"
-          >
-            新增下載
-          </Button>
-          <BatchImportButton
-            onImportSuccess={handleBatchImportSuccess}
-            onImportError={handleBatchImportError}
-          />
-        </Box>
-      </Box>
-
-      {/* Download list - fills remaining space */}
+      {/* Download list - fills all space */}
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <DownloadList
           activeCount={activeDownloads.length}
@@ -135,6 +104,9 @@ const MainPage: React.FC = () => {
           completedCount={completedDownloads.length}
           onControlSuccess={handleQueueControlSuccess}
           onControlError={handleQueueControlError}
+          onAddDownload={() => navigateTo('add-download')}
+          onBatchImportSuccess={handleBatchImportSuccess}
+          onBatchImportError={handleBatchImportError}
         />
       </Box>
 
