@@ -19,6 +19,7 @@ import MainPage from './pages/MainPage';
 import SettingsPage from './pages/SettingsPage';
 import AddDownloadPage from './pages/AddDownloadPage';
 import ResumeDialog from './components/ResumeDialog';
+import Footer from './components/Footer';
 import { useNavigation } from './hooks/useNavigation';
 import { useClipboard } from './hooks/useClipboard';
 import CaptchaDialog from './components/CaptchaDialog';
@@ -252,6 +253,9 @@ function App() {
           {currentPage === 'settings' && <SettingsPage />}
           {currentPage === 'add-download' && <AddDownloadPage />}
         </Box>
+
+        {/* Global Footer */}
+        <Footer />
 
         {/* Dialogs */}
         <ResumeDialog

@@ -7,7 +7,6 @@ import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
 import BatchImportButton from '../components/BatchImportButton';
 import QueueControls from '../components/QueueControls';
-import Footer from '../components/Footer';
 import useTauriEvents from '../hooks/useTauriEvents';
 import useDownloads from '../hooks/useDownloads';
 import { useNavigation } from '../hooks/useNavigation';
@@ -142,9 +141,6 @@ const MainPage: React.FC = () => {
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <DownloadList />
       </Box>
-
-      {/* Footer - app info and statistics */}
-      <Footer />
 
       {/* Snackbar for notifications */}
       <Snackbar

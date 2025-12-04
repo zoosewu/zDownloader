@@ -50,7 +50,7 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
   }
 
   return (
-    <Paper elevation={1} sx={{ width: '100%' }}>
+    <Paper elevation={0} sx={{ width: '100%', height: '100%' }}>
       {/* Tabs Header */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs

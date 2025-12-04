@@ -116,9 +116,7 @@ const DownloadList: React.FC<DownloadListProps> = ({ className }) => {
           <Box
             sx={{
               height: `${panelHeight}px`,
-              overflow: 'hidden',
-              borderTop: 1,
-              borderColor: 'divider',
+              overflow: 'auto',
               backgroundColor: 'background.paper',
             }}
           >
