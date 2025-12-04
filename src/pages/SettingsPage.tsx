@@ -1,5 +1,5 @@
 // Settings Page - App settings and Proxy management
-import { Box, Container, Typography, Tabs, Tab } from '@mui/material';
+import { Box, Tabs, Tab } from '@mui/material';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai';
@@ -8,6 +8,7 @@ import GeneralSettings from '../components/GeneralSettings';
 import AdvancedSettings from '../components/AdvancedSettings';
 import DeveloperSettings from '../components/DeveloperSettings';
 import { isDevEnvironmentAtom } from '../stores/devStore';
+import PageLayout from '../components/PageLayout';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -26,7 +27,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`settings-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -41,20 +42,16 @@ export default function SettingsPage() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        {t('settings.title')}
-      </Typography>
-
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={currentTab} onChange={handleTabChange}>
+    <PageLayout
+      header={
+        <Tabs value={currentTab} onChange={handleTabChange} sx={{ width: '100%' }}>
           <Tab label={t('settings.general')} />
           <Tab label={t('settings.proxy')} />
           <Tab label={t('settings.advanced')} />
           {isDev && <Tab label={t('settings.developer')} />}
         </Tabs>
-      </Box>
-
+      }
+    >
       <TabPanel value={currentTab} index={0}>
         <GeneralSettings />
       </TabPanel>
@@ -72,6 +69,6 @@ export default function SettingsPage() {
           <DeveloperSettings />
         </TabPanel>
       )}
-    </Container>
+    </PageLayout>
   );
 }
