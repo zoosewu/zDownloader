@@ -46,6 +46,9 @@ coverage
 *.db
 *.sqlite
 
+# Audit logs (generated at runtime)
+logs/audit/
+
 # Build outputs
 *.exe
 *.dll

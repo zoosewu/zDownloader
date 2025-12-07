@@ -46,9 +46,32 @@ const BatchImportButton: React.FC<BatchImportButtonProps> = ({
       onImportSuccess?.(taskIds);
     } catch (error) {
       console.error('Failed to import batch downloads:', error);
-      onImportError?.(
-        error instanceof Error ? error.message : 'Unknown error'
-      );
+
+      // Extract error message from various error formats
+      let errorMessage = 'Unknown error';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object') {
+        // Handle Tauri error objects
+        if ('message' in error && typeof error.message === 'string') {
+          errorMessage = error.message;
+        } else {
+          // Try to stringify the error object
+          try {
+            errorMessage = JSON.stringify(error);
+          } catch {
+            errorMessage = String(error);
+          }
+        }
+      } else if (error !== null && error !== undefined) {
+        errorMessage = String(error);
+      }
+
+      console.error('Extracted error message:', errorMessage);
+      onImportError?.(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -12,7 +12,9 @@ edition = "2021"
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "zoo_downloader_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# Note: Removed "cdylib" because deno_core's V8 uses thread-local storage
+# which is incompatible with shared libraries (Feature 004)
+crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -39,4 +41,17 @@ regex = "1"
 rand = "0.8"
 warp = "0.3"
 log = "0.4"
+
+# Module system dependencies (Feature 004)
+deno_core = "0.372"  # Updated to latest available version
+wildmatch = "2.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+tracing-appender = "0.2"
+semver = "1.0"
+url = "2.5"
+
+[dev-dependencies]
+serial_test = "3.0"
+tempfile = "3.8"
 

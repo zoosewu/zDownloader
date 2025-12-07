@@ -167,6 +167,71 @@ pub trait WebsiteModule: Send + Sync {
 /// Type alias for boxed modules
 pub type BoxedModule = Box<dyn WebsiteModule>;
 
+// ============================================================================
+// Feature 004: JavaScript Module System
+// ============================================================================
+
+/// Information about a loaded JavaScript module
+///
+/// This represents a JavaScript module that has been loaded and validated.
+/// Unlike the Rust-based WebsiteModule trait, these modules are executed
+/// in a sandboxed JavaScript runtime.
+#[derive(Debug)]
+pub struct ModuleInfo {
+    /// Module manifest containing metadata and permissions
+    pub manifest: crate::modules::manifest::ModuleManifest,
+
+    /// Permission checker for validating module operations
+    pub permission_checker: crate::modules::permission::PermissionChecker,
+
+    /// Path to the module directory
+    pub module_path: std::path::PathBuf,
+
+    /// Module load timestamp
+    pub loaded_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl ModuleInfo {
+    /// Create a new ModuleInfo instance
+    pub fn new(
+        manifest: crate::modules::manifest::ModuleManifest,
+        module_path: std::path::PathBuf,
+    ) -> Self {
+        let permission_checker = crate::modules::permission::PermissionChecker::new(
+            manifest.permissions.clone()
+        );
+
+        Self {
+            manifest,
+            permission_checker,
+            module_path,
+            loaded_at: chrono::Utc::now(),
+        }
+    }
+
+    /// Get the module ID
+    pub fn id(&self) -> &str {
+        &self.manifest.id
+    }
+
+    /// Get the module name
+    pub fn name(&self) -> &str {
+        &self.manifest.name
+    }
+
+    /// Get the module version
+    pub fn version(&self) -> &str {
+        &self.manifest.version
+    }
+
+    /// Check if this module can handle a given URL
+    pub fn can_handle(&self, url: &str) -> bool {
+        self.manifest.url_patterns.iter().any(|pattern| {
+            wildmatch::WildMatch::new(pattern).matches(url)
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,5 +266,70 @@ mod tests {
         assert_eq!(metadata.id, deserialized.id);
         assert_eq!(metadata.name, deserialized.name);
         assert_eq!(metadata.version, deserialized.version);
+    }
+
+    // Feature 004: ModuleInfo tests
+    #[test]
+    fn test_module_info_creation() {
+        use crate::modules::manifest::{ModuleManifest, ModulePermissions, NetworkPermission};
+        use std::path::PathBuf;
+
+        let manifest = ModuleManifest {
+            id: "test-module".to_string(),
+            name: "Test Module".to_string(),
+            version: "1.0.0".to_string(),
+            author: "Test Author".to_string(),
+            description: "A test module".to_string(),
+            homepage: Some("https://example.com".to_string()),
+            url_patterns: vec!["https://example.com/*".to_string()],
+            permissions: ModulePermissions {
+                network: NetworkPermission {
+                    allow_domains: vec!["example.com".to_string()],
+                },
+                credentials: None,
+            },
+        };
+
+        let module_info = ModuleInfo::new(manifest, PathBuf::from("/modules/test-module"));
+
+        assert_eq!(module_info.id(), "test-module");
+        assert_eq!(module_info.name(), "Test Module");
+        assert_eq!(module_info.version(), "1.0.0");
+    }
+
+    #[test]
+    fn test_module_info_can_handle() {
+        use crate::modules::manifest::{ModuleManifest, ModulePermissions, NetworkPermission};
+        use std::path::PathBuf;
+
+        let manifest = ModuleManifest {
+            id: "test-module".to_string(),
+            name: "Test Module".to_string(),
+            version: "1.0.0".to_string(),
+            author: "Test Author".to_string(),
+            description: "A test module".to_string(),
+            homepage: None,
+            url_patterns: vec![
+                "https://example.com/*".to_string(),
+                "https://*.cdn.example.com/*".to_string(),
+            ],
+            permissions: ModulePermissions {
+                network: NetworkPermission {
+                    allow_domains: vec!["example.com".to_string()],
+                },
+                credentials: None,
+            },
+        };
+
+        let module_info = ModuleInfo::new(manifest, PathBuf::from("/modules/test-module"));
+
+        // Should match exact pattern
+        assert!(module_info.can_handle("https://example.com/file.zip"));
+
+        // Should match wildcard pattern
+        assert!(module_info.can_handle("https://cdn1.cdn.example.com/download"));
+
+        // Should not match different domain
+        assert!(!module_info.can_handle("https://other.com/file.zip"));
     }
 }

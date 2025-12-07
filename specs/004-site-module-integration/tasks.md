@@ -175,11 +175,11 @@
 
 #### 4.4 Context API 實作
 
-- [ ] T073 [US1] 設計 JS context API 介面 (http, credentials, captcha, log)
-- [ ] T074 [US1] 實作 context.http.get/post 並整合認證代理
-- [ ] T075 [US1] 實作 context.credentials (返回認證資訊 proxy)
-- [ ] T076 [US1] 實作 context.log (橋接到 Rust tracing)
-- [ ] T077 [US1] 實作 context.captcha.request (Tauri event 機制)
+- [X] T073 [US1] 設計 JS context API 介面 (http, credentials, captcha, log)
+- [X] T074 [US1] 實作 context.http.get/post 並整合認證代理
+- [X] T075 [US1] 實作 context.credentials (返回認證資訊 proxy)
+- [X] T076 [US1] 實作 context.log (橋接到 Rust tracing)
+- [X] T077 [US1] 實作 context.captcha.request (Tauri event 機制)
 
 #### 4.5 K2S 模組實作 (FR-017 to FR-022)
 

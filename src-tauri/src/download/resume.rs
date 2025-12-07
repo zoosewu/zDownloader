@@ -204,6 +204,12 @@ mod tests {
             retry_count: 0,
             max_retries: None,
             last_retry_at: None,
+            // Module integration fields (T085)
+            module_id: None,
+            module_metadata: None,
+            original_url: None,
+            wait_time: None,
+            requires_auth: false,
         };
 
         let temp_dir = Path::new("/tmp/nonexistent");
@@ -248,6 +254,12 @@ mod tests {
             retry_count: 0,
             max_retries: None,
             last_retry_at: None,
+            // Module integration fields (T085)
+            module_id: None,
+            module_metadata: None,
+            original_url: None,
+            wait_time: None,
+            requires_auth: false,
         };
 
         let total = calculate_total_downloaded(&task, &temp_dir);

@@ -1,0 +1,27 @@
+{
+  "id": "k2s",
+  "name": "Keep2Share Downloader",
+  "version": "1.0.0",
+  "author": "Zoo Downloader Community",
+  "description": "支援 Keep2Share (k2s.cc) 的檔案下載，包含自動認證和驗證碼處理",
+  "homepage": "https://github.com/zoo-downloader/modules/k2s",
+  "urlPatterns": [
+    "https://k2s.cc/file/*",
+    "https://*.k2s.cc/file/*",
+    "https://keep2share.cc/file/*"
+  ],
+  "permissions": {
+    "network": {
+      "allowDomains": [
+        "k2s.cc",
+        "*.k2s.cc",
+        "keep2share.cc",
+        "api.keep2share.cc"
+      ]
+    },
+    "credentials": {
+      "required": true,
+      "credentialKeys": ["username", "password", "apiKey"]
+    }
+  }
+}

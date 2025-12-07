@@ -122,6 +122,91 @@ impl Default for ModuleRegistry {
     }
 }
 
+// ============================================================================
+// Site Module Integration (Feature 004 - Phase 4.6 - T087)
+// ============================================================================
+
+/// Detect which site module (if any) should handle the given URL (T087)
+///
+/// This function checks the ModuleRegistry to see if any JavaScript module can handle the URL.
+/// If no module matches, it falls back to builtin URL detection.
+///
+/// # Arguments
+/// * `url` - The URL to detect
+/// * `site_module_registry` - Site module registry containing loaded modules
+///
+/// # Returns
+/// UrlDetectionInfo with detection information
+pub fn detect_url_with_modules(
+    url: &str,
+    site_module_registry: &crate::modules::registry::ModuleRegistry,
+) -> UrlDetectionInfo {
+    // Step 1: Try to find a site module that can handle this URL
+    let module_match = site_module_registry.find_module_for_url(url);
+
+    if module_match.is_some() {
+        // A site module was found - create result with ModuleCustom mode
+        return UrlDetectionInfo {
+            url: url.to_string(),
+            is_valid: true,
+            detector_name: "site-module".to_string(),
+            detection_mode: DetectionMode::ModuleCustom,
+            suggested_filename: extract_filename_from_url(url),
+            file_extension: extract_file_extension(url),
+        };
+    }
+
+    // Step 2: Fall back to builtin URL detection
+    let builtin_registry = ModuleRegistry::new();
+
+    match builtin_registry.detect_url(url) {
+        Ok(info) => info,
+        Err(_) => {
+            // If builtin detection also fails, return invalid result
+            UrlDetectionInfo {
+                url: url.to_string(),
+                is_valid: false,
+                detector_name: "none".to_string(),
+                detection_mode: DetectionMode::FileExtension,
+                suggested_filename: None,
+                file_extension: None,
+            }
+        }
+    }
+}
+
+/// Extract filename from URL
+fn extract_filename_from_url(url: &str) -> Option<String> {
+    let parts: Vec<&str> = url.split('/').collect();
+
+    // Get the last non-empty part
+    for part in parts.iter().rev() {
+        if !part.is_empty() && !part.contains('?') {
+            // Remove query parameters if present
+            let filename = part.split('?').next().unwrap_or(part);
+            if !filename.is_empty() {
+                return Some(filename.to_string());
+            }
+        }
+    }
+
+    None
+}
+
+/// Extract file extension from URL
+fn extract_file_extension(url: &str) -> Option<String> {
+    if let Some(filename) = extract_filename_from_url(url) {
+        if let Some(dot_pos) = filename.rfind('.') {
+            let ext = &filename[dot_pos + 1..];
+            if !ext.is_empty() && ext.len() <= 10 {
+                // Reasonable extension length
+                return Some(ext.to_string());
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

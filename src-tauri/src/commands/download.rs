@@ -2,6 +2,9 @@
 use crate::commands::settings::SettingsState;
 use crate::download::{DownloadEngine, DownloadQueue};
 use crate::models::DownloadTask;
+use crate::modules::url_detector::detect_url_with_modules; // T086: Module detection
+use crate::modules::url_detector::DetectionMode; // T086
+use crate::modules::registry::ModuleRegistry as SiteModuleRegistry; // T086
 use crate::proxy::pool::ProxyPool;
 use crate::storage::get_downloads_dir;
 use crate::utils::parser::parse_url_file;
@@ -74,9 +77,24 @@ pub async fn create_download_with_path(
     url_validator::validate_url_format(&url)?;
     log::info!("✓ URL format validation passed");
 
+    // T086: Detect if URL should be handled by a site module
+    log::info!("Detecting site module support...");
+    let (detection_mode, suggested_filename) = {
+        let site_registry = SiteModuleRegistry::new(); // For now, create empty registry
+        let detection_result = detect_url_with_modules(&url, &site_registry);
+        log::info!(
+            "Detection result: mode={:?}, module={}",
+            detection_result.detection_mode,
+            detection_result.detector_name
+        );
+        (detection_result.detection_mode, detection_result.suggested_filename)
+    }; // Drop site_registry and detection_result here
+
     // Extract filename from URL if not provided
-    let filename =
-        filename.unwrap_or_else(|| url.split('/').next_back().unwrap_or("download").to_string());
+    let filename = filename.unwrap_or_else(|| {
+        // T086: Use suggested filename from module detection if available
+        suggested_filename.unwrap_or_else(|| url.split('/').next_back().unwrap_or("download").to_string())
+    });
     log::info!("Final filename: {}", filename);
 
     // Validate download path
@@ -106,9 +124,29 @@ pub async fn create_download_with_path(
     let filepath = path.join(&filename).to_string_lossy().to_string();
     log::info!("Full file path: {}", filepath);
 
-    // Create task
+    // T086: Create task with module information if detected
     log::info!("Creating download task...");
-    let task = DownloadTask::new(url, filename, filepath);
+    let task = match detection_mode {
+        DetectionMode::ModuleCustom => {
+            log::info!("Creating task with module support (site-module)");
+            // Module detected - create task with module info
+            DownloadTask::new_with_module(
+                url.clone(),
+                filename,
+                filepath,
+                Some("site-module".to_string()), // Module ID (generic for now)
+                None,                             // Module metadata (will be filled during execution)
+                Some(url),                        // Original URL
+                None,                             // Wait time (will be determined during execution)
+                true,                             // Requires auth (assume true for site modules)
+            )
+        }
+        _ => {
+            log::info!("Creating standard download task (no module)");
+            // Direct download - use standard constructor
+            DownloadTask::new(url, filename, filepath)
+        }
+    };
     let task_id = task.id;
     log::info!("✓ Task created with ID: {}", task_id);
 
@@ -276,25 +314,61 @@ pub async fn import_batch_downloads(
     file_path: String,
     state: State<'_, AppState>,
 ) -> Result<Vec<String>, String> {
+    log::info!("========== import_batch_downloads called ==========");
+    log::info!("File path: {}", file_path);
+
     // Parse URL file
     let path = PathBuf::from(&file_path);
-    let urls = parse_url_file(&path)?;
+    log::info!("Parsing URL file...");
+
+    let urls = parse_url_file(&path).map_err(|e| {
+        log::error!("✗ Failed to parse URL file: {}", e);
+        e
+    })?;
+
+    log::info!("✓ Successfully parsed {} URLs from file", urls.len());
 
     let mut task_ids = Vec::new();
     let downloads_dir = get_downloads_dir();
+    log::info!("Download directory: {}", downloads_dir.display());
+
+    // Ensure download directory exists
+    if let Err(e) = std::fs::create_dir_all(&downloads_dir) {
+        let error_msg = format!(
+            "Failed to create download directory '{}': {}",
+            downloads_dir.display(),
+            e
+        );
+        log::error!("✗ {}", error_msg);
+        return Err(error_msg);
+    }
+    log::info!("✓ Download directory is ready");
 
     // Create tasks for all URLs
+    log::info!("Creating tasks for {} URLs...", urls.len());
     let mut queue = state.queue.lock().await;
-    for url in urls {
+
+    for (index, url) in urls.iter().enumerate() {
+        log::info!("Processing URL {}/{}: {}", index + 1, urls.len(), url);
+
         // Extract filename from URL
         let filename = url.split('/').next_back().unwrap_or("download").to_string();
         let filepath = downloads_dir.join(&filename).to_string_lossy().to_string();
 
+        log::info!("  → Filename: {}", filename);
+        log::info!("  → Filepath: {}", filepath);
+
         // Create task
-        let task = DownloadTask::new(url, filename, filepath);
-        task_ids.push(task.id.to_string());
+        let task = DownloadTask::new(url.clone(), filename, filepath);
+        let task_id = task.id.to_string();
+        log::info!("  → Task ID: {}", task_id);
+
+        task_ids.push(task_id);
         queue.add_task(task);
     }
+
+    log::info!("✓ Successfully created {} tasks", task_ids.len());
+    log::info!("========== import_batch_downloads completed ==========");
 
     Ok(task_ids)
 }

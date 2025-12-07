@@ -5,15 +5,45 @@ use std::path::Path;
 /// Parse a text file containing URLs (one per line)
 /// Returns a vector of valid HTTP/HTTPS URLs
 pub fn parse_url_file(file_path: &Path) -> Result<Vec<String>, String> {
+    // Validate file path exists
+    if !file_path.exists() {
+        return Err(format!(
+            "File does not exist: {}",
+            file_path.display()
+        ));
+    }
+
+    // Validate file is readable
+    if !file_path.is_file() {
+        return Err(format!(
+            "Path is not a file: {}",
+            file_path.display()
+        ));
+    }
+
     // Read file content
-    let content =
-        fs::read_to_string(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+    let content = fs::read_to_string(file_path).map_err(|e| {
+        format!(
+            "Failed to read file '{}': {} (check file permissions)",
+            file_path.display(),
+            e
+        )
+    })?;
+
+    // Count total lines for error reporting
+    let total_lines = content.lines().count();
 
     // Parse URLs line by line
     let urls = parse_url_list(&content);
 
     if urls.is_empty() {
-        return Err("No valid URLs found in file".to_string());
+        return Err(format!(
+            "No valid URLs found in file '{}' ({} lines read). \
+            Expected HTTP/HTTPS URLs, one per line. \
+            Lines starting with '#' are treated as comments.",
+            file_path.display(),
+            total_lines
+        ));
     }
 
     Ok(urls)
