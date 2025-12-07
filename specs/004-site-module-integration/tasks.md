@@ -159,11 +159,11 @@
 
 #### 4.2 網路監控 (FR-031, FR-032)
 
-- [ ] T063 [P] [US1] 實作 NetworkMonitor 結構 src-tauri/src/modules/network_monitor.rs
-- [ ] T064 [P] [US1] 實作請求頻率限制 (60 requests/min)
-- [ ] T065 [P] [US1] 實作回應大小限制 (10MB max)
-- [ ] T066 [P] [US1] 實作可疑行為偵測 (多網域請求)
-- [ ] T067 [P] [US1] 新增網路監控測試
+- [X] T063 [P] [US1] 實作 NetworkMonitor 結構 src-tauri/src/modules/network_monitor.rs
+- [X] T064 [P] [US1] 實作請求頻率限制 (60 requests/min)
+- [X] T065 [P] [US1] 實作回應大小限制 (10MB max)
+- [X] T066 [P] [US1] 實作可疑行為偵測 (多網域請求)
+- [X] T067 [P] [US1] 新增網路監控測試
 
 #### 4.3 URL 驗證器 (FR-029, FR-032)
 
