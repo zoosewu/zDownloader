@@ -151,11 +151,11 @@
 
 #### 4.1 認證代理 API (FR-013, FR-014)
 
-- [ ] T058 [US1] 實作 CredentialProxy 結構 src-tauri/src/modules/credential_proxy.rs
-- [ ] T059 [US1] 實作認證資訊安全儲存 (tauri-plugin-keyring)
-- [ ] T060 [US1] 實作認證代理 HTTP 請求 API (inject 到 JS context)
-- [ ] T061 [US1] 實作認證資訊載入和驗證
-- [ ] T062 [US1] 新增認證代理隔離測試 (JS 無法直接存取密碼)
+- [X] T058 [US1] 實作 CredentialProxy 結構 src-tauri/src/modules/credential_proxy.rs
+- [X] T059 [US1] 實作認證資訊安全儲存 (tauri-plugin-keyring)
+- [X] T060 [US1] 實作認證代理 HTTP 請求 API (inject 到 JS context)
+- [X] T061 [US1] 實作認證資訊載入和驗證
+- [X] T062 [US1] 新增認證代理隔離測試 (JS 無法直接存取密碼)
 
 #### 4.2 網路監控 (FR-031, FR-032)
 
