@@ -103,37 +103,37 @@
 
 #### 3.1 JavaScript 模組包裝器 (FR-001)
 
-- [ ] T036 [US2] 實作 SiteModule 資料結構 src-tauri/src/modules/js_module.rs
-- [ ] T037 [US2] 實作 JavaScript 模組類別實例化 (new MySiteModule())
-- [ ] T038 [US2] 實作 Rust-to-JS 函數綁定 (canHandle, extractDownloadInfo)
-- [ ] T039 [US2] 實作 JS-to-Rust 回傳值轉換 (DownloadInfo deserialization)
-- [ ] T040 [US2] 實作模組執行錯誤處理和清理
+- [X] T036 [US2] 實作 SiteModule 資料結構 src-tauri/src/modules/js_module.rs
+- [X] T037 [US2] 實作 JavaScript 模組類別實例化 (new MySiteModule())
+- [X] T038 [US2] 實作 Rust-to-JS 函數綁定 (canHandle, extractDownloadInfo)
+- [X] T039 [US2] 實作 JS-to-Rust 回傳值轉換 (DownloadInfo deserialization)
+- [X] T040 [US2] 實作模組執行錯誤處理和清理
 
 #### 3.2 模組註冊表 (FR-002, FR-004, FR-005)
 
-- [ ] T041 [US2] 擴展 ModuleRegistry 支援 JavaScript 模組 src-tauri/src/modules/registry.rs
-- [ ] T042 [US2] 實作 ModuleType enum (Rust vs JavaScript)
-- [ ] T043 [US2] 實作模組自動發現 (掃描 modules/ 目錄)
-- [ ] T044 [US2] 實作模組載入流程 (讀取 manifest → 驗證 → 建立沙箱 → 載入程式碼)
-- [ ] T045 [US2] 實作 find_module_for_url (URL 匹配邏輯)
-- [ ] T046 [US2] 實作模組衝突解決 (多個模組匹配同一 URL)
-- [ ] T047 [US2] 實作回退到通用下載模式
-- [ ] T048 [US2] 新增模組註冊表單元測試
+- [X] T041 [US2] 擴展 ModuleRegistry 支援 JavaScript 模組 src-tauri/src/modules/registry.rs
+- [X] T042 [US2] 實作 ModuleType enum (Rust vs JavaScript)
+- [X] T043 [US2] 實作模組自動發現 (掃描 modules/ 目錄)
+- [X] T044 [US2] 實作模組載入流程 (讀取 manifest → 驗證 → 建立沙箱 → 載入程式碼)
+- [X] T045 [US2] 實作 find_module_for_url (URL 匹配邏輯)
+- [X] T046 [US2] 實作模組衝突解決 (多個模組匹配同一 URL)
+- [X] T047 [US2] 實作回退到通用下載模式
+- [X] T048 [US2] 新增模組註冊表單元測試
 
 #### 3.3 資源限制器 (FR-028)
 
-- [ ] T049 [P] [US2] 實作 ResourceLimits 資料結構 src-tauri/src/modules/resource_limiter.rs
-- [ ] T050 [P] [US2] 實作 CPU 時間限制 (tokio::time::timeout)
-- [ ] T051 [P] [US2] 實作記憶體使用監控 (JsRuntime heap statistics)
-- [ ] T052 [P] [US2] 實作資源超限處理 (強制終止模組)
-- [ ] T053 [P] [US2] 新增資源限制測試
+- [X] T049 [P] [US2] 實作 ResourceLimits 資料結構 src-tauri/src/modules/resource_limiter.rs
+- [X] T050 [P] [US2] 實作 CPU 時間限制 (tokio::time::timeout)
+- [X] T051 [P] [US2] 實作記憶體使用監控 (JsRuntime heap statistics)
+- [X] T052 [P] [US2] 實作資源超限處理 (強制終止模組)
+- [X] T053 [P] [US2] 新增資源限制測試
 
 #### 3.4 模組載入器整合
 
-- [ ] T054 [US2] 整合所有元件：Manifest → Sandbox → Runtime → Module
-- [ ] T055 [US2] 實作模組生命週期管理 (載入、執行、卸載)
-- [ ] T056 [US2] 實作模組狀態追蹤 (Pending → Loading → Active → Failed)
-- [ ] T057 [US2] 新增完整的模組載入流程測試
+- [X] T054 [US2] 整合所有元件：Manifest → Sandbox → Runtime → Module
+- [X] T055 [US2] 實作模組生命週期管理 (載入、執行、卸載)
+- [X] T056 [US2] 實作模組狀態追蹤 (Pending → Loading → Active → Failed)
+- [X] T057 [US2] 新增完整的模組載入流程測試
 
 **完成標準**: 系統能自動掃描、載入和執行測試模組，正確處理 URL 匹配和權限檢查。
 
