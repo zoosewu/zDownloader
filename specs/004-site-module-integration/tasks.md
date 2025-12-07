@@ -183,13 +183,13 @@
 
 #### 4.5 K2S 模組實作 (FR-017 to FR-022)
 
-- [ ] T078 [US1] 完善 K2S manifest.json (權限、網域白名單)
-- [ ] T079 [US1] 實作 K2S canHandle (URL 模式匹配)
-- [ ] T080 [US1] 實作 K2S 認證流程 (login API)
-- [ ] T081 [US1] 實作 K2S URL 解析邏輯
-- [ ] T082 [US1] 實作 K2S 驗證碼處理
-- [ ] T083 [US1] 實作 K2S 會員類型判斷 (付費/免費)
-- [ ] T084 [US1] 新增 K2S 模組整合測試
+- [X] T078 [US1] 完善 K2S manifest.json (權限、網域白名單)
+- [X] T079 [US1] 實作 K2S canHandle (URL 模式匹配)
+- [X] T080 [US1] 實作 K2S 認證流程 (login API)
+- [X] T081 [US1] 實作 K2S URL 解析邏輯
+- [X] T082 [US1] 實作 K2S 驗證碼處理
+- [X] T083 [US1] 實作 K2S 會員類型判斷 (付費/免費)
+- [X] T084 [US1] 新增 K2S 模組整合測試
 
 #### 4.6 下載整合
 
