@@ -193,11 +193,11 @@
 
 #### 4.6 下載整合
 
-- [ ] T085 [US1] 擴展 DownloadTask 資料結構 (新增 module_id 欄位)
-- [ ] T086 [US1] 修改 create_download command 整合模組系統
-- [ ] T087 [US1] 實作 detect_url_module 自動偵測
-- [ ] T088 [US1] 實作模組錯誤處理和回退到通用下載
-- [ ] T089 [US1] 新增端對端測試 (貼上 K2S 連結 → 完成下載)
+- [X] T085 [US1] 擴展 DownloadTask 資料結構 (新增 module_id 欄位)
+- [X] T086 [US1] 修改 create_download command 整合模組系統
+- [X] T087 [US1] 實作 detect_url_module 自動偵測
+- [X] T088 [US1] 實作模組錯誤處理和回退到通用下載
+- [X] T089 [US1] 新增端對端測試 (貼上 K2S 連結 → 完成下載)
 
 **完成標準**: 使用者貼上 K2S 連結，系統自動識別、認證、解析並開始下載，過程透明且安全。
 

@@ -10,3 +10,6 @@ pub mod serialization_tests;
 
 #[cfg(test)]
 pub mod k2s_tests;
+
+#[cfg(test)]
+pub mod integration_tests;

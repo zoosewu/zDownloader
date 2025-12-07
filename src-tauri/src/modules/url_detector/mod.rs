@@ -33,7 +33,7 @@ pub struct UrlDetectionInfo {
 }
 
 /// Detection mode type
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DetectionMode {
     FileExtension,
