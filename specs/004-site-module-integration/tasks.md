@@ -167,11 +167,11 @@
 
 #### 4.3 URL 驗證器 (FR-029, FR-032)
 
-- [ ] T068 [P] [US1] 實作 UrlValidator 結構 src-tauri/src/modules/url_validator.rs
-- [ ] T069 [P] [US1] 實作內網 IP 檢測 (使用 std::net::Ipv4Addr::is_private())
-- [ ] T070 [P] [US1] 實作 DNS 解析後驗證 (防止 DNS rebinding)
-- [ ] T071 [P] [US1] 實作協議檢查 (只允許 HTTP/HTTPS)
-- [ ] T072 [P] [US1] 新增 SSRF 防護測試
+- [X] T068 [P] [US1] 實作 UrlValidator 結構 src-tauri/src/modules/url_validator.rs
+- [X] T069 [P] [US1] 實作內網 IP 檢測 (使用 std::net::Ipv4Addr::is_private())
+- [X] T070 [P] [US1] 實作 DNS 解析後驗證 (防止 DNS rebinding)
+- [X] T071 [P] [US1] 實作協議檢查 (只允許 HTTP/HTTPS)
+- [X] T072 [P] [US1] 新增 SSRF 防護測試
 
 #### 4.4 Context API 實作
 
