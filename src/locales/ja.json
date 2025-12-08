@@ -182,5 +182,66 @@
         "item4": "これらの設定はブラウザにローカルに保存され、本番環境には影響しません"
       }
     }
+  },
+  "modules": {
+    "title": "サイトモジュール",
+    "credentials": {
+      "title": "認証管理",
+      "description": "サイトモジュールのログイン認証情報を管理",
+      "saveCredentials": "認証情報を保存",
+      "deleteCredentials": "認証情報を削除",
+      "credentialStatus": "認証ステータス",
+      "configured": "設定済み",
+      "notConfigured": "未設定",
+      "missingKeys": "認証フィールドが不足しています",
+      "confirmDelete": "{{moduleName}}の認証情報を削除してもよろしいですか？",
+      "deleteSuccess": "認証情報を削除しました",
+      "saveSuccess": "認証情報を保存しました",
+      "errors": {
+        "saveFailed": "認証情報の保存に失敗しました: {{error}}",
+        "deleteFailed": "認証情報の削除に失敗しました: {{error}}",
+        "loadFailed": "認証ステータスの読み込みに失敗しました: {{error}}",
+        "emptyField": "{{field}}を入力してください",
+        "invalidCredentials": "無効な認証情報"
+      }
+    },
+    "management": {
+      "title": "モジュール管理",
+      "noModules": "モジュールが見つかりません",
+      "scanModules": "モジュールをスキャン",
+      "scanToFind": "「モジュールをスキャン」をクリックして利用可能なサイトモジュールを検索",
+      "scanComplete": "スキャン完了: {{found}}個のモジュールが見つかり、{{loaded}}個を読み込みました",
+      "reloadModule": "モジュールを再読み込み",
+      "reloadSuccess": "モジュールを再読み込みしました: {{moduleId}}",
+      "unloadModule": "モジュールをアンロード",
+      "moduleDetail": "モジュール詳細",
+      "permissions": "権限",
+      "urlPatterns": "対応URLパターン",
+      "allowedDomains": "許可されたドメイン",
+      "requiredCredentials": "必要な認証",
+      "loadedAt": "読み込み日時",
+      "homepage": "ホームページ",
+      "auditLogs": "監査ログ",
+      "statistics": "統計情報",
+      "totalDownloads": "総ダウンロード数",
+      "successfulDownloads": "成功",
+      "failedDownloads": "失敗",
+      "lastUsed": "最終使用",
+      "never": "未使用",
+      "status": {
+        "pending": "待機中",
+        "loading": "読み込み中",
+        "active": "有効",
+        "failed": "失敗",
+        "suspended": "一時停止",
+        "unloaded": "アンロード済み"
+      },
+      "errors": {
+        "loadFailed": "モジュールの読み込みに失敗しました: {{error}}",
+        "reloadFailed": "モジュールの再読み込みに失敗しました: {{error}}",
+        "unloadFailed": "モジュールのアンロードに失敗しました: {{error}}",
+        "scanFailed": "モジュールのスキャンに失敗しました: {{error}}"
+      }
+    }
   }
 }

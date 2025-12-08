@@ -327,5 +327,66 @@
         "item4": "These settings are stored locally in the browser and do not affect production"
       }
     }
+  },
+  "modules": {
+    "title": "Site Modules",
+    "credentials": {
+      "title": "Credential Management",
+      "description": "Manage login credentials for site modules",
+      "saveCredentials": "Save Credentials",
+      "deleteCredentials": "Delete Credentials",
+      "credentialStatus": "Credential Status",
+      "configured": "Configured",
+      "notConfigured": "Not Configured",
+      "missingKeys": "Missing credential fields",
+      "confirmDelete": "Are you sure you want to delete credentials for {{moduleName}}?",
+      "deleteSuccess": "Credentials deleted successfully",
+      "saveSuccess": "Credentials saved successfully",
+      "errors": {
+        "saveFailed": "Failed to save credentials: {{error}}",
+        "deleteFailed": "Failed to delete credentials: {{error}}",
+        "loadFailed": "Failed to load credential status: {{error}}",
+        "emptyField": "{{field}} cannot be empty",
+        "invalidCredentials": "Invalid credentials"
+      }
+    },
+    "management": {
+      "title": "Module Management",
+      "noModules": "No modules found",
+      "scanModules": "Scan Modules",
+      "scanToFind": "Click 'Scan Modules' to find available site modules",
+      "scanComplete": "Scan complete: found {{found}} modules, loaded {{loaded}} successfully",
+      "reloadModule": "Reload Module",
+      "reloadSuccess": "Module reloaded: {{moduleId}}",
+      "unloadModule": "Unload Module",
+      "moduleDetail": "Module Details",
+      "permissions": "Permissions",
+      "urlPatterns": "Supported URL Patterns",
+      "allowedDomains": "Allowed Domains",
+      "requiredCredentials": "Required Credentials",
+      "loadedAt": "Loaded At",
+      "homepage": "Homepage",
+      "auditLogs": "Audit Logs",
+      "statistics": "Statistics",
+      "totalDownloads": "Total Downloads",
+      "successfulDownloads": "Successful",
+      "failedDownloads": "Failed",
+      "lastUsed": "Last Used",
+      "never": "Never",
+      "status": {
+        "pending": "Pending",
+        "loading": "Loading",
+        "active": "Active",
+        "failed": "Failed",
+        "suspended": "Suspended",
+        "unloaded": "Unloaded"
+      },
+      "errors": {
+        "loadFailed": "Failed to load modules: {{error}}",
+        "reloadFailed": "Failed to reload module: {{error}}",
+        "unloadFailed": "Failed to unload module: {{error}}",
+        "scanFailed": "Failed to scan modules: {{error}}"
+      }
+    }
   }
 }

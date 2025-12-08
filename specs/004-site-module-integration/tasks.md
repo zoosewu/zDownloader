@@ -352,7 +352,7 @@
 - [x] T133 [US4] 擴展 Settings 頁面 src/pages/Settings.tsx (新增模組管理區域)
 - [x] T134 [US4] 實作模組管理區域布局和導航
 - [x] T135 [US4] 整合 ModuleList 和 CredentialManager 組件
-- [ ] T136 [US4] 新增多語言翻譯 (zh-TW, en, ja)
+- [x] T136 [US4] 新增多語言翻譯 (zh-TW, en, ja)
 - [ ] T137 [US4] 新增模組管理 UI 測試
 
 **完成標準**: 使用者能在設定頁面查看所有模組、權限、狀態，並進行基本管理操作。
