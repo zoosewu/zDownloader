@@ -14,6 +14,9 @@ import { useDownloadPath } from '../hooks/useDownloadPath';
 import { settingsAtom } from '../stores/settingsStore';
 import { isTauriAvailable } from '../utils/tauri';
 import UrlDetectionIndicator, { UrlDetectionStatus } from './UrlDetectionIndicator';
+import CredentialPromptDialog from './CredentialPromptDialog';
+import { getModuleCredentialsStatus } from '../api/modules';
+import type { CredentialStatus } from '../types/module';
 
 interface UrlDetectionResult {
   url: string;
@@ -49,6 +52,20 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isUserEditedFilename, setIsUserEditedFilename] = useState(false); // Track if user manually edited filename
   const [detectionStatus, setDetectionStatus] = useState<UrlDetectionStatus | null>(null); // T146: URL detection indicator
+
+  // T117-T118: Credential prompt state
+  const [showCredentialPrompt, setShowCredentialPrompt] = useState(false);
+  const [credentialPromptData, setCredentialPromptData] = useState<{
+    moduleId: string;
+    moduleName: string;
+    requiredKeys: string[];
+  } | null>(null);
+  const [pendingDownload, setPendingDownload] = useState<{
+    url: string;
+    filename: string;
+    downloadPath: string;
+  } | null>(null);
+
   const { navigateTo } = useNavigation();
 
   // Auto-paste from clipboard when form opens (if no initialUrl)
@@ -248,6 +265,49 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         console.log('[AddDownloadForm] ⚠ URL detection unavailable, skipping frontend validation:', detectionError);
       }
 
+      // T117: Check if URL requires authentication
+      console.log('[AddDownloadForm] Checking if module requires authentication...');
+      if (detectionStatus?.isSupported && detectionStatus?.requiresAuth && detectionStatus?.moduleId) {
+        console.log('[AddDownloadForm] Module requires auth, checking credential status...');
+
+        try {
+          const credStatus: CredentialStatus = await getModuleCredentialsStatus(
+            detectionStatus.moduleId,
+            ['username', 'password'] // TODO: Get actual required keys from module metadata
+          );
+
+          console.log('[AddDownloadForm] Credential status:', credStatus);
+
+          if (!credStatus.configured || credStatus.missingKeys.length > 0) {
+            console.log('[AddDownloadForm] ⚠ Missing credentials, prompting user...');
+
+            // Store pending download info
+            setPendingDownload({
+              url: url.trim(),
+              filename: filename.trim(),
+              downloadPath,
+            });
+
+            // Show credential prompt dialog
+            setCredentialPromptData({
+              moduleId: detectionStatus.moduleId,
+              moduleName: detectionStatus.moduleName || detectionStatus.moduleId,
+              requiredKeys: credStatus.missingKeys.length > 0
+                ? credStatus.missingKeys
+                : credStatus.credentialKeys,
+            });
+            setShowCredentialPrompt(true);
+            setLoading(false);
+            return; // Stop here and wait for user to input credentials
+          }
+
+          console.log('[AddDownloadForm] ✓ Credentials are configured');
+        } catch (credError) {
+          console.warn('[AddDownloadForm] ⚠ Failed to check credential status:', credError);
+          // Continue anyway - backend will handle auth errors
+        }
+      }
+
       console.log('[AddDownloadForm] Calling create_download_with_path command...');
       const taskId = await invoke<string>('create_download_with_path', {
         url: url.trim(),
@@ -277,6 +337,55 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     if (event.key === 'Enter' && !loading) {
       handleSubmit(event as any);
     }
+  };
+
+  // T118: Handle credential prompt success
+  const handleCredentialSuccess = async () => {
+    console.log('[AddDownloadForm] Credentials saved, resuming download...');
+
+    if (!pendingDownload) {
+      console.error('[AddDownloadForm] No pending download found');
+      return;
+    }
+
+    setLoading(true);
+    setShowCredentialPrompt(false);
+
+    try {
+      // Create and start the download
+      console.log('[AddDownloadForm] Creating download with saved credentials...');
+      const taskId = await invoke<string>('create_download_with_path', {
+        url: pendingDownload.url,
+        filename: pendingDownload.filename || undefined,
+        downloadPath: pendingDownload.downloadPath,
+      });
+      console.log('[AddDownloadForm] ✓ Download task created, taskId:', taskId);
+
+      console.log('[AddDownloadForm] Starting download...');
+      await invoke('start_download', { taskId });
+      console.log('[AddDownloadForm] ✓ Download started successfully');
+
+      // Clear pending download
+      setPendingDownload(null);
+      setCredentialPromptData(null);
+
+      // Navigate to main page
+      navigateTo('main');
+    } catch (e: any) {
+      console.error('[AddDownloadForm] ✗ Error starting download after credentials:', e);
+      setError(e.message || '建立下載任務失敗');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // T118: Handle credential prompt cancel
+  const handleCredentialCancel = () => {
+    console.log('[AddDownloadForm] User cancelled credential input');
+    setShowCredentialPrompt(false);
+    setPendingDownload(null);
+    setCredentialPromptData(null);
+    setLoading(false);
   };
 
   return (
@@ -350,6 +459,18 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
           取消
         </Button>
       </Box>
+
+      {/* T118: Credential Prompt Dialog */}
+      {credentialPromptData && (
+        <CredentialPromptDialog
+          open={showCredentialPrompt}
+          moduleId={credentialPromptData.moduleId}
+          moduleName={credentialPromptData.moduleName}
+          requiredKeys={credentialPromptData.requiredKeys}
+          onClose={handleCredentialCancel}
+          onSuccess={handleCredentialSuccess}
+        />
+      )}
     </Box>
   );
 };
