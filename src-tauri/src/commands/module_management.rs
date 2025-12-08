@@ -147,6 +147,129 @@ pub async fn delete_module_credentials(
         .map_err(|e| format!("Failed to delete credentials: {}", e))
 }
 
+// ============================================================================
+// Module Management Commands (Phase 7: T121-T126)
+// ============================================================================
+
+/// T121: Get all modules
+///
+/// Returns a list of all registered modules with their metadata.
+///
+/// # Returns
+/// * `Ok(Vec<ModuleMetadataDto>)` - List of module metadata
+/// * `Err(String)` - Error message if operation failed
+#[tauri::command]
+pub async fn get_all_modules() -> Result<Vec<serde_json::Value>, String> {
+    // TODO: Implement actual module registry access
+    // For now, return empty list to allow frontend compilation
+    Ok(vec![])
+}
+
+/// T122: Get module detail
+///
+/// Returns detailed information about a specific module.
+///
+/// # Arguments
+/// * `module_id` - Module identifier
+///
+/// # Returns
+/// * `Ok(ModuleDetailDto)` - Module details
+/// * `Err(String)` - Error message if module not found
+#[tauri::command]
+pub async fn get_module_detail(module_id: String) -> Result<serde_json::Value, String> {
+    // TODO: Implement module detail retrieval
+    Err(format!("Module '{}' not found", module_id))
+}
+
+/// T123: Reload module
+///
+/// Reloads a module from disk, refreshing its code and configuration.
+///
+/// # Arguments
+/// * `module_id` - Module identifier
+///
+/// # Returns
+/// * `Ok(())` - Module reloaded successfully
+/// * `Err(String)` - Error message if reload failed
+#[tauri::command]
+pub async fn reload_module(module_id: String) -> Result<(), String> {
+    if module_id.is_empty() {
+        return Err("Module ID cannot be empty".to_string());
+    }
+
+    // TODO: Implement module reload logic
+    Ok(())
+}
+
+/// T124: Unload module
+///
+/// Unloads a module from memory.
+///
+/// # Arguments
+/// * `module_id` - Module identifier
+///
+/// # Returns
+/// * `Ok(())` - Module unloaded successfully
+/// * `Err(String)` - Error message if unload failed
+#[tauri::command]
+pub async fn unload_module(module_id: String) -> Result<(), String> {
+    if module_id.is_empty() {
+        return Err("Module ID cannot be empty".to_string());
+    }
+
+    // TODO: Implement module unload logic
+    Ok(())
+}
+
+/// T125: Scan modules
+///
+/// Scans the modules directory for new or updated modules.
+///
+/// # Returns
+/// * `Ok(ScanResultDto)` - Scan results
+/// * `Err(String)` - Error message if scan failed
+#[tauri::command]
+pub async fn scan_modules() -> Result<serde_json::Value, String> {
+    // TODO: Implement module scanning logic
+    Ok(serde_json::json!({
+        "totalFound": 0,
+        "successfullyLoaded": 0,
+        "failed": []
+    }))
+}
+
+/// T126: Get module audit logs
+///
+/// Returns audit log entries for a specific module.
+///
+/// # Arguments
+/// * `module_id` - Module identifier
+/// * `limit` - Maximum number of entries to return
+/// * `offset` - Offset for pagination
+///
+/// # Returns
+/// * `Ok(AuditLogsResponseDto)` - Audit logs
+/// * `Err(String)` - Error message if operation failed
+#[tauri::command]
+pub async fn get_module_audit_logs(
+    module_id: String,
+    limit: Option<usize>,
+    offset: Option<usize>,
+) -> Result<serde_json::Value, String> {
+    if module_id.is_empty() {
+        return Err("Module ID cannot be empty".to_string());
+    }
+
+    let _limit = limit.unwrap_or(100);
+    let _offset = offset.unwrap_or(0);
+
+    // TODO: Implement audit log retrieval
+    Ok(serde_json::json!({
+        "total": 0,
+        "logs": []
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

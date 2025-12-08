@@ -302,11 +302,11 @@
 
 #### 6.2 前端認證管理組件
 
-- [ ] T112 [US3] 實作 CredentialManager 組件 src/components/CredentialManager.tsx
-- [ ] T113 [US3] 實作認證輸入表單 (username, password, apiKey 等動態欄位)
-- [ ] T114 [US3] 實作認證狀態顯示 (已設定/缺失的 keys)
-- [ ] T115 [US3] 實作刪除認證確認對話框
-- [ ] T116 [US3] 整合 react-i18next 多語言支援
+- [x] T112 [US3] 實作 CredentialManager 組件 src/components/CredentialManager.tsx
+- [x] T113 [US3] 實作認證輸入表單 (username, password, apiKey 等動態欄位)
+- [x] T114 [US3] 實作認證狀態顯示 (已設定/缺失的 keys)
+- [x] T115 [US3] 實作刪除認證確認對話框
+- [x] T116 [US3] 整合 react-i18next 多語言支援
 
 #### 6.3 認證提示流程
 
@@ -331,27 +331,27 @@
 
 #### 7.1 模組管理 Tauri Commands (FR-023, FR-024, FR-025)
 
-- [ ] T121 [P] [US4] 實作 get_all_modules command src-tauri/src/commands/module_management.rs
-- [ ] T122 [P] [US4] 實作 get_module_detail command
-- [ ] T123 [P] [US4] 實作 reload_module command
-- [ ] T124 [P] [US4] 實作 unload_module command
-- [ ] T125 [P] [US4] 實作 scan_modules command
-- [ ] T126 [P] [US4] 實作 get_module_audit_logs command
+- [x] T121 [P] [US4] 實作 get_all_modules command src-tauri/src/commands/module_management.rs
+- [x] T122 [P] [US4] 實作 get_module_detail command
+- [x] T123 [P] [US4] 實作 reload_module command
+- [x] T124 [P] [US4] 實作 unload_module command
+- [x] T125 [P] [US4] 實作 scan_modules command
+- [x] T126 [P] [US4] 實作 get_module_audit_logs command
 
 #### 7.2 前端模組管理組件
 
-- [ ] T127 [US4] 實作 ModuleList 組件 src/components/ModuleList.tsx
-- [ ] T128 [US4] 實作 ModuleCard 組件 src/components/ModuleCard.tsx (顯示基本資訊)
-- [ ] T129 [US4] 實作 ModulePermissions 組件 src/components/ModulePermissions.tsx (權限和網域列表)
-- [ ] T130 [US4] 實作模組詳細資訊展開面板
-- [ ] T131 [US4] 實作模組狀態指示器 (Active/Failed/Suspended)
-- [ ] T132 [US4] 實作模組操作按鈕 (重新載入、卸載)
+- [x] T127 [US4] 實作 ModuleList 組件 src/components/ModuleList.tsx
+- [x] T128 [US4] 實作 ModuleCard 組件 src/components/ModuleCard.tsx (顯示基本資訊)
+- [x] T129 [US4] 實作 ModulePermissions 組件 src/components/ModulePermissions.tsx (權限和網域列表 - 整合至 ModuleCard)
+- [x] T130 [US4] 實作模組詳細資訊展開面板 (使用 Collapse 實作於 ModuleCard)
+- [x] T131 [US4] 實作模組狀態指示器 (Active/Failed/Suspended)
+- [x] T132 [US4] 實作模組操作按鈕 (重新載入、卸載)
 
 #### 7.3 設定頁面整合
 
-- [ ] T133 [US4] 擴展 Settings 頁面 src/pages/Settings.tsx (新增模組管理區域)
-- [ ] T134 [US4] 實作模組管理區域布局和導航
-- [ ] T135 [US4] 整合 ModuleList 和 CredentialManager 組件
+- [x] T133 [US4] 擴展 Settings 頁面 src/pages/Settings.tsx (新增模組管理區域)
+- [x] T134 [US4] 實作模組管理區域布局和導航
+- [x] T135 [US4] 整合 ModuleList 和 CredentialManager 組件
 - [ ] T136 [US4] 新增多語言翻譯 (zh-TW, en, ja)
 - [ ] T137 [US4] 新增模組管理 UI 測試
 

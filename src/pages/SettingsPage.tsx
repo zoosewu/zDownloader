@@ -7,6 +7,7 @@ import ProxySettings from '../components/ProxySettings';
 import GeneralSettings from '../components/GeneralSettings';
 import AdvancedSettings from '../components/AdvancedSettings';
 import DeveloperSettings from '../components/DeveloperSettings';
+import ModuleList from '../components/ModuleList';
 import { isDevEnvironmentAtom } from '../stores/devStore';
 import PageLayout from '../components/PageLayout';
 
@@ -47,6 +48,7 @@ export default function SettingsPage() {
         <Tabs value={currentTab} onChange={handleTabChange} sx={{ width: '100%' }}>
           <Tab label={t('settings.general')} />
           <Tab label={t('settings.proxy')} />
+          <Tab label={t('modules.title')} />
           <Tab label={t('settings.advanced')} />
           {isDev && <Tab label={t('settings.developer')} />}
         </Tabs>
@@ -61,11 +63,15 @@ export default function SettingsPage() {
       </TabPanel>
 
       <TabPanel value={currentTab} index={2}>
+        <ModuleList />
+      </TabPanel>
+
+      <TabPanel value={currentTab} index={3}>
         <AdvancedSettings />
       </TabPanel>
 
       {isDev && (
-        <TabPanel value={currentTab} index={3}>
+        <TabPanel value={currentTab} index={4}>
           <DeveloperSettings />
         </TabPanel>
       )}

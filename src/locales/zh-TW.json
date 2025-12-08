@@ -318,12 +318,18 @@
       "title": "模組管理",
       "noModules": "未找到可用模組",
       "scanModules": "掃描模組",
+      "scanToFind": "點擊「掃描模組」以尋找可用的網站模組",
+      "scanComplete": "掃描完成：找到 {{found}} 個模組，成功載入 {{loaded}} 個",
       "reloadModule": "重新載入",
+      "reloadSuccess": "已重新載入模組：{{moduleId}}",
       "unloadModule": "卸載模組",
       "moduleDetail": "模組詳細資訊",
       "permissions": "權限",
+      "urlPatterns": "支援的網址模式",
       "allowedDomains": "允許的網域",
       "requiredCredentials": "需要認證",
+      "loadedAt": "載入時間",
+      "homepage": "首頁",
       "auditLogs": "審計日誌",
       "statistics": "統計資訊",
       "totalDownloads": "總下載數",
@@ -340,6 +346,7 @@
         "unloaded": "已卸載"
       },
       "errors": {
+        "loadFailed": "載入模組失敗: {{error}}",
         "reloadFailed": "重新載入模組失敗: {{error}}",
         "unloadFailed": "卸載模組失敗: {{error}}",
         "scanFailed": "掃描模組失敗: {{error}}"

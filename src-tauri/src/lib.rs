@@ -20,6 +20,9 @@ use commands::download::{
 };
 use commands::module_management::{
     delete_module_credentials, get_module_credentials_status, save_module_credentials,
+    // Phase 7: Module Management Commands (T121-T126)
+    get_all_modules, get_module_detail, reload_module, unload_module, scan_modules,
+    get_module_audit_logs,
 };
 use commands::proxy::{
     clear_all_proxies, get_active_proxy_count, get_proxy_list, import_proxy_list, remove_proxy,
@@ -146,6 +149,13 @@ pub fn run() {
             save_module_credentials,
             get_module_credentials_status,
             delete_module_credentials,
+            // Phase 7: Module Management Commands (T121-T126)
+            get_all_modules,
+            get_module_detail,
+            reload_module,
+            unload_module,
+            scan_modules,
+            get_module_audit_logs,
         ])
         .setup(|app| {
             // Log initialization complete
