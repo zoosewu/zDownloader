@@ -8,7 +8,7 @@
 
 本任務清單按照 User Story 優先級組織，確保每個 story 都能獨立實作和測試。採用 MVP-first 策略，優先完成最小可行產品（MVP = User Story 2 的核心架構）。
 
-**總任務數**: 164 個任務
+**總任務數**: 169 個任務
 **MVP 範圍**: Phase 1-3 (Setup + Foundational + US2 核心架構)
 **並行機會**: 35+ 個標記為 [P] 的任務可並行執行
 **開發者體驗**: Phase 8 包含完整的 TypeScript 型別定義和 VS Code 整合
@@ -201,6 +201,48 @@
 
 **完成標準**: 使用者貼上 K2S 連結，系統自動識別、認證、解析並開始下載，過程透明且安全。
 
+#### 4.7 K2S 模組優化 (基於研究分析)
+
+**參考**: `specs/004-site-module-integration/k2s-implementation-analysis.md`
+
+- [X] T165 [US1] [高優先級] API 端點驗證 - 測試並修正 K2S API 端點名稱
+  - 驗證 `/v2/file/info` vs `/v2/getFilesInfo`
+  - 驗證 `/v2/file/download` vs `/v2/getUrl`
+  - 驗證 `/v2/account/info` vs `/v2/accountInfo`
+  - 如果當前端點失效，切換到官方端點名稱
+
+- [X] T166 [US1] [中優先級] CAPTCHA 處理優化 - 實作官方 ReCAPTCHA v2 流程
+  - 實作 `/v2/requestReCaptcha` 端點請求
+  - 實作 `/v2/reCaptcha` 端點提交
+  - 處理 HTTP 406 + errorCode 33 錯誤碼
+  - 保留當前 `captcha_required` 流程作為 fallback
+  - 更新 Context API 的 `captcha.request()` 以支持 siteKey
+
+- [x] T167 [US1] [中優先級] 錯誤處理和重試策略 - 添加智能重試機制
+  - 在 CredentialProxy 中實作 `authenticated_request_with_retry()` 方法
+  - 實作指數退避策略 (2s → 4s → 8s，上限 10s)
+  - 定義可重試的錯誤類型 (429, 502, 503, 504, timeout, connection errors)
+  - 配置最大重試次數和延遲參數（預設 3 次重試）
+  - 添加重試邏輯測試（5 個測試全部通過）
+  - Context API 自動整合重試能力
+
+- [x] T168 [US1] [低優先級] 帳號類型偵測優化 - 處理過期的 premium 帳號
+  - 檢查 `premium_expired` 標誌（已實作）
+  - 處理過期 premium 帳號降級為 free（已實作）
+  - 記錄 `premium_until` 日期到日誌（已實作）
+  - 添加帳號狀態變更的警告訊息（已實作）
+  - 存儲 `premiumExpired` 和 `premiumUntil` 屬性
+
+- [x] T169 [US1] [低優先級] 平行下載優化 - 下載引擎層級改進
+  - K2S 模組返回 `downloadHints` metadata（已實作）
+  - 配置最佳區塊大小 (20MB)（已實作）
+  - 配置並行連接數 (premium: 20, free: 5)（已實作）
+  - 添加 `supportsRangeRequests` 標誌（已實作）
+  - 添加 `requestDelay` 配置（premium: 0ms, free: 100ms）
+  - 注意：DownloadEngine 的 range request 實作屬於下載引擎層級，不在本 feature 範圍
+
+**完成標準**: K2S 模組使用官方 API 規格，具備完善的錯誤處理和重試機制，為 premium 用戶提供最佳下載性能。
+
 ---
 
 ## Phase 5: User Story 5 - 模組安全性驗證和測試 (Priority P1)
@@ -215,27 +257,27 @@
 
 #### 5.1 惡意測試模組建立
 
-- [ ] T090 [P] [US5] 建立測試模組：unauthorized_domain.js (測試網域限制)
-- [ ] T091 [P] [US5] 建立測試模組：resource_exhaustion.js (測試資源限制)
-- [ ] T092 [P] [US5] 建立測試模組：ssrf_attempt.js (測試 SSRF 防護)
-- [ ] T093 [P] [US5] 建立測試模組：sandbox_escape.js (測試沙箱逃逸)
-- [ ] T094 [P] [US5] 建立測試模組：data_exfiltration.js (測試資料外洩偵測)
-- [ ] T095 [P] [US5] 建立測試模組：credential_access.js (測試認證隔離)
-- [ ] T096 [P] [US5] 建立測試模組：prototype_pollution.js (測試原型污染)
-- [ ] T097 [P] [US5] 建立測試模組：infinite_loop.js (測試執行逾時)
+- [X] T090 [P] [US5] 建立測試模組：unauthorized_domain.js (測試網域限制)
+- [X] T091 [P] [US5] 建立測試模組：resource_exhaustion.js (測試資源限制)
+- [X] T092 [P] [US5] 建立測試模組：ssrf_attempt.js (測試 SSRF 防護)
+- [X] T093 [P] [US5] 建立測試模組：sandbox_escape.js (測試沙箱逃逸)
+- [X] T094 [P] [US5] 建立測試模組：data_exfiltration.js (測試資料外洩偵測)
+- [X] T095 [P] [US5] 建立測試模組：credential_access.js (測試認證隔離)
+- [X] T096 [P] [US5] 建立測試模組：prototype_pollution.js (測試原型污染)
+- [X] T097 [P] [US5] 建立測試模組：infinite_loop.js (測試執行逾時)
 
 #### 5.2 安全測試套件
 
-- [ ] T098 [US5] 實作安全測試框架 src-tauri/src/modules/tests/security_tests.rs
-- [ ] T099 [US5] 實作測試：權限違規偵測 (SC-010: 100% 成功率)
-- [ ] T100 [US5] 實作測試：認證隔離 (SC-011: 100% 成功率)
-- [ ] T101 [US5] 實作測試：沙箱逃逸防護 (SC-012: 100% 成功率)
-- [ ] T102 [US5] 實作測試：資源限制執行 (SC-013: 100% 成功率)
-- [ ] T103 [US5] 實作測試：內網存取阻止 (SC-014: 100% 成功率)
-- [ ] T104 [US5] 實作測試：URL 驗證 (SC-015: 100% 成功率)
-- [ ] T105 [US5] 實作測試：審計日誌完整性 (SC-016: 100% 成功率)
-- [ ] T106 [US5] 實作測試：可疑行為偵測 (SC-017: <5% 誤報率)
-- [ ] T107 [US5] 執行完整安全測試套件並生成報告
+- [X] T098 [US5] 實作安全測試框架 src-tauri/src/modules/tests/security_tests.rs
+- [X] T099 [US5] 實作測試：權限違規偵測 (SC-010: 100% 成功率)
+- [X] T100 [US5] 實作測試：認證隔離 (SC-011: 100% 成功率)
+- [X] T101 [US5] 實作測試：沙箱逃逸防護 (SC-012: 100% 成功率)
+- [X] T102 [US5] 實作測試：資源限制執行 (SC-013: 100% 成功率)
+- [X] T103 [US5] 實作測試：內網存取阻止 (SC-014: 100% 成功率)
+- [X] T104 [US5] 實作測試：URL 驗證 (SC-015: 100% 成功率)
+- [X] T105 [US5] 實作測試：審計日誌完整性 (SC-016: 100% 成功率)
+- [X] T106 [US5] 實作測試：可疑行為偵測 (SC-017: <5% 誤報率)
+- [X] T107 [US5] 執行完整安全測試套件並生成報告
 
 **完成標準**: 所有安全測試通過，審計日誌記錄完整，無安全漏洞。
 
@@ -253,10 +295,10 @@
 
 #### 6.1 認證管理 Tauri Commands (FR-015)
 
-- [ ] T108 [P] [US3] 實作 save_module_credentials command src-tauri/src/commands/module_management.rs
-- [ ] T109 [P] [US3] 實作 get_module_credentials_status command
-- [ ] T110 [P] [US3] 實作 delete_module_credentials command
-- [ ] T111 [P] [US3] 新增認證管理 commands 錯誤處理
+- [x] T108 [P] [US3] 實作 save_module_credentials command src-tauri/src/commands/module_management.rs
+- [x] T109 [P] [US3] 實作 get_module_credentials_status command
+- [x] T110 [P] [US3] 實作 delete_module_credentials command
+- [x] T111 [P] [US3] 新增認證管理 commands 錯誤處理（完整驗證邏輯，3 個測試通過）
 
 #### 6.2 前端認證管理組件
 
@@ -352,21 +394,21 @@
 
 #### 8.5 模組開發者體驗
 
-- [ ] T150 建立 TypeScript 型別定義檔 modules/@types/zoo-downloader/index.d.ts
+- [X] T150 建立 TypeScript 型別定義檔 modules/@types/zoo-downloader/index.d.ts
   - 定義 Context, HttpClient, Logger, CaptchaClient 等接口
   - 定義 DownloadInfo, HttpResponse, Credentials 等資料型別
   - 包含完整的 JSDoc 註解和使用範例
   - 提供全域型別別名 (ModuleContext, ModuleDownloadInfo 等)
-- [ ] T151 建立 TypeScript 型別定義 package.json (modules/@types/zoo-downloader/package.json)
-- [ ] T152 建立 jsconfig.json (modules/jsconfig.json) 全域配置
-- [ ] T153 建立 VS Code 設定 (modules/.vscode/settings.json)
-- [ ] T154 建立 VS Code 程式碼片段 (modules/.vscode/zoo-downloader.code-snippets)
+- [X] T151 建立 TypeScript 型別定義 package.json (modules/@types/zoo-downloader/package.json)
+- [X] T152 建立 jsconfig.json (modules/jsconfig.json) 全域配置
+- [X] T153 建立 VS Code 設定 (modules/.vscode/settings.json)
+- [X] T154 建立 VS Code 程式碼片段 (modules/.vscode/zoo-downloader.code-snippets)
   - zoo-module: 完整模組模板
   - zoo-http-get: HTTP GET 請求
   - zoo-http-post: HTTP POST 請求
   - zoo-captcha: 驗證碼處理
   - zoo-login: 登入流程範例
-- [ ] T155 完善 modules/_template/ 模板檔案（使用型別定義）
+- [X] T155 完善 modules/_template/ 模板檔案（使用型別定義）
 - [ ] T156 更新 modules/k2s/ 範例使用型別定義和 JSDoc
 - [ ] T157 撰寫模組開發文件 (參考 quickstart.md)
   - 說明如何使用型別定義獲得 IDE 支援
@@ -519,8 +561,8 @@ Phase 2 (Foundational) ← 所有 Stories 的前置條件
 
 ---
 
-**Last Updated**: 2025-12-05
-**Total Tasks**: 164
+**Last Updated**: 2025-12-07
+**Total Tasks**: 169
 **Estimated Duration**: 7 weeks
 **MVP Milestone**: Phase 3 完成 (約 3 weeks)
 **Developer Experience**: TypeScript 型別定義 + VS Code snippets (Phase 8)

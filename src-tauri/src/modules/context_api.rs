@@ -3,7 +3,7 @@
 // This module provides the JavaScript context API that is injected into module runtimes.
 // It bridges JavaScript modules with Rust backend functionality.
 
-use super::credential_proxy::CredentialProxy;
+use super::credential_proxy::{CredentialProxy, RetryConfig};
 use super::network_monitor::NetworkMonitor;
 use super::url_validator::UrlValidator;
 use super::audit::{log_security_event, AuditSeverity};
@@ -121,6 +121,8 @@ globalThis.context = context;
     }
 
     /// Handle HTTP request from JavaScript (Phase 4: T074)
+    ///
+    /// T167: Now uses automatic retry with exponential backoff for transient errors
     pub async fn handle_http_request(
         &mut self,
         method: &str,
@@ -137,9 +139,10 @@ globalThis.context = context;
         // Step 3: Build authenticated headers
         let auth_headers = self.credential_proxy.build_authenticated_headers(headers);
 
-        // Step 4: Make request
+        // Step 4: Make request with retry (T167)
+        // Use default retry config: 3 retries, 2s → 4s → 8s (max 10s)
         let response = self.credential_proxy
-            .authenticated_request(url, method, Some(auth_headers), body)
+            .authenticated_request_with_retry(url, method, Some(auth_headers), body, None)
             .await?;
 
         // Step 5: Check response size
@@ -195,26 +198,41 @@ globalThis.context = context;
         );
     }
 
-    /// Handle captcha request from JavaScript (Phase 4: T077)
+    /// Handle captcha request from JavaScript (Phase 4: T077, T166)
+    ///
+    /// T166: Now supports both image-based CAPTCHA and ReCAPTCHA v2 (via siteKey)
     pub async fn handle_captcha_request(
         &self,
-        image_url: &str,
+        image_url: Option<&str>,
         site_key: Option<&str>,
     ) -> Result<String, String> {
+        // T166: Determine CAPTCHA type
+        let captcha_type = if site_key.is_some() {
+            "ReCAPTCHA v2"
+        } else if image_url.is_some() {
+            "Image CAPTCHA"
+        } else {
+            return Err("Either image_url or site_key must be provided".to_string());
+        };
+
         // Log captcha request
         log_security_event(
             &self.module_id,
-            "Captcha requested",
+            &format!("Captcha requested ({})", captcha_type),
             AuditSeverity::Info,
             serde_json::json!({
                 "imageUrl": image_url,
                 "siteKey": site_key,
+                "type": captcha_type,
             }),
         );
 
         // TODO: Implement actual captcha handling via Tauri events
-        // For now, return error to indicate captcha handling is needed
-        Err("Captcha handling not yet implemented. Will be implemented in Phase 4.5.".to_string())
+        // T166: UI should handle both image CAPTCHA and ReCAPTCHA v2
+        Err(format!(
+            "{} handling not yet implemented. Will be implemented in Phase 6 (UI).",
+            captcha_type
+        ))
     }
 }
 

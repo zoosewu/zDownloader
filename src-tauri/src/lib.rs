@@ -18,6 +18,9 @@ use commands::download::{
     get_download_list, import_batch_downloads, pause_all_downloads, pause_download,
     resume_all_downloads, retry_download_direct, start_download, AppState,
 };
+use commands::module_management::{
+    delete_module_credentials, get_module_credentials_status, save_module_credentials,
+};
 use commands::proxy::{
     clear_all_proxies, get_active_proxy_count, get_proxy_list, import_proxy_list, remove_proxy,
     reset_failed_proxies,
@@ -139,6 +142,10 @@ pub fn run() {
             cancel_scheduled_download,
             get_scheduled_downloads,
             retry_download,
+            // Phase 6: Module Management Commands (T108-T111)
+            save_module_credentials,
+            get_module_credentials_status,
+            delete_module_credentials,
         ])
         .setup(|app| {
             // Log initialization complete

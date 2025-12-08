@@ -13,3 +13,9 @@ pub mod k2s_tests;
 
 #[cfg(test)]
 pub mod integration_tests;
+
+#[cfg(test)]
+pub mod security_tests;
+
+#[cfg(test)]
+pub mod run_security_tests;

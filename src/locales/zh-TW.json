@@ -292,6 +292,66 @@
       "scheduleFailed": "無法排程下載"
     }
   },
+  "modules": {
+    "title": "網站模組",
+    "credentials": {
+      "title": "認證管理",
+      "description": "管理網站模組的登入認證資訊",
+      "saveCredentials": "儲存認證",
+      "deleteCredentials": "刪除認證",
+      "credentialStatus": "認證狀態",
+      "configured": "已設定",
+      "notConfigured": "未設定",
+      "missingKeys": "缺少認證欄位",
+      "confirmDelete": "確定要刪除 {{moduleName}} 的認證資訊嗎？",
+      "deleteSuccess": "已刪除認證資訊",
+      "saveSuccess": "已儲存認證資訊",
+      "errors": {
+        "saveFailed": "儲存認證失敗: {{error}}",
+        "deleteFailed": "刪除認證失敗: {{error}}",
+        "loadFailed": "載入認證狀態失敗: {{error}}",
+        "emptyField": "{{field}} 不能為空",
+        "invalidCredentials": "認證資訊無效"
+      }
+    },
+    "management": {
+      "title": "模組管理",
+      "noModules": "未找到可用模組",
+      "scanModules": "掃描模組",
+      "reloadModule": "重新載入",
+      "unloadModule": "卸載模組",
+      "moduleDetail": "模組詳細資訊",
+      "permissions": "權限",
+      "allowedDomains": "允許的網域",
+      "requiredCredentials": "需要認證",
+      "auditLogs": "審計日誌",
+      "statistics": "統計資訊",
+      "totalDownloads": "總下載數",
+      "successfulDownloads": "成功下載",
+      "failedDownloads": "失敗下載",
+      "lastUsed": "最後使用",
+      "never": "從未使用",
+      "status": {
+        "pending": "等待中",
+        "loading": "載入中",
+        "active": "啟用",
+        "failed": "失敗",
+        "suspended": "已暫停",
+        "unloaded": "已卸載"
+      },
+      "errors": {
+        "reloadFailed": "重新載入模組失敗: {{error}}",
+        "unloadFailed": "卸載模組失敗: {{error}}",
+        "scanFailed": "掃描模組失敗: {{error}}"
+      }
+    },
+    "urlDetection": {
+      "supported": "由 {{moduleName}} 支援",
+      "notSupported": "無可用模組支援此網址",
+      "requiresAuth": "需要認證",
+      "detectFailed": "偵測模組失敗"
+    }
+  },
   "dev": {
     "banner": {
       "title": "開發模式",

@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use keyring::Entry;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use tokio::time::sleep;
 
 /// Credential proxy that mediates credential access
 pub struct CredentialProxy {
@@ -24,6 +26,30 @@ pub struct CredentialStatus {
     pub has_credentials: bool,
     pub available_keys: Vec<String>,
     pub missing_keys: Vec<String>,
+}
+
+/// Retry configuration for HTTP requests (Phase 4: T167)
+#[derive(Debug, Clone)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts (default: 3)
+    pub max_retries: usize,
+    /// Initial delay in seconds (default: 2)
+    pub initial_delay_secs: u64,
+    /// Maximum delay in seconds (default: 10)
+    pub max_delay_secs: u64,
+    /// Enable exponential backoff (default: true)
+    pub exponential_backoff: bool,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: 3,
+            initial_delay_secs: 2,
+            max_delay_secs: 10,
+            exponential_backoff: true,
+        }
+    }
 }
 
 impl CredentialProxy {
@@ -125,6 +151,123 @@ impl CredentialProxy {
             .map_err(|e| format!("Failed to read response body: {}", e))?;
 
         Ok(body)
+    }
+
+    /// Make an authenticated HTTP request with automatic retry (Phase 4: T167)
+    ///
+    /// This method wraps `authenticated_request()` with retry logic using exponential backoff.
+    /// Retryable errors: rate limit (429), timeout, server errors (502, 503, 504)
+    pub async fn authenticated_request_with_retry(
+        &self,
+        url: &str,
+        method: &str,
+        headers: Option<HashMap<String, String>>,
+        body: Option<String>,
+        retry_config: Option<RetryConfig>,
+    ) -> Result<String, String> {
+        let config = retry_config.unwrap_or_default();
+        let mut last_error = String::new();
+
+        for attempt in 0..=config.max_retries {
+            // Make the request
+            let result = self.authenticated_request(
+                url,
+                method,
+                headers.clone(),
+                body.clone(),
+            ).await;
+
+            match result {
+                Ok(response) => {
+                    // Success! Return the response
+                    if attempt > 0 {
+                        log::info!(
+                            "[{}] Request succeeded after {} retries: {}",
+                            self.module_id, attempt, url
+                        );
+                    }
+                    return Ok(response);
+                }
+                Err(error) => {
+                    last_error = error.clone();
+
+                    // Check if error is retryable
+                    if !Self::is_retryable_error(&error) {
+                        // Non-retryable error, fail immediately
+                        return Err(error);
+                    }
+
+                    // If this was the last attempt, return the error
+                    if attempt >= config.max_retries {
+                        log::warn!(
+                            "[{}] Request failed after {} retries: {}",
+                            self.module_id, config.max_retries, url
+                        );
+                        return Err(format!(
+                            "Request failed after {} retries: {}",
+                            config.max_retries, error
+                        ));
+                    }
+
+                    // Calculate delay for next retry
+                    let delay_secs = if config.exponential_backoff {
+                        // Exponential backoff: 2s → 4s → 8s (capped at max_delay_secs)
+                        let exponential_delay = config.initial_delay_secs * 2_u64.pow(attempt as u32);
+                        exponential_delay.min(config.max_delay_secs)
+                    } else {
+                        // Linear backoff
+                        config.initial_delay_secs
+                    };
+
+                    log::info!(
+                        "[{}] Request failed (attempt {}/{}), retrying in {}s: {}",
+                        self.module_id, attempt + 1, config.max_retries + 1, delay_secs, error
+                    );
+
+                    // Wait before retrying
+                    sleep(Duration::from_secs(delay_secs)).await;
+                }
+            }
+        }
+
+        // Should never reach here, but just in case
+        Err(last_error)
+    }
+
+    /// Check if an error is retryable (Phase 4: T167)
+    ///
+    /// Retryable errors:
+    /// - Rate limit (429)
+    /// - Timeout errors
+    /// - Server errors (502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout)
+    fn is_retryable_error(error: &str) -> bool {
+        let error_lower = error.to_lowercase();
+
+        // HTTP status codes that are retryable
+        if error_lower.contains("429") ||  // Too Many Requests
+           error_lower.contains("502") ||  // Bad Gateway
+           error_lower.contains("503") ||  // Service Unavailable
+           error_lower.contains("504")     // Gateway Timeout
+        {
+            return true;
+        }
+
+        // Timeout errors
+        if error_lower.contains("timeout") ||
+           error_lower.contains("timed out")
+        {
+            return true;
+        }
+
+        // Connection errors
+        if error_lower.contains("connection reset") ||
+           error_lower.contains("connection refused") ||
+           error_lower.contains("temporarily unavailable")
+        {
+            return true;
+        }
+
+        false
     }
 
     /// Get credential value (for internal use only, not exposed to JS) (Phase 4: T062)
@@ -338,5 +481,89 @@ mod tests {
         assert!(!status.has_credentials);
         assert!(status.available_keys.is_empty());
         assert_eq!(status.missing_keys.len(), 2);
+    }
+
+    /// Test retry config default values (Phase 4: T167)
+    #[test]
+    fn test_retry_config_defaults() {
+        let config = RetryConfig::default();
+        assert_eq!(config.max_retries, 3);
+        assert_eq!(config.initial_delay_secs, 2);
+        assert_eq!(config.max_delay_secs, 10);
+        assert!(config.exponential_backoff);
+    }
+
+    /// Test retry config custom values (Phase 4: T167)
+    #[test]
+    fn test_retry_config_custom() {
+        let config = RetryConfig {
+            max_retries: 5,
+            initial_delay_secs: 1,
+            max_delay_secs: 30,
+            exponential_backoff: false,
+        };
+        assert_eq!(config.max_retries, 5);
+        assert_eq!(config.initial_delay_secs, 1);
+        assert_eq!(config.max_delay_secs, 30);
+        assert!(!config.exponential_backoff);
+    }
+
+    /// Test is_retryable_error with retryable errors (Phase 4: T167)
+    #[test]
+    fn test_is_retryable_error_true() {
+        // Rate limit
+        assert!(CredentialProxy::is_retryable_error("HTTP request failed with status 429"));
+
+        // Server errors
+        assert!(CredentialProxy::is_retryable_error("HTTP request failed with status 502: Bad Gateway"));
+        assert!(CredentialProxy::is_retryable_error("HTTP request failed with status 503: Service Unavailable"));
+        assert!(CredentialProxy::is_retryable_error("HTTP request failed with status 504: Gateway Timeout"));
+
+        // Timeout
+        assert!(CredentialProxy::is_retryable_error("HTTP request failed: timeout"));
+        assert!(CredentialProxy::is_retryable_error("Connection timed out"));
+
+        // Connection errors
+        assert!(CredentialProxy::is_retryable_error("Connection reset by peer"));
+        assert!(CredentialProxy::is_retryable_error("Connection refused"));
+        assert!(CredentialProxy::is_retryable_error("Resource temporarily unavailable"));
+    }
+
+    /// Test is_retryable_error with non-retryable errors (Phase 4: T167)
+    #[test]
+    fn test_is_retryable_error_false() {
+        // Client errors (4xx except 429)
+        assert!(!CredentialProxy::is_retryable_error("HTTP request failed with status 400: Bad Request"));
+        assert!(!CredentialProxy::is_retryable_error("HTTP request failed with status 401: Unauthorized"));
+        assert!(!CredentialProxy::is_retryable_error("HTTP request failed with status 403: Forbidden"));
+        assert!(!CredentialProxy::is_retryable_error("HTTP request failed with status 404: Not Found"));
+
+        // Invalid URL
+        assert!(!CredentialProxy::is_retryable_error("Invalid URL protocol: ftp://example.com"));
+
+        // Unsupported method
+        assert!(!CredentialProxy::is_retryable_error("Unsupported HTTP method: PATCH"));
+    }
+
+    /// Test exponential backoff calculation (Phase 4: T167)
+    #[test]
+    fn test_exponential_backoff() {
+        let config = RetryConfig::default(); // 2s initial, 10s max
+
+        // Attempt 0: 2 * 2^0 = 2s
+        let delay0 = config.initial_delay_secs * 2_u64.pow(0);
+        assert_eq!(delay0, 2);
+
+        // Attempt 1: 2 * 2^1 = 4s
+        let delay1 = config.initial_delay_secs * 2_u64.pow(1);
+        assert_eq!(delay1, 4);
+
+        // Attempt 2: 2 * 2^2 = 8s
+        let delay2 = config.initial_delay_secs * 2_u64.pow(2);
+        assert_eq!(delay2, 8);
+
+        // Attempt 3: 2 * 2^3 = 16s, capped at max 10s
+        let delay3 = (config.initial_delay_secs * 2_u64.pow(3)).min(config.max_delay_secs);
+        assert_eq!(delay3, 10);
     }
 }

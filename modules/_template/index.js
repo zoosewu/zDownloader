@@ -1,9 +1,24 @@
 // Module Template
 // Replace this with your module implementation
 
+/// <reference types="zoo-downloader" />
+
+/**
+ * @typedef {import('zoo-downloader').ModuleContext} ModuleContext
+ * @typedef {import('zoo-downloader').DownloadInfo} DownloadInfo
+ * @typedef {import('zoo-downloader').HttpResponse} HttpResponse
+ */
+
+/**
+ * Your Site Module
+ *
+ * Replace "YourModule" with your site name (e.g., K2SModule, MediafireModule)
+ * @implements {import('zoo-downloader').SiteModule}
+ */
 export class YourModule {
   constructor() {
     // Initialize your module state
+    this.session = null;
   }
 
   /**
@@ -13,18 +28,15 @@ export class YourModule {
    */
   canHandle(url) {
     // Implement your URL matching logic
+    // Example: return url.includes('example.com/file/');
     return url.includes('example.com/file/');
   }
 
   /**
    * Extract download information from URL
    * @param {string} url - File URL
-   * @param {object} context - Execution context provided by the main app
-   * @param {object} context.http - HTTP client for making requests
-   * @param {object} context.credentials - Credential proxy (if configured)
-   * @param {object} context.captcha - CAPTCHA handler
-   * @param {object} context.log - Logging interface
-   * @returns {Promise<object>} Download information
+   * @param {ModuleContext} context - Execution context provided by the downloader
+   * @returns {Promise<DownloadInfo>} Download information
    */
   async extractDownloadInfo(url, context) {
     try {
@@ -53,12 +65,14 @@ export class YourModule {
    */
   requiresAuth(html) {
     // Implement your auth detection logic
+    // Example: return html.includes('login-required');
     return false;
   }
 
   /**
    * Perform login
-   * @param {object} context - Execution context
+   * @param {ModuleContext} context - Execution context
+   * @returns {Promise<void>}
    */
   async login(context) {
     // Implement your login logic using context.credentials

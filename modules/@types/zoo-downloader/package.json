@@ -1,0 +1,17 @@
+{
+  "name": "@types/zoo-downloader",
+  "version": "1.0.0",
+  "description": "TypeScript type definitions for Zoo Downloader site modules",
+  "main": "index.d.ts",
+  "types": "index.d.ts",
+  "typings": "index.d.ts",
+  "keywords": [
+    "zoo-downloader",
+    "types",
+    "typescript",
+    "module",
+    "site-module"
+  ],
+  "author": "Zoo Downloader Community",
+  "license": "MIT"
+}
