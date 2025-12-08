@@ -80,7 +80,8 @@
       "queueControlFailed": "Queue control failed: {{error}}",
       "networkError": "Network error: {{error}}",
       "fileAccessError": "File access error: {{error}}",
-      "insufficientSpace": "Insufficient disk space"
+      "insufficientSpace": "Insufficient disk space",
+      "retryFailed": "Retry failed: {{error}}"
     },
     "batch": {
       "import": "Batch Import",
@@ -357,12 +358,16 @@
       "email": "Email",
       "enterCredential": "Enter {{field}}",
       "securityNotice": "Your credentials will be securely stored in the system keychain.",
+      "authErrorDetected": "Authentication error detected. Please update your login credentials and try again.",
+      "retryWithAuth": "Re-authenticate and Retry",
       "errors": {
         "saveFailed": "Failed to save credentials: {{error}}",
         "deleteFailed": "Failed to delete credentials: {{error}}",
         "loadFailed": "Failed to load credential status: {{error}}",
         "emptyField": "{{field}} cannot be empty",
-        "invalidCredentials": "Invalid credentials"
+        "invalidCredentials": "Invalid credentials",
+        "unknownModule": "Unable to identify module, please configure credentials manually",
+        "checkFailed": "Failed to check credential status: {{error}}"
       }
     },
     "management": {

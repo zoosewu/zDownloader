@@ -30,6 +30,7 @@ import ProgressBar from './ProgressBar';
 import useDownloads from '../hooks/useDownloads';
 import { retryDownload } from '../api/scheduler';
 import ScheduleDialog from './ScheduleDialog';
+import CredentialRetryHandler from './CredentialRetryHandler';
 
 interface DownloadItemProps {
   task: DownloadTask;
@@ -225,6 +226,16 @@ const DownloadItem: React.FC<DownloadItemProps> = ({ task }) => {
           <Typography variant="caption" color="text.secondary" noWrap>
             {task.url}
           </Typography>
+
+          {/* Credential Retry Handler for authentication errors */}
+          {task.status === 'Failed' && (
+            <CredentialRetryHandler
+              task={task}
+              onRetrySuccess={() => {
+                console.log('[DownloadItem] Credential retry successful for task:', task.id);
+              }}
+            />
+          )}
 
           {/* Segments toggle button */}
           {hasSegments && (

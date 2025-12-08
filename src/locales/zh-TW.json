@@ -80,7 +80,8 @@
       "queueControlFailed": "佇列控制失敗: {{error}}",
       "networkError": "網路錯誤: {{error}}",
       "fileAccessError": "檔案存取錯誤: {{error}}",
-      "insufficientSpace": "磁碟空間不足"
+      "insufficientSpace": "磁碟空間不足",
+      "retryFailed": "重試失敗: {{error}}"
     },
     "batch": {
       "import": "批次匯入",
@@ -321,12 +322,16 @@
       "email": "電子郵件",
       "enterCredential": "請輸入{{field}}",
       "securityNotice": "您的認證資訊將安全存儲在系統密鑰鏈中。",
+      "authErrorDetected": "檢測到認證錯誤。請更新您的登入資訊後重試。",
+      "retryWithAuth": "重新認證並重試",
       "errors": {
         "saveFailed": "儲存認證失敗: {{error}}",
         "deleteFailed": "刪除認證失敗: {{error}}",
         "loadFailed": "載入認證狀態失敗: {{error}}",
         "emptyField": "{{field}} 不能為空",
-        "invalidCredentials": "認證資訊無效"
+        "invalidCredentials": "認證資訊無效",
+        "unknownModule": "無法識別模組，請手動設定認證",
+        "checkFailed": "檢查認證狀態失敗: {{error}}"
       }
     },
     "management": {

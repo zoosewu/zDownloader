@@ -79,7 +79,8 @@
       "queueControlFailed": "キュー制御に失敗しました: {{error}}",
       "networkError": "ネットワークエラー: {{error}}",
       "fileAccessError": "ファイルアクセスエラー: {{error}}",
-      "insufficientSpace": "ディスク容量が不足しています"
+      "insufficientSpace": "ディスク容量が不足しています",
+      "retryFailed": "再試行に失敗しました: {{error}}"
     },
     "clipboard": {
       "detected": "クリップボードでURLを検出しました",
@@ -212,12 +213,16 @@
       "email": "メールアドレス",
       "enterCredential": "{{field}}を入力してください",
       "securityNotice": "認証情報はシステムのキーチェーンに安全に保存されます。",
+      "authErrorDetected": "認証エラーが検出されました。ログイン情報を更新して再試行してください。",
+      "retryWithAuth": "再認証して再試行",
       "errors": {
         "saveFailed": "認証情報の保存に失敗しました: {{error}}",
         "deleteFailed": "認証情報の削除に失敗しました: {{error}}",
         "loadFailed": "認証ステータスの読み込みに失敗しました: {{error}}",
         "emptyField": "{{field}}を入力してください",
-        "invalidCredentials": "無効な認証情報"
+        "invalidCredentials": "無効な認証情報",
+        "unknownModule": "モジュールを識別できません。手動で認証を設定してください",
+        "checkFailed": "認証ステータスの確認に失敗しました: {{error}}"
       }
     },
     "management": {
