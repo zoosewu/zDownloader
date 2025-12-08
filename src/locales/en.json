@@ -328,6 +328,12 @@
       }
     }
   },
+  "urlDetection": {
+    "detecting": "Detecting...",
+    "failed": "Detection Failed",
+    "supportedBy": "Supported By",
+    "requiresAuth": "Requires Authentication"
+  },
   "modules": {
     "title": "Site Modules",
     "credentials": {

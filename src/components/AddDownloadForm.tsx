@@ -13,6 +13,7 @@ import { useNavigation } from '../hooks/useNavigation';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { settingsAtom } from '../stores/settingsStore';
 import { isTauriAvailable } from '../utils/tauri';
+import UrlDetectionIndicator, { UrlDetectionStatus } from './UrlDetectionIndicator';
 
 interface UrlDetectionResult {
   url: string;
@@ -21,6 +22,14 @@ interface UrlDetectionResult {
   detectionMode?: string;
   suggestedFilename?: string;
   fileExtension?: string;
+}
+
+interface UrlModuleDetectionResult {
+  url: string;
+  moduleId?: string;
+  moduleName?: string;
+  isSupported: boolean;
+  requiresAuth: boolean;
 }
 
 interface AddDownloadFormProps {
@@ -39,6 +48,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isUserEditedFilename, setIsUserEditedFilename] = useState(false); // Track if user manually edited filename
+  const [detectionStatus, setDetectionStatus] = useState<UrlDetectionStatus | null>(null); // T146: URL detection indicator
   const { navigateTo } = useNavigation();
 
   // Auto-paste from clipboard when form opens (if no initialUrl)
@@ -120,6 +130,56 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
 
     return () => clearTimeout(timeoutId);
   }, [url, isUserEditedFilename]);
+
+  // T145: Detect module support when URL changes
+  useEffect(() => {
+    // Reset detection status if URL is empty
+    if (!url.trim()) {
+      setDetectionStatus(null);
+      return;
+    }
+
+    // Skip if Tauri is not available
+    if (!isTauriAvailable()) {
+      return;
+    }
+
+    // Set detecting state
+    setDetectionStatus({
+      isDetecting: true,
+      isSupported: false,
+      requiresAuth: false,
+    });
+
+    // Debounce the module detection
+    const timeoutId = setTimeout(async () => {
+      try {
+        console.log('[AddDownloadForm] Checking module support...');
+        const result = await invoke<UrlModuleDetectionResult>('detect_url_module', {
+          url: url.trim(),
+        });
+        console.log('[AddDownloadForm] Module detection result:', result);
+
+        setDetectionStatus({
+          isDetecting: false,
+          isSupported: result.isSupported,
+          moduleId: result.moduleId,
+          moduleName: result.moduleName,
+          requiresAuth: result.requiresAuth,
+        });
+      } catch (e) {
+        console.log('[AddDownloadForm] Module detection failed:', e);
+        setDetectionStatus({
+          isDetecting: false,
+          isSupported: false,
+          requiresAuth: false,
+          error: String(e),
+        });
+      }
+    }, 600); // 600ms debounce (slightly longer than filename detection)
+
+    return () => clearTimeout(timeoutId);
+  }, [url]);
 
   const isValidUrl = (urlString: string): boolean => {
     try {
@@ -238,6 +298,9 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         placeholder="https://example.com/file.zip"
         helperText="請輸入要下載的檔案網址"
       />
+
+      {/* T146: URL Detection Indicator */}
+      <UrlDetectionIndicator status={detectionStatus} />
 
       <TextField
         label="檔案名稱（選填）"

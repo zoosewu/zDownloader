@@ -12,7 +12,7 @@ mod utils;
 use commands::captcha::{
     cancel_captcha, get_active_captcha_count, get_pending_captchas, submit_captcha_solution,
 };
-use commands::clipboard::{detect_url, get_clipboard_content};
+use commands::clipboard::{detect_url, detect_url_module, get_clipboard_content};
 use commands::download::{
     cancel_download, clear_completed_downloads, create_download, create_download_with_path,
     get_download_list, import_batch_downloads, pause_all_downloads, pause_download,
@@ -126,6 +126,7 @@ pub fn run() {
             retry_download_direct,
             get_clipboard_content,
             detect_url,
+            detect_url_module,
             import_proxy_list,
             get_proxy_list,
             remove_proxy,

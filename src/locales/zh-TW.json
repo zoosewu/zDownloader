@@ -292,6 +292,12 @@
       "scheduleFailed": "無法排程下載"
     }
   },
+  "urlDetection": {
+    "detecting": "檢測中...",
+    "failed": "檢測失敗",
+    "supportedBy": "支援模組",
+    "requiresAuth": "需要認證"
+  },
   "modules": {
     "title": "網站模組",
     "credentials": {

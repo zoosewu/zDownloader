@@ -183,6 +183,12 @@
       }
     }
   },
+  "urlDetection": {
+    "detecting": "検出中...",
+    "failed": "検出失敗",
+    "supportedBy": "対応モジュール",
+    "requiresAuth": "認証が必要"
+  },
   "modules": {
     "title": "サイトモジュール",
     "credentials": {

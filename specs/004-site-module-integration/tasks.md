@@ -382,9 +382,9 @@
 
 #### 8.3 URL 偵測整合 (FR-026)
 
-- [ ] T144 實作 detect_url_module Tauri command
-- [ ] T145 整合到前端 URL 輸入流程
-- [ ] T146 實作 URL 偵測指示器 (顯示使用的模組，僅在失敗時)
+- [x] T144 實作 detect_url_module Tauri command
+- [x] T145 整合到前端 URL 輸入流程
+- [x] T146 實作 URL 偵測指示器 (顯示使用的模組，僅在失敗時)
 
 #### 8.4 審計日誌 UI
 

@@ -24,10 +24,10 @@ import type { ModuleMetadata } from '../types/module';
 interface ModuleCardProps {
   module: ModuleMetadata;
   onReload?: (moduleId: string) => void;
-  onManageCredentials?: (moduleId: string) => void;
+  onManageCredentials?: (moduleId: string) => void; // Reserved for future use
 }
 
-export default function ModuleCard({ module, onReload, onManageCredentials }: ModuleCardProps) {
+export default function ModuleCard({ module, onReload, onManageCredentials: _onManageCredentials }: ModuleCardProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -66,7 +66,7 @@ export default function ModuleCard({ module, onReload, onManageCredentials }: Mo
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="h6">{module.name}</Typography>
             <Chip
-              icon={getStatusIcon(module.status)}
+              icon={getStatusIcon(module.status) || undefined}
               label={t(`modules.management.status.${module.status}`)}
               color={getStatusColor(module.status)}
               size="small"
