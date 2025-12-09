@@ -37,9 +37,17 @@ A powerful, feature-rich download manager built with Tauri, React, and Rust. Zoo
 - **Multiple CAPTCHA Types**: Support for various CAPTCHA challenges
 - **User-friendly Dialog**: Clear interface for CAPTCHA resolution
 
+### Site Module System (NEW!)
+- **Extensible Module Architecture**: Support for site-specific download modules
+- **Secure Sandbox**: JavaScript modules run in isolated environment with 8-layer security
+- **TypeScript Support**: Full IntelliSense and type checking for module developers
+- **Keep2Share (K2S) Built-in**: Premium file hosting support with authentication
+- **Developer Tools**: Complete toolchain including module testing and validation
+- **Permission System**: Fine-grained control over network access and resources
+
 ### User Interface
 - **Modern Material-UI Design**: Clean and intuitive interface
-- **Multi-language Support**: English and Traditional Chinese (繁體中文)
+- **Multi-language Support**: English, Traditional Chinese (繁體中文), and Japanese (日本語)
 - **Dark/Light Theme**: Adaptive theme support
 - **Responsive Layout**: Works seamlessly on different screen sizes
 
@@ -157,6 +165,62 @@ npm run tauri build
    - Downloadable links will show ⬇️ icon
    - Right-click any link → "Download with Zoo Downloader"
 
+### Site Modules
+
+Zoo Downloader supports site-specific modules for premium file hosting services. Modules are JavaScript files that run in a secure sandbox with fine-grained permissions.
+
+#### Using Built-in Modules
+
+**Keep2Share (K2S) Module** - Built-in support for premium downloads:
+
+1. **Navigate to Module Settings**
+   - Open Settings → Module Management
+   - See list of installed modules
+
+2. **Configure Authentication**
+   - When downloading from K2S, you'll be prompted for credentials
+   - Enter your username and password
+   - Credentials are stored securely and never exposed to modules
+
+3. **Download Premium Files**
+   - Add K2S URLs normally
+   - Module automatically handles authentication and premium link extraction
+   - Supports retry mechanism for expired sessions
+
+#### Developing Custom Modules
+
+For developers who want to add support for new sites:
+
+1. **Quick Start**
+   ```bash
+   # Copy the module template
+   cp -r modules/_template modules/my-site
+
+   # Edit manifest and implementation
+   cd modules/my-site
+   # Edit manifest.json and index.js
+
+   # Test your module
+   node ../test-module.js
+   ```
+
+2. **Full TypeScript Support**
+   - IntelliSense and autocomplete in VS Code
+   - Type definitions in `modules/@types/zoo-downloader/`
+   - Code snippets in `modules/.vscode/`
+
+3. **Documentation**
+   - See `specs/004-site-module-integration/quickstart.md` for detailed guide
+   - See `modules/k2s/` for a complete working example
+   - See `modules/_template/` for module structure
+
+**Security Features:**
+- 8-layer security sandbox (Deno runtime isolation)
+- Fine-grained network permissions (domain allowlist)
+- Resource limits (memory, CPU time)
+- No file system access
+- Credential proxy (modules never see raw passwords)
+
 ## 🏗️ Architecture
 
 ### Technology Stack
@@ -231,6 +295,14 @@ zoo-downloader/
 │   ├── background.js             # Background service worker
 │   ├── content.js                # Content script
 │   └── popup.html                # Extension popup
+│
+├── modules/                      # Site-specific download modules
+│   ├── @types/                   # TypeScript type definitions
+│   │   └── zoo-downloader/       # Module development types
+│   ├── .vscode/                  # VS Code snippets for module development
+│   ├── _template/                # Module template
+│   ├── k2s/                      # Keep2Share module (built-in)
+│   └── test-module.js            # Module testing utility
 │
 └── package.json                  # Node.js dependencies
 ```
@@ -359,7 +431,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Bandwidth limiting
 - [ ] Browser integration for Firefox and Edge
 - [ ] Video/Audio stream detection and download
-- [ ] Plugin system for website-specific modules
+- [x] Plugin system for website-specific modules
 
 ---
 
