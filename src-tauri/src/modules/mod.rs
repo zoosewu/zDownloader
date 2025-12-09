@@ -11,6 +11,7 @@ pub mod url_detector;
 pub mod audit;
 pub mod context_api;
 pub mod credential_proxy;
+pub mod error_format;
 pub mod init;
 pub mod js_module;
 pub mod js_runtime;
