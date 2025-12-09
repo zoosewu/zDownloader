@@ -7,13 +7,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: [],
+    setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/__tests__/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
     exclude: ['node_modules', 'dist', 'src-tauri'],
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@mui/material/utils': '@mui/material/node/utils/index.js',
+      '@mui/system/colorManipulator': '@mui/system/node/colorManipulator/index.js',
     },
   },
 });
