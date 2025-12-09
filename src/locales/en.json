@@ -407,6 +407,12 @@
         "unloadFailed": "Failed to unload module: {{error}}",
         "scanFailed": "Failed to scan modules: {{error}}"
       }
+    },
+    "urlDetection": {
+      "supported": "Supported by {{moduleName}}",
+      "notSupported": "No module available for this URL",
+      "requiresAuth": "Requires Authentication",
+      "detectFailed": "Module detection failed"
     }
   }
 }

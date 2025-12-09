@@ -28,6 +28,7 @@
   },
   "downloads": {
     "title": "ダウンロードリスト",
+    "addDownload": "ダウンロードを追加",
     "noTasks": "ダウンロードタスクがありません",
     "unknown": "不明",
     "urlLabel": "ダウンロードURL",
@@ -81,6 +82,13 @@
       "fileAccessError": "ファイルアクセスエラー: {{error}}",
       "insufficientSpace": "ディスク容量が不足しています",
       "retryFailed": "再試行に失敗しました: {{error}}"
+    },
+    "batch": {
+      "import": "バッチインポート",
+      "importSuccess": "{{count}}個のダウンロードタスクを正常にインポートしました",
+      "importError": "バッチインポートに失敗しました: {{error}}",
+      "selectFile": "URLファイルを選択",
+      "fileFormat": "1行に1つのURLを含むテキストファイル"
     },
     "clipboard": {
       "detected": "クリップボードでURLを検出しました",
@@ -146,7 +154,59 @@
     }
   },
   "settings": {
-    "developer": "開発者"
+    "title": "設定",
+    "general": "一般",
+    "download": "ダウンロード",
+    "proxy": "プロキシ",
+    "advanced": "詳細",
+    "developer": "開発者",
+    "about": "について",
+    "downloadPath": "ダウンロードパス",
+    "selectPath": "フォルダを選択",
+    "maxConcurrent": "最大同時ダウンロード数",
+    "maxConcurrentHelp": "空欄で無制限",
+    "maxThreads": "ダウンロードあたりの最大スレッド数",
+    "autoStart": "ダウンロードを自動開始",
+    "clipboardMonitor": "クリップボードを監視",
+    "notifications": "通知を有効にする",
+    "language": "言語",
+    "theme": "テーマ",
+    "themeLight": "ライト",
+    "themeDark": "ダーク",
+    "themeAuto": "自動",
+    "systemTray": "システムトレイを有効にする",
+    "uiSettings": "UI設定",
+    "downloadSettings": "ダウンロード設定",
+    "segmentSize": "セグメントサイズ (MB)",
+    "segmentSizeHelp": "各ダウンロードセグメントのサイズ (1-100 MB)",
+    "speedLimit": "速度制限",
+    "speedLimitMode": "速度制限モード",
+    "unlimited": "無制限",
+    "fixed": "固定",
+    "speedLimitValue": "速度制限 (KB/s)",
+    "autoRetry": "自動再試行",
+    "enableAutoRetry": "自動再試行を有効にする",
+    "maxRetryCount": "最大再試行回数",
+    "retryInterval": "再試行間隔（秒）",
+    "proxySettings": "プロキシ設定",
+    "proxyVerificationInterval": "プロキシ検証間隔（時間）",
+    "proxyVerificationHelp": "プロキシの健全性を確認する頻度 (1-168時間)",
+    "importExport": "インポート/エクスポート",
+    "export": "設定をエクスポート",
+    "import": "設定をインポート",
+    "resetToDefaults": "デフォルトにリセット",
+    "saveSuccess": "設定を保存しました",
+    "resetSuccess": "設定をデフォルトにリセットしました",
+    "exportSuccess": "設定をエクスポートしました",
+    "importSuccess": "設定をインポートしました",
+    "confirmReset": "すべての設定をデフォルト値にリセットしますか？",
+    "errors": {
+      "loadFailed": "設定の読み込みに失敗しました",
+      "saveFailed": "設定の保存に失敗しました",
+      "resetFailed": "設定のリセットに失敗しました",
+      "exportFailed": "設定のエクスポートに失敗しました",
+      "importFailed": "設定のインポートに失敗しました"
+    }
   },
   "dev": {
     "banner": {
@@ -262,6 +322,97 @@
         "unloadFailed": "モジュールのアンロードに失敗しました: {{error}}",
         "scanFailed": "モジュールのスキャンに失敗しました: {{error}}"
       }
+    },
+    "urlDetection": {
+      "supported": "{{moduleName}}がサポート",
+      "notSupported": "このURLに対応するモジュールがありません",
+      "requiresAuth": "認証が必要",
+      "detectFailed": "モジュール検出に失敗しました"
+    }
+  },
+  "captcha": {
+    "title": "CAPTCHA認証",
+    "description": "CAPTCHAを解決してダウンロードを続行してください",
+    "submit": "送信",
+    "refresh": "更新",
+    "solving": "CAPTCHA解決中...",
+    "success": "CAPTCHA認証成功",
+    "failed": "CAPTCHA認証失敗",
+    "timeout": "CAPTCHAタイムアウト"
+  },
+  "dialogs": {
+    "deleteConfirm": "このダウンロードを削除してもよろしいですか？",
+    "deleteTitle": "削除の確認",
+    "clearCompletedConfirm": "完了したすべてのダウンロードをクリアしてもよろしいですか？",
+    "clearCompletedTitle": "完了をクリア",
+    "exitConfirm": "アクティブなダウンロードがあります。終了してもよろしいですか？",
+    "exitTitle": "終了の確認"
+  },
+  "format": {
+    "speed": "{{value}}/s",
+    "size": "{{value}}",
+    "time": {
+      "seconds": "{{count}}秒",
+      "seconds_plural": "{{count}}秒",
+      "minutes": "{{count}}分",
+      "minutes_plural": "{{count}}分",
+      "hours": "{{count}}時間",
+      "hours_plural": "{{count}}時間",
+      "days": "{{count}}日",
+      "days_plural": "{{count}}日"
+    },
+    "percentage": "{{value}}%"
+  },
+  "notifications": {
+    "downloadStarted": "ダウンロードを開始しました",
+    "downloadCompleted": "ダウンロード完了: {{filename}}",
+    "downloadFailed": "ダウンロード失敗: {{filename}}",
+    "allDownloadsCompleted": "すべてのダウンロードが完了しました",
+    "proxyFailed": "すべてのプロキシが失敗しました。直接接続に切り替えました"
+  },
+  "proxy": {
+    "title": "プロキシ管理",
+    "enabled": "プロキシを有効にする",
+    "addProxy": "プロキシを追加",
+    "editProxy": "プロキシを編集",
+    "removeProxy": "プロキシを削除",
+    "testProxy": "プロキシをテスト",
+    "protocol": "プロトコル",
+    "host": "ホスト",
+    "port": "ポート",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "status": {
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "testing": "テスト中",
+      "failed": "失敗"
+    },
+    "health": "ヘルス",
+    "latency": "レイテンシ",
+    "successRate": "成功率",
+    "errors": {
+      "invalidHost": "無効なホストアドレス",
+      "invalidPort": "無効なポート番号",
+      "testFailed": "プロキシテスト失敗",
+      "connectionFailed": "接続失敗"
+    }
+  },
+  "scheduler": {
+    "scheduleDownload": "ダウンロードをスケジュール",
+    "selectDate": "日付を選択",
+    "selectTime": "時刻を選択",
+    "schedule": "スケジュール",
+    "scheduling": "スケジュール中...",
+    "scheduledFor": "スケジュール日時",
+    "cancelSchedule": "スケジュールをキャンセル",
+    "scheduleHint": "指定した時刻にダウンロードが自動的に開始されます。",
+    "retryDownload": "ダウンロードを再試行",
+    "retryAttempt": "再試行 {{count}}/{{max}}",
+    "errors": {
+      "invalidDateTime": "日付と時刻を選択してください",
+      "pastTime": "スケジュール時刻は未来でなければなりません",
+      "scheduleFailed": "ダウンロードのスケジュールに失敗しました"
     }
   }
 }
