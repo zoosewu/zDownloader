@@ -3,6 +3,8 @@
 // This module handles file downloads from Keep2Share (k2s.cc) and keep2share.cc.
 // It supports both free and premium accounts with automatic authentication.
 
+/// <reference types="zoo-downloader" />
+
 /**
  * K2S Module for handling Keep2Share downloads
  *
@@ -12,6 +14,10 @@
  * - T081: URL parsing and file info extraction
  * - T082: CAPTCHA handling integration
  * - T083: Account type detection (free/premium)
+ *
+ * @typedef {import('zoo-downloader').ModuleContext} Context
+ * @typedef {import('zoo-downloader').ModuleDownloadInfo} DownloadInfo
+ * @implements {import('zoo-downloader').SiteModule}
  */
 export class K2SModule {
   constructor() {
