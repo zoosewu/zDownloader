@@ -17,6 +17,17 @@ pub struct ModuleManifest {
     pub homepage: Option<String>,
     pub url_patterns: Vec<String>,
     pub permissions: ModulePermissions,
+
+    /// Entry point file path (relative to module directory)
+    /// Default: "index.js"
+    /// Examples: "dist/index.js", "output/bundle.js", "build/main.js"
+    #[serde(default = "default_entrypoint")]
+    pub entrypoint: String,
+}
+
+/// Default entrypoint for backward compatibility
+fn default_entrypoint() -> String {
+    "index.js".to_string()
 }
 
 /// Module permissions structure

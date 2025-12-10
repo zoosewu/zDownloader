@@ -64,24 +64,37 @@ impl ModuleLoader {
         let manifest = ModuleManifest::from_json(&manifest_content)
             .map_err(|e| format!("Failed to parse manifest.json: {}", e))?;
 
-        // T039: Read index.js
-        let code_path = module_path.join("index.js");
+        // T039: Read entry point file (from manifest.entrypoint)
+        let entrypoint = &manifest.entrypoint;
+        let code_path = module_path.join(entrypoint);
+
+        // Validate entry point file exists
+        if !code_path.exists() {
+            return Err(format!(
+                "Entry point file '{}' not found. Please ensure the file exists or build your module first.",
+                entrypoint
+            ));
+        }
+
         let mut code = fs::read_to_string(&code_path)
-            .map_err(|e| format!("Failed to read index.js: {}", e))?;
+            .map_err(|e| format!("Failed to read entry point '{}': {}", entrypoint, e))?;
 
         // Validate code is not empty
         if code.trim().is_empty() {
-            return Err("Module code (index.js) is empty".to_string());
+            return Err(format!("Entry point file '{}' is empty", entrypoint));
         }
 
         // Transform ES6 module syntax to plain JavaScript
-        // Deno's execute_script() doesn't support ES modules, so we need to strip export keywords
+        // This allows build tools to output ES modules, which we'll transform automatically
+        // Deno's execute_script() doesn't support ES modules, so we strip export keywords
         code = code.replace("export default class", "class")
                    .replace("export class", "class")
                    .replace("export default function", "function")
                    .replace("export function", "function")
                    .replace("export default const", "const")
                    .replace("export const", "const")
+                   .replace("export let", "let")
+                   .replace("export var", "var")
                    .replace("export default", "");
 
         // T037: Create SiteModule instance

@@ -566,6 +566,33 @@ export interface ModuleManifest {
   /** Homepage URL (optional) */
   homepage?: string;
 
+  /**
+   * Entry point file path (relative to module directory)
+   *
+   * Default: "index.js"
+   *
+   * Use this to specify a custom entry point, especially when using a build tool.
+   *
+   * @example
+   * ```json
+   * // Using Vite to compile source to dist/
+   * {
+   *   "entrypoint": "dist/index.js"
+   * }
+   * ```
+   *
+   * @example
+   * ```json
+   * // Using another build output directory
+   * {
+   *   "entrypoint": "build/bundle.js"
+   * }
+   * ```
+   *
+   * @default "index.js"
+   */
+  entrypoint?: string;
+
   /** URL patterns this module supports */
   urlPatterns: string[];
 
