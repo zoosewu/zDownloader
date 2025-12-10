@@ -38,16 +38,15 @@ use commands::settings::{
 };
 use download::{scan_unfinished_downloads, DownloadEngine, DownloadQueue, DownloadScheduler};
 use modules::captcha::CaptchaManager;
-use modules::url_detector::ModuleRegistry;
 use proxy::pool::ProxyPool;
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 use utils::clipboard::start_clipboard_monitor;
 
-// State for URL detector module registry
-pub struct ModuleRegistryState {
-    pub registry: Arc<Mutex<ModuleRegistry>>,
+// URL Detector State (thread-safe, different from site module registry)
+pub struct UrlDetectorState {
+    pub registry: Arc<Mutex<modules::url_detector::ModuleRegistry>>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -70,6 +69,11 @@ pub fn run() {
     // Initialize CAPTCHA manager
     let captcha_manager = Arc::new(std::sync::Mutex::new(CaptchaManager::new()));
 
+    // Initialize URL detector (thread-safe)
+    let url_detector_state = UrlDetectorState {
+        registry: Arc::new(Mutex::new(modules::url_detector::ModuleRegistry::new())),
+    };
+
     // Initialize app state
     let app_state = AppState {
         queue: Arc::new(Mutex::new(DownloadQueue::new())),
@@ -83,10 +87,10 @@ pub fn run() {
         scheduler: Arc::clone(&scheduler),
     };
 
-    // Initialize URL detector module registry
-    let module_registry_state = ModuleRegistryState {
-        registry: Arc::new(Mutex::new(ModuleRegistry::new())),
-    };
+    // Note: Module registry is now created on-demand in module_management commands
+    // This is because ModuleRegistry (with Deno runtime) cannot be stored in Tauri State
+    // due to not being Send + Sync
+    log::info!("Site module system will load modules on demand");
 
     tauri::Builder::default()
         .plugin(
@@ -110,7 +114,7 @@ pub fn run() {
         .manage(captcha_manager)
         .manage(settings_state)
         .manage(scheduler_state)
-        .manage(module_registry_state)
+        .manage(url_detector_state)
         .invoke_handler(tauri::generate_handler![
             greet,
             create_download,

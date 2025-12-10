@@ -1,6 +1,6 @@
 // Clipboard command handlers - Tauri commands for clipboard monitoring and URL detection
 use crate::modules::url_detector::UrlDetectionInfo;
-use crate::ModuleRegistryState;
+use crate::UrlDetectorState;
 use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
@@ -14,7 +14,7 @@ pub async fn get_clipboard_content(app: AppHandle) -> Result<String, String> {
 #[tauri::command]
 pub async fn detect_url(
     url: String,
-    state: State<'_, ModuleRegistryState>,
+    state: State<'_, UrlDetectorState>,
 ) -> Result<UrlDetectionInfo, String> {
     log::info!("========== detect_url called ==========");
     log::info!("URL: {}", url);
@@ -64,7 +64,7 @@ pub struct UrlModuleDetectionResult {
 #[tauri::command]
 pub async fn detect_url_module(
     url: String,
-    state: State<'_, ModuleRegistryState>,
+    state: State<'_, UrlDetectorState>,
 ) -> Result<UrlModuleDetectionResult, String> {
     log::info!("========== detect_url_module called ==========");
     log::info!("URL: {}", url);
