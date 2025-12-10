@@ -28,13 +28,20 @@ pub struct ModuleRegistry {
 }
 
 impl ModuleRegistry {
-    /// Creates a new empty module registry
+    /// Creates a new empty module registry with default modules directory (./modules)
     pub fn new() -> Self {
+        Self::with_path("./modules")
+    }
+
+    /// Creates a new empty module registry with custom modules directory
+    ///
+    /// # Arguments
+    /// * `modules_dir` - Path to the modules directory
+    pub fn with_path(modules_dir: impl AsRef<Path>) -> Self {
         Self {
             modules: Arc::new(RwLock::new(Vec::new())),
             js_modules: Arc::new(RwLock::new(Vec::new())),
-            // Use default modules directory for JavaScript module loading
-            _loader: ModuleLoader::new("./modules"),
+            _loader: ModuleLoader::new(modules_dir.as_ref().to_str().unwrap_or("./modules")),
         }
     }
 

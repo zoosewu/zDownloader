@@ -234,11 +234,13 @@ pub async fn delete_module_credentials(
 pub fn get_all_modules() -> Result<Vec<serde_json::Value>, String> {
     log::info!("📋 Getting all modules...");
 
-    // Create a new registry and scan modules
+    // Find modules directory using smart path resolution
+    let modules_dir = find_modules_directory();
+
+    // Create a new registry with the found modules directory
     // Note: This is a workaround since ModuleRegistry cannot be stored in Tauri State
     // due to Deno runtime not being Send + Sync
-    let mut registry = crate::modules::registry::ModuleRegistry::new();
-    let modules_dir = find_modules_directory();
+    let mut registry = crate::modules::registry::ModuleRegistry::with_path(&modules_dir);
 
     if modules_dir.exists() {
         registry.scan_and_register(&modules_dir);
@@ -345,9 +347,9 @@ pub fn scan_modules() -> Result<serde_json::Value, String> {
 
     log::info!("📁 Scanning directory: {:?}", modules_dir.canonicalize().unwrap_or(modules_dir.clone()));
 
-    // Create a new registry and scan modules
+    // Create a new registry with the found modules directory and scan modules
     // Note: This is a workaround since ModuleRegistry cannot be stored in Tauri State
-    let mut registry = crate::modules::registry::ModuleRegistry::new();
+    let mut registry = crate::modules::registry::ModuleRegistry::with_path(&modules_dir);
     let loaded_count = registry.scan_and_register(&modules_dir);
 
     log::info!("✅ Scan complete");

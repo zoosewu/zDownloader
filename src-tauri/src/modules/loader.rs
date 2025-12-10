@@ -66,13 +66,23 @@ impl ModuleLoader {
 
         // T039: Read index.js
         let code_path = module_path.join("index.js");
-        let code = fs::read_to_string(&code_path)
+        let mut code = fs::read_to_string(&code_path)
             .map_err(|e| format!("Failed to read index.js: {}", e))?;
 
         // Validate code is not empty
         if code.trim().is_empty() {
             return Err("Module code (index.js) is empty".to_string());
         }
+
+        // Transform ES6 module syntax to plain JavaScript
+        // Deno's execute_script() doesn't support ES modules, so we need to strip export keywords
+        code = code.replace("export default class", "class")
+                   .replace("export class", "class")
+                   .replace("export default function", "function")
+                   .replace("export function", "function")
+                   .replace("export default const", "const")
+                   .replace("export const", "const")
+                   .replace("export default", "");
 
         // T037: Create SiteModule instance
         let module_id = manifest.id.clone();
