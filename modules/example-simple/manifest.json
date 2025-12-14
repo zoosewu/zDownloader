@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "A minimal example module for learning purposes",
   "author": "Zoo Downloader Team",
+  "className": "SimpleExampleModule",
   "urlPatterns": [
     "https://example.com/file/*",
     "https://example.com/download/*"

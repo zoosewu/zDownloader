@@ -92,8 +92,16 @@ impl SiteModule {
         Ok(())
     }
 
-    /// Convert module ID to PascalCase class name (e.g., "k2s" -> "K2s", "my-module" -> "MyModule")
+    /// Get class name for module instantiation
+    /// Priority: 1) manifest.class_name if specified, 2) auto-generated from ID
+    /// Auto-generation: "k2s" -> "K2s", "my-module" -> "MyModule"
     fn get_class_name(&self) -> String {
+        // Use explicit class_name from manifest if provided
+        if let Some(ref class_name) = self.manifest.class_name {
+            return class_name.clone();
+        }
+
+        // Otherwise, auto-generate from module ID
         self.manifest.id
             .split('-')
             .map(|part| {
@@ -241,6 +249,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         }
     }
 

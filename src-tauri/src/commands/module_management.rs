@@ -19,7 +19,7 @@ use std::path::PathBuf;
 /// 2. ../../modules (from target/debug/)
 /// 3. ../modules (from src-tauri/)
 /// 4. Look for project root by finding Cargo.toml
-fn find_modules_directory() -> PathBuf {
+pub fn find_modules_directory() -> PathBuf {
     // Release mode: only use ./modules for performance
     // This is compiled out in debug builds (zero overhead)
     #[cfg(not(debug_assertions))]

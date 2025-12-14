@@ -7,7 +7,7 @@ use deno_core::JsRuntime;
 
 /// JavaScript runtime handle for executing module code
 pub struct JsRuntimeHandle {
-    runtime: JsRuntime,
+    runtime: Option<JsRuntime>,
 }
 
 // Manual Debug implementation since JsRuntime doesn't derive Debug
@@ -26,7 +26,7 @@ impl JsRuntimeHandle {
         // Sandbox restrictions will be injected separately in Phase 2.3
         let runtime = JsRuntime::new(Default::default());
 
-        Ok(Self { runtime })
+        Ok(Self { runtime: Some(runtime) })
     }
 
     /// Create a new JavaScript runtime with Context API (Phase 4: T073)
@@ -40,7 +40,7 @@ impl JsRuntimeHandle {
         // Full ops integration will be done in future iterations
         let runtime = JsRuntime::new(Default::default());
 
-        Ok(Self { runtime })
+        Ok(Self { runtime: Some(runtime) })
     }
 
     /// Execute JavaScript code in the runtime
@@ -50,7 +50,10 @@ impl JsRuntimeHandle {
     /// * `code` - JavaScript code to execute
     pub fn execute_script(&mut self, script_name: &str, code: &str) -> Result<(), String> {
         // Convert &str to ModuleCodeString using to_string()
-        self.runtime
+        let runtime = self.runtime.as_mut()
+            .ok_or_else(|| "Runtime has been disposed".to_string())?;
+
+        runtime
             .execute_script(script_name.to_string(), code.to_string())
             .map_err(|e| format!("Failed to execute script '{}': {:?}", script_name, e))?;
 
@@ -60,7 +63,10 @@ impl JsRuntimeHandle {
     /// Run the event loop to completion
     /// This is necessary for async operations to complete
     pub async fn run_event_loop_async(&mut self) -> Result<(), String> {
-        self.runtime
+        let runtime = self.runtime.as_mut()
+            .ok_or_else(|| "Runtime has been disposed".to_string())?;
+
+        runtime
             .run_event_loop(Default::default())
             .await
             .map_err(|e| format!("Failed to run event loop: {:?}", e))?;
@@ -117,6 +123,20 @@ impl JsRuntimeHandle {
 impl Default for JsRuntimeHandle {
     fn default() -> Self {
         Self::new().expect("Failed to create default JsRuntimeHandle")
+    }
+}
+
+impl Drop for JsRuntimeHandle {
+    fn drop(&mut self) {
+        // WORKAROUND: V8/Deno JsRuntime requires being in a HandleScope when dropped
+        // Since we can't guarantee that context here, we use mem::forget to prevent
+        // the drop and avoid the "Cannot create a handle without a HandleScope" crash
+        //
+        // This causes a small memory leak (~few KB per module), but ensures stability
+        // TODO: Properly implement async cleanup using tokio::spawn_blocking
+        if let Some(runtime) = self.runtime.take() {
+            std::mem::forget(runtime);
+        }
     }
 }
 

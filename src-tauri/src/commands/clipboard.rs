@@ -75,7 +75,54 @@ pub async fn detect_url_module(
         return Err(format!("Invalid URL format: {}", url));
     }
 
-    log::info!("Checking module support...");
+    log::info!("Checking JavaScript modules...");
+
+    // Step 1: Load JavaScript modules from disk and check for match
+    // Do this in a scope to ensure ModuleRegistry is dropped before await
+    let js_module_result = {
+        let modules_dir = crate::commands::module_management::find_modules_directory();
+        log::info!("📁 Modules directory: {:?}", modules_dir);
+
+        let mut js_module_registry = crate::modules::registry::ModuleRegistry::with_path(&modules_dir);
+        let loaded_count = js_module_registry.scan_and_register(&modules_dir);
+        log::info!("📦 Loaded {} JavaScript module(s)", loaded_count);
+
+        // Check if any JavaScript module can handle this URL
+        let module_id = js_module_registry.find_js_module_for_url(&url);
+
+        if let Some(id) = module_id {
+            log::info!("✓ JavaScript module found: {}", id);
+
+            // Get full manifest for the module
+            let manifests = js_module_registry.get_all_js_module_manifests();
+            if let Some(manifest) = manifests.iter().find(|m| m.id == id) {
+                log::info!("  - Module name: {}", manifest.name);
+                log::info!("  - Requires credentials: {}", manifest.permissions.credentials.is_some());
+
+                Some(UrlModuleDetectionResult {
+                    url: url.clone(),
+                    module_id: Some(manifest.id.clone()),
+                    module_name: Some(manifest.name.clone()),
+                    is_supported: true,
+                    requires_auth: manifest.permissions.credentials.is_some(),
+                })
+            } else {
+                log::warn!("⚠ Module ID '{}' found but manifest not available", id);
+                None
+            }
+        } else {
+            None
+        }
+    }; // ModuleRegistry is dropped here
+
+    // Step 2: If we found a JS module, return it
+    if let Some(result) = js_module_result {
+        log::info!("========== detect_url_module completed (JS module) ==========");
+        return Ok(result);
+    }
+
+    // Step 3: Fall back to builtin URL detection
+    log::info!("No JavaScript module found, trying builtin detectors...");
     let registry = state.registry.lock().await;
     let detection_result = registry.detect_url(&url);
 
@@ -87,7 +134,7 @@ pub async fn detect_url_module(
                 crate::modules::url_detector::DetectionMode::ModuleCustom
             );
 
-            log::info!("✓ Detection result:");
+            log::info!("✓ Builtin detection result:");
             log::info!("  - Valid: {}", info.is_valid);
             log::info!("  - Detector: {}", info.detector_name);
             log::info!("  - Is module: {}", is_module_detection);
@@ -109,7 +156,7 @@ pub async fn detect_url_module(
             }
         }
         Err(e) => {
-            log::warn!("⚠ No module support found: {:?}", e);
+            log::warn!("⚠ No builtin module support found: {:?}", e);
             UrlModuleDetectionResult {
                 url: url.clone(),
                 module_id: None,

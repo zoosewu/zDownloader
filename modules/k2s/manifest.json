@@ -6,6 +6,7 @@
   "description": "支援 Keep2Share (k2s.cc) 的檔案下載，包含自動認證和驗證碼處理",
   "homepage": "https://github.com/zoo-downloader/modules/k2s",
   "entrypoint": "dist/index.js",
+  "className": "K2SModule",
   "urlPatterns": [
     "https://k2s.cc/file/*",
     "https://*.k2s.cc/file/*",

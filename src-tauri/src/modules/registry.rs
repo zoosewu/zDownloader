@@ -524,6 +524,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         };
 
         let code = "class TestJs { canHandle(url) { return true; } }".to_string();
@@ -555,6 +557,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         };
 
         let code = "class TestJs {}".to_string();
@@ -593,6 +597,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         };
 
         let code = "class JsModule {}".to_string();
@@ -655,6 +661,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         };
 
         let module = SiteModule::new("test".to_string(), manifest, "class Test {}".to_string());
@@ -663,5 +671,30 @@ mod tests {
 
         registry.clear_js_modules();
         assert_eq!(registry.js_module_count(), 0);
+    }
+}
+#[cfg(test)]
+mod registry_drop_tests {
+    use crate::modules::loader::ModuleLoader;
+    use crate::modules::registry::ModuleRegistry;
+
+    #[test]
+    fn test_registry_can_be_dropped_safely() {
+        // This test ensures that ModuleRegistry can be created, used, and dropped
+        // without V8 HandleScope errors
+        
+        let modules_dir = "/nodejs/zoo-downloader/modules";
+        let mut registry = ModuleRegistry::with_path(modules_dir);
+        
+        // Scan and load modules
+        registry.scan_and_register(modules_dir);
+        
+        // Get manifests (this was causing the error)
+        let manifests = registry.get_all_js_module_manifests();
+        
+        println!("✅ Successfully loaded {} modules", manifests.len());
+        println!("✅ Registry can be dropped safely");
+        
+        // Registry will be dropped here - this should not crash
     }
 }

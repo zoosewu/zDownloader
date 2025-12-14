@@ -93,26 +93,92 @@ Zoo Downloader 模組系統支援**構建工具驅動**的開發流程，讓模�
 ```javascript
 import { defineConfig } from 'vite';
 
+/**
+ * Vite plugin to remove ES module export syntax
+ *
+ * Zoo Downloader's module loader uses deno_core's execute_script() API,
+ * which doesn't support ES module syntax (import/export).
+ *
+ * This plugin automatically transforms:
+ *   export class Foo {}        → class Foo {}
+ *   export default class Foo   → class Foo
+ *   export function bar()      → function bar()
+ *   export { ... }             → (removed)
+ *
+ * This allows developers to write standard ES modules during development,
+ * while producing compatible output for the runtime.
+ */
+function removeExportSyntax() {
+  return {
+    name: 'remove-export-syntax',
+
+    // Apply transformation after code generation
+    generateBundle(options, bundle) {
+      for (const fileName in bundle) {
+        const chunk = bundle[fileName];
+
+        if (chunk.type === 'chunk') {
+          // Add banner at the top
+          const banner = '// My Module - Compiled with Vite\n// Export syntax removed for Zoo Downloader compatibility\n\n';
+
+          // Transform export statements to plain declarations
+          let code = chunk.code
+            // Remove export { ... } blocks
+            .replace(/export\s*\{[^}]*\}\s*;?\s*/g, '')
+            // Remove inline export declarations
+            .replace(/export default class\s+/g, 'class ')
+            .replace(/export class\s+/g, 'class ')
+            .replace(/export default function\s+/g, 'function ')
+            .replace(/export function\s+/g, 'function ')
+            .replace(/export default const\s+/g, 'const ')
+            .replace(/export const\s+/g, 'const ')
+            .replace(/export default let\s+/g, 'let ')
+            .replace(/export let\s+/g, 'let ')
+            .replace(/export default var\s+/g, 'var ')
+            .replace(/export var\s+/g, 'var ')
+            .replace(/export default\s+/g, '');
+
+          // Add banner and update chunk
+          chunk.code = banner + code;
+        }
+      }
+    }
+  };
+}
+
 export default defineConfig({
   build: {
     outDir: 'dist',
     lib: {
       entry: 'src/index.js',
-      formats: ['es'],  // 輸出 ES 模組格式
+      formats: ['es'],  // ES module format (will be transformed by plugin)
       fileName: () => 'index.js',
     },
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
-        banner: '// My Module - Compiled with Vite\n',
+        preserveModules: false,
       },
     },
     minify: false,  // 開發時禁用壓縮
     sourcemap: false,
     target: 'es2020',
   },
+
+  // Register the custom plugin
+  plugins: [
+    removeExportSyntax(),
+  ],
 });
 ```
+
+**✨ 推薦方案：使用 Vite 插件自動移除 `export`**
+
+上面的配置包含 `removeExportSyntax()` 插件，它會：
+- ✅ 在構建時自動移除所有 `export` 語法
+- ✅ 讓開發者用標準 ES Module 開發
+- ✅ 輸出可直接被 deno_core 執行的代碼
+- ✅ 無需 Rust 載入器額外處理
 
 #### Webpack 配置範例
 
@@ -180,27 +246,51 @@ export default {
 7. 註冊到模組系統
 ```
 
-### 2. ES6 語法自動轉換
+### 2. ES6 語法處理策略
 
-**為什麼需要轉換？**
+**為什麼需要處理 `export`？**
 
-Deno 的 `execute_script()` API 不支援 ES 模組語法（`export`/`import`），但構建工具通常輸出 ES 模組格式。
+Deno 的 `execute_script()` API 不支援 ES 模組語法（`export`/`import`），但現代 JavaScript 開發廣泛使用 ES Module。
 
-**轉換規則**：
+**兩種處理方案**：
+
+#### ✅ **方案 1：構建時處理（推薦）**
+
+使用 Vite 插件在構建時自動移除 `export` 語法：
+
+```javascript
+// vite.config.js
+plugins: [
+  removeExportSyntax(),  // 見上方完整範例
+]
+```
+
+**優點**：
+- ✅ 開發者用標準 ES Module 開發
+- ✅ 構建產物直接可執行，無需額外處理
+- ✅ 編輯器完整的 IDE 支援和自動完成
+- ✅ 支援所有 `export` 語法（包括 `export { ... }`）
+
+#### ⚠️ **方案 2：運行時轉換（備用）**
+
+Loader 在載入時自動轉換：
 
 | 原始語法 | 轉換後 | 說明 |
 |---------|-------|------|
 | `export default class Foo` | `class Foo` | 預設類別導出 |
 | `export class Foo` | `class Foo` | 命名類別導出 |
-| `export default function foo()` | `function foo()` | 預設函數導出 |
 | `export function foo()` | `function foo()` | 命名函數導出 |
-| `export default const x = 1` | `const x = 1` | 預設常數導出 |
 | `export const x = 1` | `const x = 1` | 命名常數導出 |
-| `export let x = 1` | `let x = 1` | let 變數導出 |
-| `export var x = 1` | `var x = 1` | var 變數導出 |
-| `export default` | `` (移除) | 其他預設導出 |
+| `export let/var` | `let/var` | 變數導出 |
+| `export default` | (移除) | 其他預設導出 |
 
-**實作位置**: `src-tauri/src/modules/loader.rs` 第 87-98 行
+**限制**：
+- ⚠️ 不支援複雜的 export 語法（如 `export { A as B }`）
+- ⚠️ 增加運行時開銷
+
+**實作位置**: `src-tauri/src/modules/loader.rs`
+
+**推薦**: 使用方案 1（Vite 插件），保持 loader 簡單。
 
 ```rust
 // Transform ES6 module syntax to plain JavaScript

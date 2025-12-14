@@ -288,6 +288,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         };
 
         let module_info = ModuleInfo::new(manifest, PathBuf::from("/modules/test-module"));
@@ -319,6 +321,8 @@ mod tests {
                 },
                 credentials: None,
             },
+            entrypoint: "index.js".to_string(),
+            class_name: None,
         };
 
         let module_info = ModuleInfo::new(manifest, PathBuf::from("/modules/test-module"));

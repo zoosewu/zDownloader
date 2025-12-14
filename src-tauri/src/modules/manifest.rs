@@ -23,6 +23,12 @@ pub struct ModuleManifest {
     /// Examples: "dist/index.js", "output/bundle.js", "build/main.js"
     #[serde(default = "default_entrypoint")]
     pub entrypoint: String,
+
+    /// Optional: Explicit class name for module instantiation
+    /// If not specified, class name will be auto-generated from module ID
+    /// Example: "K2SModule", "SimpleExampleModule"
+    #[serde(default)]
+    pub class_name: Option<String>,
 }
 
 /// Default entrypoint for backward compatibility
@@ -247,6 +253,51 @@ mod tests {
         let manifest = ModuleManifest::from_json(json);
         assert!(manifest.is_ok());
         assert!(manifest.unwrap().permissions.credentials.is_none());
+    }
+
+    #[test]
+    fn test_manifest_with_explicit_class_name() {
+        let json = r#"{
+            "id": "k2s",
+            "name": "K2S Module",
+            "version": "1.0.0",
+            "author": "Author",
+            "description": "Test module with explicit class name",
+            "className": "K2SModule",
+            "urlPatterns": ["https://k2s.cc/*"],
+            "permissions": {
+                "network": {
+                    "allowDomains": ["k2s.cc"]
+                }
+            }
+        }"#;
+
+        let manifest = ModuleManifest::from_json(json);
+        assert!(manifest.is_ok());
+        let manifest = manifest.unwrap();
+        assert_eq!(manifest.class_name, Some("K2SModule".to_string()));
+    }
+
+    #[test]
+    fn test_manifest_without_class_name_defaults_to_none() {
+        let json = r#"{
+            "id": "simple-module",
+            "name": "Simple Module",
+            "version": "1.0.0",
+            "author": "Author",
+            "description": "Test module without class name",
+            "urlPatterns": ["https://example.com/*"],
+            "permissions": {
+                "network": {
+                    "allowDomains": ["example.com"]
+                }
+            }
+        }"#;
+
+        let manifest = ModuleManifest::from_json(json);
+        assert!(manifest.is_ok());
+        let manifest = manifest.unwrap();
+        assert_eq!(manifest.class_name, None);
     }
 
     #[test]

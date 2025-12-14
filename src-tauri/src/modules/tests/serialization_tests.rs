@@ -95,6 +95,8 @@ fn test_manifest_serialization_uses_camel_case() {
                 credential_keys: vec!["username".to_string()],
             }),
         },
+        entrypoint: "index.js".to_string(),
+        class_name: None,
     };
 
     let json = serde_json::to_string(&manifest).unwrap();
@@ -145,6 +147,8 @@ fn test_manifest_roundtrip_serialization() {
                 ],
             }),
         },
+        entrypoint: "index.js".to_string(),
+        class_name: None,
     };
 
     // Serialize to JSON

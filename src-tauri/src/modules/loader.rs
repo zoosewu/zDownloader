@@ -422,3 +422,46 @@ mod tests {
         assert!(result.unwrap_err().contains("empty"));
     }
 }
+#[cfg(test)]
+mod module_loading_tests {
+    use crate::modules::loader::ModuleLoader;
+    use std::path::Path;
+
+    #[test]
+    fn test_load_k2s_module() {
+        let loader = ModuleLoader::new("/nodejs/zoo-downloader/modules");
+        let result = loader.load_module("/nodejs/zoo-downloader/modules/k2s");
+        
+        match result {
+            Ok(module) => {
+                println!("✅ Successfully loaded k2s module");
+                println!("   ID: {}", module.id);
+                println!("   Name: {}", module.manifest.name);
+                println!("   Class name: {:?}", module.manifest.class_name);
+                println!("   Status: {:?}", module.status());
+            },
+            Err(e) => {
+                panic!("❌ Failed to load k2s module: {}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_load_example_simple_module() {
+        let loader = ModuleLoader::new("/nodejs/zoo-downloader/modules");
+        let result = loader.load_module("/nodejs/zoo-downloader/modules/example-simple");
+        
+        match result {
+            Ok(module) => {
+                println!("✅ Successfully loaded example-simple module");
+                println!("   ID: {}", module.id);
+                println!("   Name: {}", module.manifest.name);
+                println!("   Class name: {:?}", module.manifest.class_name);
+                println!("   Status: {:?}", module.status());
+            },
+            Err(e) => {
+                panic!("❌ Failed to load example-simple module: {}", e);
+            }
+        }
+    }
+}

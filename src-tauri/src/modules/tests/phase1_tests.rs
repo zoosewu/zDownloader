@@ -78,6 +78,8 @@ fn test_manifest_validation_basic() {
             },
             credentials: None,
         },
+        entrypoint: "index.js".to_string(),
+        class_name: None,
     };
 
     assert!(valid_manifest.validate().is_ok(), "Valid manifest should pass validation");
