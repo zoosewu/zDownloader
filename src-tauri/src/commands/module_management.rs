@@ -41,28 +41,42 @@ pub fn find_modules_directory() -> PathBuf {
             PathBuf::from("../../../modules"),    // From deep nested directories
         ];
 
-        // Try each candidate path
+        // Try each candidate path and verify it contains actual modules
         for path in &candidate_paths {
             if path.exists() && path.is_dir() {
-                log::info!("✓ Found modules directory at: {:?}", path.canonicalize().unwrap_or(path.clone()));
-                return path.clone();
+                // Verify it's a real modules directory by checking for common markers
+                let template_exists = path.join("_template").exists();
+                let types_exists = path.join("@types").exists();
+
+                if template_exists || types_exists {
+                    log::info!("✓ Found modules directory at: {:?}", path.canonicalize().unwrap_or(path.clone()));
+                    return path.clone();
+                }
             }
         }
 
-        // Try to find project root by looking for Cargo.toml
+        // Try to find project root by looking for modules directory
+        // This works for both dev builds (deep in target/) and bundled builds
         if let Ok(current_exe) = std::env::current_exe() {
             let mut search_dir = current_exe.parent();
 
-            // Search up to 5 levels
-            for _ in 0..5 {
+            // Search up to 15 levels (needed for Windows bundled builds in target/x86_64-pc-windows-msvc/debug/bundle/nsis/)
+            for level in 0..15 {
                 if let Some(dir) = search_dir {
-                    let cargo_toml = dir.join("Cargo.toml");
+                    // Check for modules directory at this level
                     let modules_dir = dir.join("modules");
+                    if modules_dir.exists() && modules_dir.is_dir() {
+                        // Verify it's a real modules directory by checking for common files
+                        // (e.g., _template directory or @types directory)
+                        let template_exists = modules_dir.join("_template").exists();
+                        let types_exists = modules_dir.join("@types").exists();
 
-                    if cargo_toml.exists() && modules_dir.exists() {
-                        log::info!("✓ Found modules directory via Cargo.toml at: {:?}",
-                            modules_dir.canonicalize().unwrap_or(modules_dir.clone()));
-                        return modules_dir;
+                        if template_exists || types_exists {
+                            log::info!("✓ Found modules directory at level {} up: {:?}",
+                                level,
+                                modules_dir.canonicalize().unwrap_or(modules_dir.clone()));
+                            return modules_dir;
+                        }
                     }
 
                     search_dir = dir.parent();
@@ -481,5 +495,37 @@ mod tests {
         ).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("No credential keys specified"));
+    }
+}
+#[cfg(test)]
+mod find_modules_tests {
+    use crate::commands::module_management::find_modules_directory;
+
+    #[test]
+    fn test_find_modules_directory() {
+        let modules_dir = find_modules_directory();
+        
+        println!("Found modules directory: {:?}", modules_dir);
+        
+        // The directory should exist or be the fallback
+        if modules_dir.exists() {
+            println!("✅ Modules directory exists");
+            
+            // Check if it contains _template or @types
+            let has_template = modules_dir.join("_template").exists();
+            let has_types = modules_dir.join("@types").exists();
+            
+            if has_template {
+                println!("✅ Found _template directory");
+            }
+            if has_types {
+                println!("✅ Found @types directory");
+            }
+            
+            assert!(has_template || has_types, 
+                "Modules directory should contain _template or @types");
+        } else {
+            println!("⚠️  Using fallback directory (will be created)");
+        }
     }
 }
