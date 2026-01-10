@@ -22,7 +22,7 @@
       ]
     },
     "credentials": {
-      "required": true,
+      "required": false,
       "credentialKeys": ["username", "password", "apiKey"]
     }
   }
