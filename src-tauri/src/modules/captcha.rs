@@ -4,7 +4,6 @@
 //! in website modules. It manages the event flow between backend modules
 //! and frontend UI for CAPTCHA verification.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

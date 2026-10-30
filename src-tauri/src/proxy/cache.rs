@@ -1,126 +1,9 @@
 // Proxy cache - persistent storage for proxy list
-#![allow(dead_code)]
 
 use crate::models::ProxyInfo;
-use crate::storage::paths::get_proxies_cache_file;
-use std::fs::{create_dir_all, File};
-use std::io::{BufRead, BufReader, Write};
 
-/// File format: one proxy per line in format "host:port"
-/// Example file content:
-/// ```text
-/// 127.0.0.1:8080
-/// 192.168.1.1:3128
-/// proxy.example.com:8888
-/// ```
-/// Load proxies from cache file
-///
-/// Returns empty vector if file doesn't exist or is empty
-pub fn load_proxies_from_cache() -> Result<Vec<ProxyInfo>, String> {
-    let cache_path = get_proxies_cache_file();
-
-    // If file doesn't exist, return empty vector
-    if !cache_path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let file =
-        File::open(&cache_path).map_err(|e| format!("Failed to open cache file: {}", e))?;
-
-    let reader = BufReader::new(file);
-    let mut proxies = Vec::new();
-
-    for (line_num, line_result) in reader.lines().enumerate() {
-        let line = line_result.map_err(|e| format!("Failed to read line {}: {}", line_num + 1, e))?;
-
-        // Skip empty lines and comments
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-
-        // Parse "host:port" format
-        match parse_proxy_line(trimmed) {
-            Ok(proxy) => proxies.push(proxy),
-            Err(e) => {
-                eprintln!("Warning: Skipping invalid proxy on line {}: {}", line_num + 1, e);
-                continue;
-            }
-        }
-    }
-
-    Ok(proxies)
-}
-
-/// Save proxies to cache file
-///
-/// Overwrites existing file
-pub fn save_proxies_to_cache(proxies: &[ProxyInfo]) -> Result<(), String> {
-    let cache_path = get_proxies_cache_file();
-
-    // Ensure parent directory exists
-    if let Some(parent) = cache_path.parent() {
-        create_dir_all(parent)
-            .map_err(|e| format!("Failed to create cache directory: {}", e))?;
-    }
-
-    let mut file =
-        File::create(&cache_path).map_err(|e| format!("Failed to create cache file: {}", e))?;
-
-    // Write header comment
-    writeln!(file, "# Zoo Downloader Proxy Cache")
-        .map_err(|e| format!("Failed to write header: {}", e))?;
-    writeln!(file, "# Format: host:port (one per line)")
-        .map_err(|e| format!("Failed to write header: {}", e))?;
-    writeln!(file, "# Lines starting with # are ignored")
-        .map_err(|e| format!("Failed to write header: {}", e))?;
-    writeln!(file).map_err(|e| format!("Failed to write header: {}", e))?;
-
-    // Write each proxy
-    for proxy in proxies {
-        writeln!(file, "{}:{}", proxy.host, proxy.port)
-            .map_err(|e| format!("Failed to write proxy: {}", e))?;
-    }
-
-    file.flush()
-        .map_err(|e| format!("Failed to flush cache file: {}", e))?;
-
-    Ok(())
-}
-
-/// Append proxies to cache file (without duplicates)
-///
-/// This loads existing proxies, adds new ones (skipping duplicates), and saves
-pub fn append_proxies_to_cache(new_proxies: &[ProxyInfo]) -> Result<(), String> {
-    let mut existing = load_proxies_from_cache()?;
-
-    // Add new proxies if they don't exist
-    for new_proxy in new_proxies {
-        let exists = existing.iter().any(|p| {
-            p.host == new_proxy.host && p.port == new_proxy.port
-        });
-
-        if !exists {
-            existing.push(new_proxy.clone());
-        }
-    }
-
-    save_proxies_to_cache(&existing)?;
-
-    Ok(())
-}
-
-/// Clear all proxies from cache
-pub fn clear_proxy_cache() -> Result<(), String> {
-    let cache_path = get_proxies_cache_file();
-
-    if cache_path.exists() {
-        std::fs::remove_file(&cache_path)
-            .map_err(|e| format!("Failed to remove cache file: {}", e))?;
-    }
-
-    Ok(())
-}
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 /// Parse a single proxy line in "host:port" format
 fn parse_proxy_line(line: &str) -> Result<ProxyInfo, String> {
@@ -273,12 +156,4 @@ mod tests {
         std::fs::remove_file(test_path).unwrap();
     }
 
-    #[test]
-    fn test_load_nonexistent_cache() {
-        // This test uses the actual cache path function, which should return empty if file doesn't exist
-        // We can't easily test this without mocking, but we can verify the function doesn't panic
-
-        // Just verify the function exists and has correct signature
-        let _ = load_proxies_from_cache();
-    }
 }

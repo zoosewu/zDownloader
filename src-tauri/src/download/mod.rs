@@ -7,7 +7,6 @@ pub mod recovery;
 pub mod resume;
 pub mod scheduler;
 pub mod segment;
-pub mod writer;
 
 pub use client::*;
 pub use engine::*;

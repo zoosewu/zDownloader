@@ -3,7 +3,7 @@
 // This module loads JavaScript-based site modules from disk,
 // replacing the original native library loader from Feature 001.
 
-use super::js_module::{SiteModule, ModuleStatus};
+use super::js_module::SiteModule;
 use super::manifest::ModuleManifest;
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -198,6 +198,7 @@ impl Default for ModuleLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::modules::js_module::ModuleStatus;
     use std::fs;
     use std::io::Write;
     use tempfile::TempDir;
@@ -332,7 +333,6 @@ mod tests {
         // Should load 2 modules (skipping .hidden and _template)
         // Note: modules might fail initialization, so count might be less
         assert!(modules.len() <= 2);
-        assert!(modules.len() >= 0);
 
         // Check that loaded modules have correct IDs
         for module in &modules {
@@ -425,7 +425,6 @@ mod tests {
 #[cfg(test)]
 mod module_loading_tests {
     use crate::modules::loader::ModuleLoader;
-    use std::path::Path;
 
     #[test]
     fn test_load_k2s_module() {

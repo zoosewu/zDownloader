@@ -3,18 +3,13 @@
 // This module implements the security sandbox for JavaScript modules,
 // restricting access to dangerous APIs and protecting against sandbox escape.
 
-/// Module sandbox manager
-pub struct ModuleSandbox {
-    /// Whether to enable strict mode
-    strict_mode: bool,
-}
+/// Module sandbox manager (stateless; holds the init script)
+pub struct ModuleSandbox;
 
 impl ModuleSandbox {
     /// Create a new sandbox with security restrictions
     pub fn new() -> Self {
-        Self {
-            strict_mode: true,
-        }
+        Self
     }
 
     /// Get sandbox initialization script
@@ -154,12 +149,6 @@ impl ModuleSandbox {
 mod tests {
     use super::*;
     use crate::modules::js_runtime::JsRuntimeHandle;
-
-    #[test]
-    fn test_sandbox_creation() {
-        let sandbox = ModuleSandbox::new();
-        assert!(sandbox.strict_mode);
-    }
 
     #[test]
     fn test_sandbox_init_script_not_empty() {

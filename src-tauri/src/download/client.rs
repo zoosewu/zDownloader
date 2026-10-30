@@ -1,5 +1,4 @@
 // HTTP client wrapper using reqwest
-#![allow(dead_code)]
 
 use crate::models::ProxyInfo;
 use reqwest::{header, Client, Proxy};
@@ -19,7 +18,6 @@ pub struct HttpClient {
 pub struct FileInfo {
     pub size: u64,
     pub supports_range: bool,
-    pub content_type: Option<String>,
 }
 
 impl HttpClient {
@@ -90,17 +88,9 @@ impl HttpClient {
             .map(|v| v != "none")
             .unwrap_or(false);
 
-        // Get Content-Type
-        let content_type = response
-            .headers()
-            .get(header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .map(|v| v.to_string());
-
         Ok(FileInfo {
             size,
             supports_range,
-            content_type,
         })
     }
 }

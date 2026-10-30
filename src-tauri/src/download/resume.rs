@@ -1,5 +1,4 @@
 // Resume download logic - handles partial file integrity check and resume capability
-#![allow(dead_code)]
 
 use crate::models::{DownloadSegment, DownloadTask, SegmentStatus};
 use std::fs::metadata;
@@ -108,46 +107,6 @@ pub fn get_resumable_segments(task: &DownloadTask, temp_dir: &Path) -> Vec<Downl
     resumable
 }
 
-/// Verify segment file integrity
-///
-/// Checks if the segment file has the correct size (with tolerance)
-pub fn verify_segment_integrity(
-    segment: &DownloadSegment,
-    temp_dir: &Path,
-) -> Result<bool, String> {
-    let segment_path = temp_dir.join(format!("segment_{}", segment.segment_id));
-
-    if !segment_path.exists() {
-        return Ok(false);
-    }
-
-    let file_meta =
-        metadata(&segment_path).map_err(|e| format!("Failed to read segment file: {}", e))?;
-
-    let expected_size = segment.end_byte - segment.start_byte + 1;
-    let actual_size = file_meta.len();
-
-    // Check with tolerance
-    Ok(actual_size.abs_diff(expected_size) <= FILE_SIZE_TOLERANCE)
-}
-
-/// Calculate total downloaded bytes across all segments
-pub fn calculate_total_downloaded(task: &DownloadTask, temp_dir: &Path) -> u64 {
-    let mut total = 0u64;
-
-    for segment in &task.segments {
-        let segment_path = temp_dir.join(format!("segment_{}", segment.segment_id));
-
-        if segment_path.exists() {
-            if let Ok(file_meta) = metadata(&segment_path) {
-                total += file_meta.len();
-            }
-        }
-    }
-
-    total
-}
-
 /// Create a checkpoint file to save download state
 ///
 /// This allows recovery after application restart
@@ -180,8 +139,6 @@ pub fn load_checkpoint(checkpoint_path: &Path) -> Result<DownloadTask, String> {
 mod tests {
     use super::*;
     use crate::models::{DownloadStatus, DownloadTask};
-    use std::fs::File;
-    use std::io::Write;
     use uuid::Uuid;
 
     #[test]
@@ -219,53 +176,4 @@ mod tests {
         assert_eq!(result.unwrap(), false);
     }
 
-    #[test]
-    fn test_calculate_total_downloaded() {
-        let temp_dir = std::env::temp_dir().join(format!("zoo_test_{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&temp_dir).unwrap();
-
-        // Create test segment files
-        let seg1_path = temp_dir.join("segment_0");
-        let mut file1 = File::create(&seg1_path).unwrap();
-        file1.write_all(b"0123456789").unwrap(); // 10 bytes
-
-        let seg2_path = temp_dir.join("segment_1");
-        let mut file2 = File::create(&seg2_path).unwrap();
-        file2.write_all(b"abcdefghij").unwrap(); // 10 bytes
-
-        let task = DownloadTask {
-            id: Uuid::new_v4(),
-            url: "https://example.com/file.zip".to_string(),
-            filename: "file.zip".to_string(),
-            filepath: "/tmp/file.zip".to_string(),
-            filesize: 20,
-            progress: 0.0,
-            current_speed: 0,
-            status: DownloadStatus::Paused,
-            segments: vec![
-                DownloadSegment::new(0, 0, 9),
-                DownloadSegment::new(1, 10, 19),
-            ],
-            created_at: chrono::Utc::now(),
-            started_at: None,
-            completed_at: None,
-            error_message: None,
-            scheduled_start: None,
-            retry_count: 0,
-            max_retries: None,
-            last_retry_at: None,
-            // Module integration fields (T085)
-            module_id: None,
-            module_metadata: None,
-            original_url: None,
-            wait_time: None,
-            requires_auth: false,
-        };
-
-        let total = calculate_total_downloaded(&task, &temp_dir);
-        assert_eq!(total, 20);
-
-        // Cleanup
-        std::fs::remove_dir_all(&temp_dir).unwrap();
-    }
 }

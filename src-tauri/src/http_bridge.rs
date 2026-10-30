@@ -19,7 +19,7 @@ struct InvokeResponse {
 
 // Custom rejection type for warp
 #[derive(Debug)]
-struct StringError(String);
+struct StringError(#[allow(dead_code)] String); // read via Debug in warp rejection logs
 impl warp::reject::Reject for StringError {}
 
 /// Start HTTP bridge server for development

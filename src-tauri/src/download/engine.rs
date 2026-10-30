@@ -1,5 +1,4 @@
 // Download engine core - supports both single-threaded and multi-threaded segmented downloads
-#![allow(dead_code)]
 
 use crate::download::{
     calculate_segments, can_resume_download, get_resumable_segments, merge_segments,
@@ -35,10 +34,6 @@ impl DownloadError {
         self.0 == ALL_PROXIES_FAILED_ERROR
     }
 
-    /// Get the inner error message
-    pub fn message(&self) -> &str {
-        &self.0
-    }
 }
 
 impl From<String> for DownloadError {
@@ -94,40 +89,6 @@ impl DownloadEngine {
             segment_config: SegmentConfig::default(),
             proxy_pool: None,
             use_proxy: false,
-        }
-    }
-
-    pub fn with_segment_config(segment_config: SegmentConfig) -> Self {
-        Self {
-            http_client: HttpClient::new(),
-            segment_config,
-            proxy_pool: None,
-            use_proxy: false,
-        }
-    }
-
-    /// Enable proxy support with a proxy pool
-    pub fn with_proxy_pool(mut self, proxy_pool: Arc<ProxyPool>) -> Self {
-        self.proxy_pool = Some(proxy_pool);
-        self.use_proxy = true;
-        self
-    }
-
-    /// Set whether to use proxy for downloads
-    pub fn set_use_proxy(&mut self, use_proxy: bool) {
-        self.use_proxy = use_proxy;
-    }
-
-    /// Get the best available proxy
-    async fn get_proxy(&self) -> Option<crate::models::ProxyInfo> {
-        if !self.use_proxy {
-            return None;
-        }
-
-        if let Some(pool) = &self.proxy_pool {
-            pool.get_best_proxy().await
-        } else {
-            None
         }
     }
 
@@ -385,54 +346,6 @@ impl DownloadEngine {
         task.status = DownloadStatus::Completed;
         task.completed_at = Some(chrono::Utc::now());
         progress_callback(task);
-
-        Ok(())
-    }
-
-    /// Multi-threaded segmented download (legacy method using default client)
-    async fn download_segmented<F>(
-        &self,
-        task: &mut DownloadTask,
-        progress_callback: F,
-    ) -> Result<(), DownloadError>
-    where
-        F: Fn(&DownloadTask) + Send + Sync + 'static,
-    {
-        // Calculate segments
-        let segments = calculate_segments(task.filesize, &self.segment_config);
-
-        // Attach segments to task
-        task.segments = segments
-            .iter()
-            .map(|s| s.clone().with_task_id(task.id))
-            .collect();
-
-        // Create temp directory for segments
-        let temp_dir = self.get_temp_dir(task);
-        std::fs::create_dir_all(&temp_dir)?;
-
-        // Save checkpoint
-        let checkpoint_path = temp_dir.join("checkpoint.json");
-        save_checkpoint(task, &checkpoint_path)?;
-
-        let progress_arc = Arc::new(progress_callback);
-
-        // Download all segments concurrently
-        self.download_all_segments(task, &temp_dir, progress_arc.clone())
-            .await?;
-
-        // Merge segments
-        let final_path = Path::new(&task.filepath);
-        merge_segments(&task.segments, final_path, &temp_dir)
-            .await
-            .map_err(|e| format!("Failed to merge segments: {}", e))?;
-
-        // Cleanup temp files
-        crate::download::merger::cleanup_segment_files(&task.segments, &temp_dir)?;
-
-        task.status = DownloadStatus::Completed;
-        task.completed_at = Some(chrono::Utc::now());
-        progress_arc(task);
 
         Ok(())
     }

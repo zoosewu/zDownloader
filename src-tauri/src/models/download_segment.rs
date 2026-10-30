@@ -51,11 +51,4 @@ impl DownloadSegment {
         self.end_byte - self.start_byte + 1
     }
 
-    #[allow(dead_code)]
-    pub fn progress(&self) -> f64 {
-        if self.size() == 0 {
-            return 100.0;
-        }
-        (self.downloaded_bytes as f64 / self.size() as f64) * 100.0
-    }
 }

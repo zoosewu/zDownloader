@@ -36,20 +36,6 @@ pub fn validate_url_format(url: &str) -> Result<(), String> {
     }
 }
 
-/// Check if URL has a valid downloadable file extension
-pub fn has_file_extension(url: &str) -> bool {
-    // Extract the path from URL
-    if let Ok(parsed) = Url::parse(url) {
-        if let Some(mut segments) = parsed.path_segments() {
-            if let Some(last_segment) = segments.next_back() {
-                // Check if the last segment contains a dot (extension)
-                return last_segment.contains('.') && !last_segment.ends_with('.');
-            }
-        }
-    }
-    false
-}
-
 /// Extract filename from URL
 pub fn extract_filename(url: &str) -> Option<String> {
     match Url::parse(url) {
@@ -65,15 +51,6 @@ pub fn extract_filename(url: &str) -> Option<String> {
         }
         Err(_) => None,
     }
-}
-
-/// Get file extension from URL
-pub fn get_file_extension(url: &str) -> Option<String> {
-    extract_filename(url).and_then(|filename| {
-        filename
-            .rfind('.')
-            .map(|idx| filename[idx..].to_string())
-    })
 }
 
 #[cfg(test)]
@@ -98,14 +75,6 @@ mod tests {
     }
 
     #[test]
-    fn test_has_file_extension() {
-        assert!(has_file_extension("https://example.com/file.zip"));
-        assert!(has_file_extension("https://example.com/path/to/file.pdf"));
-        assert!(!has_file_extension("https://example.com/path/"));
-        assert!(!has_file_extension("https://example.com"));
-    }
-
-    #[test]
     fn test_extract_filename() {
         assert_eq!(
             extract_filename("https://example.com/file.zip"),
@@ -118,16 +87,4 @@ mod tests {
         assert_eq!(extract_filename("https://example.com/"), None);
     }
 
-    #[test]
-    fn test_get_file_extension() {
-        assert_eq!(
-            get_file_extension("https://example.com/file.zip"),
-            Some(".zip".to_string())
-        );
-        assert_eq!(
-            get_file_extension("https://example.com/document.pdf"),
-            Some(".pdf".to_string())
-        );
-        assert_eq!(get_file_extension("https://example.com/noext"), None);
-    }
 }

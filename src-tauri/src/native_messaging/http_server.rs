@@ -11,8 +11,6 @@ use warp::Filter;
 struct AddDownloadRequest {
     url: String,
     filename: Option<String>,
-    #[allow(dead_code)]
-    referer: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

@@ -1,5 +1,4 @@
 // Segmentation strategy for multi-threaded downloads
-#![allow(dead_code)]
 
 use crate::models::DownloadSegment;
 
@@ -26,12 +25,6 @@ impl Default for SegmentConfig {
 }
 
 impl SegmentConfig {
-    pub fn new(segment_size: u64, max_concurrent_segments: usize) -> Self {
-        Self {
-            segment_size,
-            max_concurrent_segments,
-        }
-    }
 }
 
 /// Calculate segments for a file

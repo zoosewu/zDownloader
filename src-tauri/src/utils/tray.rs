@@ -63,23 +63,3 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Update tray icon tooltip with download progress
-#[allow(dead_code)]
-pub fn update_tray_tooltip<R: Runtime>(
-    app: &AppHandle<R>,
-    active_downloads: usize,
-    total_progress: f64,
-) -> tauri::Result<()> {
-    if let Some(tray) = app.tray_by_id("main") {
-        let tooltip = if active_downloads > 0 {
-            format!(
-                "Zoo Downloader - {} active ({:.1}%)",
-                active_downloads, total_progress
-            )
-        } else {
-            "Zoo Downloader - No active downloads".to_string()
-        };
-        tray.set_tooltip(Some(tooltip))?;
-    }
-    Ok(())
-}

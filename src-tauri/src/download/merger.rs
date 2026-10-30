@@ -1,9 +1,8 @@
 // Segment merger - combines downloaded segments into a complete file
-#![allow(dead_code)]
 
 use crate::models::DownloadSegment;
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 /// Merge all downloaded segments into a single complete file
@@ -76,87 +75,6 @@ pub async fn merge_segments(
         // Copy segment data to final file
         std::io::copy(&mut temp_file, &mut final_file)
             .map_err(|e| format!("Failed to copy segment {}: {}", segment.segment_id, e))?;
-    }
-
-    final_file
-        .flush()
-        .map_err(|e| format!("Failed to flush final file: {}", e))?;
-
-    Ok(())
-}
-
-/// Merge segments in-place by writing each segment to its correct position
-/// This is more memory-efficient for very large files
-///
-/// # Arguments
-/// * `segments` - Vector of all download segments
-/// * `final_path` - Path to the final file (will be created if doesn't exist)
-/// * `temp_dir` - Directory containing temporary segment files
-pub async fn merge_segments_in_place(
-    segments: &[DownloadSegment],
-    final_path: &Path,
-    temp_dir: &Path,
-) -> Result<(), String> {
-    // Validate all segments are completed
-    for segment in segments {
-        if segment.status != crate::models::SegmentStatus::Completed {
-            return Err(format!("Segment {} is not completed", segment.segment_id));
-        }
-    }
-
-    // Create final file with correct size
-    if let Some(parent) = final_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create parent directory: {}", e))?;
-    }
-
-    let mut final_file = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(final_path)
-        .map_err(|e| format!("Failed to open final file: {}", e))?;
-
-    // Write each segment to its correct position
-    for segment in segments {
-        let temp_file_path = temp_dir.join(format!("segment_{}", segment.segment_id));
-
-        if !temp_file_path.exists() {
-            return Err(format!(
-                "Segment file not found: {}",
-                temp_file_path.display()
-            ));
-        }
-
-        let mut temp_file = File::open(&temp_file_path)
-            .map_err(|e| format!("Failed to open segment file: {}", e))?;
-
-        // Seek to the correct position in final file
-        final_file
-            .seek(SeekFrom::Start(segment.start_byte))
-            .map_err(|e| format!("Failed to seek to position {}: {}", segment.start_byte, e))?;
-
-        // Read segment data
-        let mut buffer = Vec::new();
-        temp_file
-            .read_to_end(&mut buffer)
-            .map_err(|e| format!("Failed to read segment data: {}", e))?;
-
-        // Verify size
-        let expected_size = (segment.end_byte - segment.start_byte + 1) as usize;
-        if buffer.len() != expected_size {
-            return Err(format!(
-                "Segment {} size mismatch: expected {}, got {}",
-                segment.segment_id,
-                expected_size,
-                buffer.len()
-            ));
-        }
-
-        // Write to final file
-        final_file
-            .write_all(&buffer)
-            .map_err(|e| format!("Failed to write segment data: {}", e))?;
     }
 
     final_file

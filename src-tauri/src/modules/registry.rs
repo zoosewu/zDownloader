@@ -1,5 +1,4 @@
 // Module registry for managing website support modules
-#![allow(dead_code)]
 use super::loader::ModuleLoader;
 use super::js_module::SiteModule;
 use super::manifest::ModuleManifest;
@@ -359,7 +358,6 @@ mod tests {
 }
 #[cfg(test)]
 mod registry_drop_tests {
-    use crate::modules::loader::ModuleLoader;
     use crate::modules::registry::ModuleRegistry;
 
     #[test]

@@ -1,5 +1,4 @@
 // Error handling - unified error type for the application
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
