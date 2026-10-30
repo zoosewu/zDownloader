@@ -102,7 +102,7 @@ curl http://localhost:3030/health
 ```bash
 # 如果使用 docker-compose，確保有：
 ports:
-  - "3030:3030"
+  - "127.0.0.1:3030:3030"
   - "5173:5173"
 ```
 

@@ -165,12 +165,12 @@ export default function AdvancedSettings() {
                 label={t('settings.speedLimitMode') || 'Speed Limit Mode'}
                 onChange={(e) => setSettings({ ...settings, speedLimitMode: e.target.value as SpeedLimitMode })}
               >
-                <MenuItem value="Unlimited">{t('settings.unlimited') || 'Unlimited'}</MenuItem>
-                <MenuItem value="Fixed">{t('settings.fixed') || 'Fixed'}</MenuItem>
+                <MenuItem value={SpeedLimitMode.Unlimited}>{t('settings.unlimited') || 'Unlimited'}</MenuItem>
+                <MenuItem value={SpeedLimitMode.Fixed}>{t('settings.fixed') || 'Fixed'}</MenuItem>
               </Select>
             </FormControl>
 
-            {settings.speedLimitMode === 'Fixed' && (
+            {settings.speedLimitMode === SpeedLimitMode.Fixed && (
               <TextField
                 fullWidth
                 type="number"

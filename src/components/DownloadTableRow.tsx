@@ -27,14 +27,14 @@ function getStatusColor(
   status: DownloadStatus
 ): 'default' | 'primary' | 'success' | 'error' | 'warning' {
   switch (status) {
-    case 'Downloading':
-    case 'Initializing':
+    case DownloadStatus.Downloading:
+    case DownloadStatus.Initializing:
       return 'primary';
-    case 'Completed':
+    case DownloadStatus.Completed:
       return 'success';
-    case 'Failed':
+    case DownloadStatus.Failed:
       return 'error';
-    case 'Paused':
+    case DownloadStatus.Paused:
       return 'warning';
     default:
       return 'default';
@@ -46,16 +46,16 @@ function getStatusColor(
  */
 function getStatusIcon(status: DownloadStatus) {
   switch (status) {
-    case 'Completed':
+    case DownloadStatus.Completed:
       return <CompleteIcon fontSize="small" />;
-    case 'Failed':
+    case DownloadStatus.Failed:
       return <ErrorIcon fontSize="small" />;
-    case 'Downloading':
-    case 'Initializing':
+    case DownloadStatus.Downloading:
+    case DownloadStatus.Initializing:
       return <DownloadingIcon fontSize="small" />;
-    case 'Paused':
+    case DownloadStatus.Paused:
       return <PausedIcon fontSize="small" />;
-    case 'Pending':
+    case DownloadStatus.Pending:
       return <PendingIcon fontSize="small" />;
     default:
       return null;
@@ -132,9 +132,9 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
                 variant="determinate"
                 value={displayData.progress}
                 color={
-                  task.status === 'Completed'
+                  task.status === DownloadStatus.Completed
                     ? 'success'
-                    : task.status === 'Failed'
+                    : task.status === DownloadStatus.Failed
                     ? 'error'
                     : 'primary'
                 }
@@ -176,7 +176,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
 
         {/* Remaining Time Column */}
         <TableCell align="right" sx={getCellWidthStyle('timeRemaining')}>
-          {task.status === 'Downloading' && displayData.remainingTimeFormatted !== '--' ? (
+          {task.status === DownloadStatus.Downloading && displayData.remainingTimeFormatted !== '--' ? (
             <Tooltip title={t('downloads.statistics.timeRemaining')} arrow>
               <span>{displayData.remainingTimeFormatted}</span>
             </Tooltip>

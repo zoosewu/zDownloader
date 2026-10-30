@@ -55,7 +55,7 @@ services:
   zoo-downloader:
     build: .
     ports:
-      - "3030:3030"  # HTTP Bridge port
+      - "127.0.0.1:3030:3030"  # HTTP Bridge port (loopback only)
       - "5173:5173"  # Vite dev server port
     environment:
       - TAURI_HTTP_BRIDGE=true
@@ -236,7 +236,7 @@ npm run tauri build
 
 1. 檢查 HTTP Bridge 是否啟動：`curl http://localhost:3030/health`
 2. 確認 `TAURI_HTTP_BRIDGE=true` 環境變數已設置
-3. 檢查 Docker port mapping 是否正確：`-p 3030:3030`
+3. 檢查 Docker port mapping 是否正確：`-p 127.0.0.1:3030:3030`
 
 ### 問題：前端仍嘗試使用 window.__TAURI__
 

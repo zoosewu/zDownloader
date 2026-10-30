@@ -44,13 +44,13 @@ export const proxyStatsAtom = atom((get) => {
   const blacklisted = get(blacklistedProxiesAtom);
 
   const totalSuccess = proxies.reduce(
-    (sum, p) => sum + p.successful_requests,
+    (sum, p) => sum + p.successfulRequests,
     0
   );
-  const totalFailed = proxies.reduce((sum, p) => sum + p.failed_requests, 0);
+  const totalFailed = proxies.reduce((sum, p) => sum + p.failedRequests, 0);
   const avgHealth =
     proxies.length > 0
-      ? proxies.reduce((sum, p) => sum + p.health_score, 0) / proxies.length
+      ? proxies.reduce((sum, p) => sum + p.healthScore * 100, 0) / proxies.length
       : 0;
 
   return {

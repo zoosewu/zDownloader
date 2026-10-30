@@ -15,7 +15,7 @@
 
 ## 建議階段（待確認）
 
-- Phase 0 熱修：檔名清理 / 本機 HTTP CORS / 關閉 http_bridge / enum 大小寫 / reqwest 30s 總逾時
+- [x] Phase 0 熱修：檔名清理 / 本機 HTTP 來源檢查 / http_bridge 改綁 loopback / enum 大小寫（含 proxy 欄位）+ 雙邊契約測試 / reqwest 30s 總逾時
 - Phase 1 刪除假表面（候選 6）
 - Phase 2 core crate：DownloadManager + PartFile、Downloads::add、Settings（候選 1、4、7）
 - Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）

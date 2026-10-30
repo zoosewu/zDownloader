@@ -29,12 +29,13 @@ export interface AppSettings {
   retryIntervalSecs: number;
 }
 
+// Values must match Rust's #[serde(rename_all = "camelCase")] output
 export enum Theme {
-  Light = 'Light',
-  Dark = 'Dark',
+  Light = 'light',
+  Dark = 'dark',
 }
 
 export enum SpeedLimitMode {
-  Unlimited = 'Unlimited',
-  Fixed = 'Fixed',
+  Unlimited = 'unlimited',
+  Fixed = 'fixed',
 }

@@ -1,5 +1,5 @@
 // Download calculations utility - Time estimation and data formatting
-import { DownloadTask } from '../types/download';
+import { DownloadTask, DownloadStatus, SegmentStatus } from '../types/download';
 
 /**
  * Calculate remaining time for a download task (in seconds)
@@ -8,7 +8,7 @@ import { DownloadTask } from '../types/download';
  */
 export function calculateRemainingTime(task: DownloadTask): number | null {
   // If speed is 0 or task is not downloading, return null
-  if (task.currentSpeed === 0 || task.status !== 'Downloading') {
+  if (task.currentSpeed === 0 || task.status !== DownloadStatus.Downloading) {
     return null;
   }
 
@@ -114,7 +114,7 @@ export function formatTaskForTable(
     progressFormatted: `${task.progress.toFixed(1)}%`,
     speed: task.currentSpeed,
     speedFormatted:
-      task.status === 'Downloading' && task.currentSpeed > 0
+      task.status === DownloadStatus.Downloading && task.currentSpeed > 0
         ? formatSpeed(task.currentSpeed)
         : '--',
     status: task.status,
@@ -151,13 +151,13 @@ export interface SegmentVisualizationData {
  */
 export function getSegmentColor(status: string): string {
   switch (status) {
-    case 'Pending':
+    case SegmentStatus.Pending:
       return '#9e9e9e'; // Grey
-    case 'Downloading':
+    case SegmentStatus.Downloading:
       return '#2196f3'; // Blue
-    case 'Completed':
+    case SegmentStatus.Completed:
       return '#4caf50'; // Green
-    case 'Failed':
+    case SegmentStatus.Failed:
       return '#f44336'; // Red
     default:
       return '#9e9e9e';

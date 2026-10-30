@@ -59,6 +59,21 @@ impl From<reqwest::Error> for DownloadError {
     }
 }
 
+/// Next body chunk, failing only if the connection stalls for READ_IDLE_TIMEOUT.
+async fn next_chunk<S, T>(stream: &mut S) -> Result<Option<T>, DownloadError>
+where
+    S: futures::Stream<Item = reqwest::Result<T>> + Unpin,
+{
+    match tokio::time::timeout(crate::download::client::READ_IDLE_TIMEOUT, stream.next()).await {
+        Ok(Some(chunk)) => Ok(Some(chunk?)),
+        Ok(None) => Ok(None),
+        Err(_) => Err(DownloadError(format!(
+            "Connection stalled: no data for {}s",
+            crate::download::client::READ_IDLE_TIMEOUT.as_secs()
+        ))),
+    }
+}
+
 impl From<tokio::task::JoinError> for DownloadError {
     fn from(e: tokio::task::JoinError) -> Self {
         DownloadError(format!("Task join error: {}", e))
@@ -301,8 +316,7 @@ impl DownloadEngine {
         let mut stream = response.bytes_stream();
 
         let mut last_progress_update = 0.0;
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
+        while let Some(chunk) = next_chunk(&mut stream).await? {
             file.write_all(&chunk)?;
             downloaded += chunk.len() as u64;
 
@@ -595,8 +609,7 @@ impl DownloadEngine {
         let mut stream = response.bytes_stream();
         let mut downloaded: u64 = 0;
 
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
+        while let Some(chunk) = next_chunk(&mut stream).await? {
             file.write_all(&chunk)?;
             downloaded += chunk.len() as u64;
 

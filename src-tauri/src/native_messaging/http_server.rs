@@ -54,9 +54,9 @@ pub async fn start_http_server(app: AppHandle) -> Result<(), Box<dyn std::error:
         return Err(error_msg.into());
     }
 
-    // CORS configuration - allow requests from Chrome extension
+    // CORS only shapes what a browser may read back; extension_origin_only() is the actual gate.
     let cors = warp::cors()
-        .allow_any_origin() // In production, restrict to chrome-extension:// origins
+        .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
         .allow_headers(vec!["Content-Type"]);
 
@@ -79,9 +79,10 @@ pub async fn start_http_server(app: AppHandle) -> Result<(), Box<dyn std::error:
         .and(with_app(app_handle.clone()))
         .and_then(handle_add_download);
 
-    let routes = health
-        .or(add_download)
+    let routes = extension_origin_only()
+        .and(health.or(add_download))
         .with(cors)
+        .recover(handle_rejection)
         .with(warp::log("zoo_downloader::http_server"));
 
     log::info!("Starting HTTP server for Chrome extension on port {}", port);
@@ -92,6 +93,46 @@ pub async fn start_http_server(app: AppHandle) -> Result<(), Box<dyn std::error:
     });
 
     Ok(())
+}
+
+#[derive(Debug)]
+struct ForbiddenOrigin;
+impl warp::reject::Reject for ForbiddenOrigin {}
+
+/// Reject requests coming from web pages.
+///
+/// Browsers always attach `Origin` to cross-origin POSTs, including CORS "simple"
+/// requests that run the handler even though the page can't read the response.
+/// The extension sends `chrome-extension://<id>`; non-browser local clients send none.
+fn extension_origin_only() -> impl Filter<Extract = (), Error = warp::Rejection> + Clone {
+    warp::header::optional::<String>("origin")
+        .and_then(|origin: Option<String>| async move {
+            match origin {
+                Some(o) if !o.starts_with("chrome-extension://") => {
+                    log::warn!("Rejected request from origin {}", o);
+                    Err(warp::reject::custom(ForbiddenOrigin))
+                }
+                _ => Ok(()),
+            }
+        })
+        .untuple_one()
+}
+
+async fn handle_rejection(
+    err: warp::Rejection,
+) -> Result<impl warp::Reply, std::convert::Infallible> {
+    use warp::http::StatusCode;
+    let status = if err.find::<ForbiddenOrigin>().is_some() {
+        StatusCode::FORBIDDEN
+    } else if err.is_not_found() {
+        StatusCode::NOT_FOUND
+    } else {
+        StatusCode::BAD_REQUEST
+    };
+    Ok(warp::reply::with_status(
+        status.canonical_reason().unwrap_or("error"),
+        status,
+    ))
 }
 
 fn with_app(
@@ -145,5 +186,34 @@ async fn handle_add_download(
                 message: format!("Failed to create download: {}", e),
             }))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn status_for(origin: Option<&str>) -> u16 {
+        let route = extension_origin_only()
+            .map(|| "ok")
+            .recover(handle_rejection);
+        let mut req = warp::test::request().method("POST").path("/add-download");
+        if let Some(o) = origin {
+            req = req.header("origin", o);
+        }
+        req.reply(&route).await.status().as_u16()
+    }
+
+    #[tokio::test]
+    async fn rejects_web_page_origins() {
+        assert_eq!(status_for(Some("https://evil.example")).await, 403);
+        assert_eq!(status_for(Some("null")).await, 403);
+        assert_eq!(status_for(Some("http://127.0.0.1:45677")).await, 403);
+    }
+
+    #[tokio::test]
+    async fn allows_extension_and_non_browser_clients() {
+        assert_eq!(status_for(Some("chrome-extension://abcdefghijklmnop")).await, 200);
+        assert_eq!(status_for(None).await, 200);
     }
 }

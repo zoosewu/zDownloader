@@ -13,11 +13,12 @@ export interface DownloadSegment {
   retryCount: number;
 }
 
+// Values must match Rust's #[serde(rename_all = "camelCase")] output
 export enum SegmentStatus {
-  Pending = 'Pending',
-  Downloading = 'Downloading',
-  Completed = 'Completed',
-  Failed = 'Failed',
+  Pending = 'pending',
+  Downloading = 'downloading',
+  Completed = 'completed',
+  Failed = 'failed',
 }
 
 export interface DownloadTask {
@@ -44,17 +45,18 @@ export interface DownloadTask {
   speedPriority?: number;  // Speed priority (default: 10, 0 = lowest, higher = more priority)
 }
 
+// Values must match Rust's #[serde(rename_all = "camelCase")] output
 export enum DownloadStatus {
-  Pending = 'Pending',
-  Initializing = 'Initializing',
-  Downloading = 'Downloading',
-  Paused = 'Paused',
-  Cancelling = 'Cancelling',
-  Cancelled = 'Cancelled',
-  Completed = 'Completed',
-  Failed = 'Failed',
-  VerifyingIntegrity = 'VerifyingIntegrity',
-  MergingSegments = 'MergingSegments',
+  Pending = 'pending',
+  Initializing = 'initializing',
+  Downloading = 'downloading',
+  Paused = 'paused',
+  Cancelling = 'cancelling',
+  Cancelled = 'cancelled',
+  Completed = 'completed',
+  Failed = 'failed',
+  VerifyingIntegrity = 'verifyingIntegrity',
+  MergingSegments = 'mergingSegments',
 }
 
 export interface DownloadProgress {

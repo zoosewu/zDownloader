@@ -221,24 +221,24 @@ export default function ProxySettings() {
                       <div
                         className="health-bar"
                         style={{
-                          width: `${proxy.health_score}%`,
-                          backgroundColor: getHealthColor(proxy.health_score),
+                          width: `${proxy.healthScore * 100}%`,
+                          backgroundColor: getHealthColor(proxy.healthScore * 100),
                         }}
                       />
                       <span className="health-value">
-                        {proxy.health_score.toFixed(0)}
+                        {(proxy.healthScore * 100).toFixed(0)}
                       </span>
                     </div>
                   </td>
                   <td className="requests-cell">
                     <span className="success-count">
-                      {proxy.successful_requests}
+                      {proxy.successfulRequests}
                     </span>
                     {' / '}
-                    <span className="failed-count">{proxy.failed_requests}</span>
+                    <span className="failed-count">{proxy.failedRequests}</span>
                   </td>
-                  <td>{proxy.avg_latency_ms.toFixed(0)} ms</td>
-                  <td className="time-cell">{formatTime(proxy.last_used)}</td>
+                  <td>{proxy.avgLatencyMs.toFixed(0)} ms</td>
+                  <td className="time-cell">{formatTime(proxy.lastUsed)}</td>
                   <td>
                     <button
                       onClick={() => handleRemove(proxy.id)}

@@ -47,13 +47,41 @@ pub async fn start_http_bridge(app: AppHandle, port: u16) {
         .and(app_filter.clone())
         .and_then(handle_invoke);
 
-    let routes = health.or(invoke).with(cors);
+    let routes = dev_origin_only().and(health.or(invoke)).with(cors);
 
-    println!("[HTTP Bridge] Server ready at http://0.0.0.0:{}", port);
+    // Loopback by default. Docker needs 0.0.0.0 inside the container; opt in explicitly
+    // and publish the port as 127.0.0.1:3030:3030 so it stays off the LAN.
+    let host: std::net::IpAddr = std::env::var("TAURI_HTTP_BRIDGE_HOST")
+        .ok()
+        .and_then(|h| h.parse().ok())
+        .unwrap_or(std::net::IpAddr::from([127, 0, 0, 1]));
+
+    println!("[HTTP Bridge] Server ready at http://{}:{}", host, port);
     println!("[HTTP Bridge] Endpoint: POST /invoke");
     println!("[HTTP Bridge] Health check: GET /health");
 
-    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
+    warp::serve(routes).run((host, port)).await;
+}
+
+/// Only the local Vite dev page (or non-browser clients) may drive the bridge;
+/// any other web page could otherwise invoke commands and read the clipboard.
+fn dev_origin_only() -> impl Filter<Extract = (), Error = warp::Rejection> + Clone {
+    warp::header::optional::<String>("origin")
+        .and_then(|origin: Option<String>| async move {
+            match origin {
+                Some(o)
+                    if !(o.starts_with("http://localhost:")
+                        || o.starts_with("http://127.0.0.1:")) =>
+                {
+                    Err(warp::reject::custom(StringError(format!(
+                        "Origin not allowed: {}",
+                        o
+                    ))))
+                }
+                _ => Ok(()),
+            }
+        })
+        .untuple_one()
 }
 
 async fn handle_invoke(
@@ -103,7 +131,7 @@ async fn handle_invoke(
         "get_settings" => {
             // Return default settings for development
             let settings = serde_json::json!({
-                "theme": "Light",
+                "theme": "light",
                 "defaultDownloadDir": "/tmp/downloads",
                 "maxConcurrentDownloads": 3,
                 "enableClipboardMonitoring": true,

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Box, Typography, Alert, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { DownloadTask } from '../types/download';
+import { DownloadTask, DownloadStatus } from '../types/download';
 
 interface ErrorInfoTabProps {
   task: DownloadTask;
@@ -14,7 +14,7 @@ interface ErrorInfoTabProps {
 const ErrorInfoTab: React.FC<ErrorInfoTabProps> = ({ task }) => {
   const { t } = useTranslation();
 
-  const hasError = task.status === 'Failed' && task.errorMessage;
+  const hasError = task.status === DownloadStatus.Failed && task.errorMessage;
 
   return (
     <Box sx={{ padding: 3 }}>

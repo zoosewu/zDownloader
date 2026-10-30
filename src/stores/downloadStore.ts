@@ -1,6 +1,6 @@
 // Jotai atoms for download state management
 import { atom } from 'jotai';
-import { DownloadTask } from '../types/download';
+import { DownloadTask, DownloadStatus } from '../types/download';
 
 // Download tasks atom - all download tasks
 export const downloadTasksAtom = atom<DownloadTask[]>([]);
@@ -9,32 +9,32 @@ export const downloadTasksAtom = atom<DownloadTask[]>([]);
 export const activeDownloadsAtom = atom((get) => {
   const tasks = get(downloadTasksAtom);
   return tasks.filter(
-    (task) => task.status === 'Downloading' || task.status === 'Initializing'
+    (task) => task.status === DownloadStatus.Downloading || task.status === DownloadStatus.Initializing
   );
 });
 
 // Completed downloads atom (derived) - successfully completed tasks
 export const completedDownloadsAtom = atom((get) => {
   const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === 'Completed');
+  return tasks.filter((task) => task.status === DownloadStatus.Completed);
 });
 
 // Failed downloads atom (derived) - failed tasks
 export const failedDownloadsAtom = atom((get) => {
   const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === 'Failed');
+  return tasks.filter((task) => task.status === DownloadStatus.Failed);
 });
 
 // Paused downloads atom (derived) - paused tasks
 export const pausedDownloadsAtom = atom((get) => {
   const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === 'Paused');
+  return tasks.filter((task) => task.status === DownloadStatus.Paused);
 });
 
 // Pending downloads atom (derived) - pending tasks
 export const pendingDownloadsAtom = atom((get) => {
   const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === 'Pending');
+  return tasks.filter((task) => task.status === DownloadStatus.Pending);
 });
 
 // Active download count atom (derived)
@@ -104,7 +104,7 @@ export const clearCompletedAtom = atom(
   null,
   (get, set) => {
     const tasks = get(downloadTasksAtom);
-    set(downloadTasksAtom, tasks.filter((t) => t.status !== 'Completed'));
+    set(downloadTasksAtom, tasks.filter((t) => t.status !== DownloadStatus.Completed));
   }
 );
 

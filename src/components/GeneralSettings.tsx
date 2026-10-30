@@ -130,8 +130,8 @@ export default function GeneralSettings() {
             label={t('settings.theme')}
             onChange={(e) => setSettings({ ...settings, theme: e.target.value as Theme })}
           >
-            <MenuItem value="Light">{t('settings.themeLight')}</MenuItem>
-            <MenuItem value="Dark">{t('settings.themeDark')}</MenuItem>
+            <MenuItem value={Theme.Light}>{t('settings.themeLight')}</MenuItem>
+            <MenuItem value={Theme.Dark}>{t('settings.themeDark')}</MenuItem>
           </Select>
         </FormControl>
 

@@ -14,6 +14,7 @@ import { useAtom } from 'jotai';
 import { listen } from '@tauri-apps/api/event';
 
 import { themeAtom, settingsAtom } from './stores/settingsStore';
+import { Theme } from './types/settings';
 import { lightTheme, darkTheme } from './styles/theme';
 import MainPage from './pages/MainPage';
 import SettingsPage from './pages/SettingsPage';
@@ -86,7 +87,7 @@ function App() {
   const [, setDownloadTasks] = useAtom(downloadTasksAtom);
 
   const theme = useMemo(() => {
-    return currentTheme === 'Light' ? lightTheme : darkTheme;
+    return currentTheme === Theme.Light ? lightTheme : darkTheme;
   }, [currentTheme]);
 
   // Load settings from backend on mount

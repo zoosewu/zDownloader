@@ -1,5 +1,6 @@
 #!/bin/bash
 export TAURI_HTTP_BRIDGE=true
+export TAURI_HTTP_BRIDGE_HOST=0.0.0.0  # Docker only: publish as 127.0.0.1:3030:3030
 
 echo "========================================="
 echo "Tauri Dev Mode Launcher for Docker"

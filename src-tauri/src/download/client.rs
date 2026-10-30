@@ -5,6 +5,12 @@ use crate::models::ProxyInfo;
 use reqwest::{header, Client, Proxy};
 use std::time::Duration;
 
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+/// Whole-request limit for small requests (HEAD probes), never for bodies.
+pub const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
+/// Longest gap allowed between two body chunks before the transfer is considered stalled.
+pub const READ_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+
 pub struct HttpClient {
     client: Client,
 }
@@ -23,8 +29,10 @@ impl HttpClient {
 
     /// Create HTTP client with optional proxy
     pub fn with_proxy(proxy_info: Option<&ProxyInfo>) -> Self {
+        // No total timeout: a body may legitimately stream for hours.
+        // Stalls are caught per chunk with READ_IDLE_TIMEOUT instead.
         let mut builder = Client::builder()
-            .timeout(Duration::from_secs(30))
+            .connect_timeout(CONNECT_TIMEOUT)
             .user_agent("Zoo-Downloader/0.1.0");
 
         // Add proxy if provided
@@ -54,6 +62,7 @@ impl HttpClient {
         let response = self
             .client
             .head(url)
+            .timeout(PROBE_TIMEOUT)
             .send()
             .await
             .map_err(|e| format!("HEAD request failed: {}", e))?;
