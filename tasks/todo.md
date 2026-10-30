@@ -32,7 +32,7 @@
   - [x] 2c manager actor（狀態機、並行、控制、自動重試、排程、持久化）
   - [x] 2d ProxyPool adapter（shell 改接留到 2e 與刪舊引擎一起做）
   - [x] 2e Tauri shell（ts-rs 匯出、CommandError、入口、通知、刪舊引擎）— 前端在 2f 改接前執行期不可用
-  - [ ] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）
+  - [x] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）— 分段視覺化分頁暫時移除（Task 不含片段資訊）
   - [ ] 2g 實機驗證與文件
 - ~~Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）~~ 併入 Phase 2
 - Phase 4 網站模組 host + 擴充重寫（候選 3、8）

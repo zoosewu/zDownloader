@@ -9,16 +9,16 @@ import DownloadDetailPanel from './DownloadDetailPanel';
 import QueueControls from './QueueControls';
 import BatchImportButton from './BatchImportButton';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
+import type { BatchResult } from '../backend';
 
 interface DownloadListProps {
   className?: string;
   activeCount: number;
   pausedCount: number;
   completedCount: number;
-  onControlSuccess: () => void;
   onControlError: (error: string) => void;
   onAddDownload: () => void;
-  onBatchImportSuccess: (taskIds: string[]) => void;
+  onBatchImportSuccess: (result: BatchResult) => void;
   onBatchImportError: (error: string) => void;
 }
 
@@ -30,7 +30,6 @@ const DownloadList: React.FC<DownloadListProps> = ({
   activeCount,
   pausedCount,
   completedCount,
-  onControlSuccess,
   onControlError,
   onAddDownload,
   onBatchImportSuccess,
@@ -108,7 +107,6 @@ const DownloadList: React.FC<DownloadListProps> = ({
           activeCount={activeCount}
           pausedCount={pausedCount}
           completedCount={completedCount}
-          onControlSuccess={onControlSuccess}
           onControlError={onControlError}
         />
 
@@ -139,7 +137,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
       >
 
         {/* Download Table */}
-        <DownloadTable tasks={tasks} />
+        <DownloadTable tasks={tasks} onActionError={onControlError} />
       </Box>
 
       {/* Resize Handle and Detail Panel - fixed at bottom */}

@@ -45,10 +45,8 @@
     }
   },
   "enums": {
-    "description": "Wire values of every enum, in declaration order. Rust and TS tests both assert against this.",
+    "description": "Wire values of every enum, in declaration order. Checked by the Rust contract test; the frontend uses ts-rs generated types (src/backend/bindings).",
     "taskState": ["scheduled", "queued", "running", "paused", "completed", "failed", "cancelled"],
-    "downloadStatus": ["pending", "initializing", "downloading", "paused", "cancelling", "cancelled", "completed", "failed", "verifyingIntegrity", "mergingSegments"],
-    "segmentStatus": ["pending", "downloading", "completed", "failed"],
     "theme": ["light", "dark"],
     "speedLimitMode": ["unlimited", "fixed"],
     "proxyStatus": ["unknown", "verifying", "active", "failed", "blacklisted"]

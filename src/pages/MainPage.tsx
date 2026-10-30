@@ -1,110 +1,66 @@
-// Main page - integrates UrlInput, BatchImport, QueueControls and DownloadList
-import React, { useEffect } from 'react';
+// Main page - download list with queue controls, batch import and detail panel
+import React from 'react';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
-import useTauriEvents from '../hooks/useTauriEvents';
-import useDownloads from '../hooks/useDownloads';
 import { useNavigation } from '../hooks/useNavigation';
+import type { BatchResult } from '../backend';
 import {
   activeDownloadsAtom,
   pausedDownloadsAtom,
   completedDownloadsAtom,
 } from '../stores/downloadStore';
 
+type Severity = 'success' | 'error' | 'info' | 'warning';
+
 const MainPage: React.FC = () => {
   const { t } = useTranslation();
-  const { refreshDownloadList } = useDownloads();
   const { navigateTo } = useNavigation();
-
-  // Get download counts for queue controls
   const activeDownloads = useAtomValue(activeDownloadsAtom);
   const pausedDownloads = useAtomValue(pausedDownloadsAtom);
   const completedDownloads = useAtomValue(completedDownloadsAtom);
 
-  // Snackbar state for notifications
-  const [snackbar, setSnackbar] = React.useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info';
-  }>({
+  const [snackbar, setSnackbar] = React.useState<{ open: boolean; message: string; severity: Severity }>({
     open: false,
     message: '',
     severity: 'info',
   });
+  const show = (message: string, severity: Severity) => setSnackbar({ open: true, message, severity });
 
-  // Setup Tauri event listeners
-  useTauriEvents();
-
-  // Load initial download list
-  useEffect(() => {
-    // Add a small delay to ensure Tauri API is ready
-    const timer = setTimeout(() => {
-      refreshDownloadList();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [refreshDownloadList]);
-
-  const handleBatchImportSuccess = (taskIds: string[]) => {
-    setSnackbar({
-      open: true,
-      message: t('downloads.batch.importSuccess', { count: taskIds.length }),
-      severity: 'success',
-    });
-    refreshDownloadList();
+  const handleBatchImportSuccess = (result: BatchResult) => {
+    const message = t('downloads.batch.importSuccess', { count: result.added.length });
+    if (result.failed.length === 0) {
+      show(message, 'success');
+    } else {
+      show(`${message}; ${t('downloads.batch.importSkipped', { count: result.failed.length })}`, 'warning');
+    }
   };
 
-  const handleBatchImportError = (error: string) => {
-    setSnackbar({
-      open: true,
-      message: t('downloads.batch.importError', { error }),
-      severity: 'error',
-    });
-  };
-
-  const handleQueueControlSuccess = () => {
-    refreshDownloadList();
-  };
-
-  const handleQueueControlError = (error: string) => {
-    setSnackbar({
-      open: true,
-      message: t('downloads.errors.queueControlFailed', { error }),
-      severity: 'error',
-    });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
+  const handleError = (error: string) => show(t('downloads.errors.queueControlFailed', { error }), 'error');
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Download list - fills all space */}
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <DownloadList
           activeCount={activeDownloads.length}
           pausedCount={pausedDownloads.length}
           completedCount={completedDownloads.length}
-          onControlSuccess={handleQueueControlSuccess}
-          onControlError={handleQueueControlError}
+          onControlError={handleError}
           onAddDownload={() => navigateTo('add-download')}
           onBatchImportSuccess={handleBatchImportSuccess}
-          onBatchImportError={handleBatchImportError}
+          onBatchImportError={(error) => show(t('downloads.batch.importError', { error }), 'error')}
         />
       </Box>
 
-      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
-          onClose={handleCloseSnackbar}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >

@@ -18,8 +18,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAtom } from 'jotai';
 import { settingsAtom } from '../stores/settingsStore';
-import { AppSettings, Theme } from '../types/settings';
-import { getSettings, updateSettings } from '../api/settings';
+import { backend, type AppSettings, type Theme } from '../backend';
 import { open } from '@tauri-apps/plugin-dialog';
 
 export default function GeneralSettings() {
@@ -38,7 +37,7 @@ export default function GeneralSettings() {
   async function loadSettings() {
     try {
       setLoading(true);
-      const loadedSettings = await getSettings();
+      const loadedSettings = await backend.settings.get();
       setSettings(loadedSettings);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -53,10 +52,7 @@ export default function GeneralSettings() {
 
     try {
       setSaving(true);
-      await updateSettings(settings);
-
-      // Update global settings atom for immediate theme change
-      setGlobalSettings(settings);
+      setGlobalSettings(await backend.settings.update(settings));
 
       // Update i18n language if changed
       if (settings.language !== i18n.language) {
@@ -130,8 +126,8 @@ export default function GeneralSettings() {
             label={t('settings.theme')}
             onChange={(e) => setSettings({ ...settings, theme: e.target.value as Theme })}
           >
-            <MenuItem value={Theme.Light}>{t('settings.themeLight')}</MenuItem>
-            <MenuItem value={Theme.Dark}>{t('settings.themeDark')}</MenuItem>
+            <MenuItem value="light">{t('settings.themeLight')}</MenuItem>
+            <MenuItem value="dark">{t('settings.themeDark')}</MenuItem>
           </Select>
         </FormControl>
 
@@ -160,7 +156,7 @@ export default function GeneralSettings() {
           label={t('settings.maxConcurrent')}
           value={settings.maxConcurrentDownloads ?? ''}
           onChange={(e) => {
-            const value = e.target.value === '' ? undefined : parseInt(e.target.value);
+            const value = e.target.value === '' ? null : parseInt(e.target.value);
             setSettings({ ...settings, maxConcurrentDownloads: value });
           }}
           helperText={t('settings.maxConcurrentHelp') || 'Leave empty for unlimited'}

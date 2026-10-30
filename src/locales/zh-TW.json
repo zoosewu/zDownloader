@@ -65,7 +65,9 @@
       "clearCompleted": "清除已完成",
       "openFile": "開啟檔案",
       "openFolder": "開啟資料夾",
-      "copyUrl": "複製連結"
+      "copyUrl": "複製連結",
+      "title": "操作",
+      "remove": "移除"
     },
     "errors": {
       "emptyUrl": "請輸入下載連結",
@@ -88,7 +90,8 @@
       "importSuccess": "成功匯入 {{count}} 個下載任務",
       "importError": "批次匯入失敗: {{error}}",
       "selectFile": "選擇網址檔案",
-      "fileFormat": "文字檔案，每行一個網址"
+      "fileFormat": "文字檔案，每行一個網址",
+      "importSkipped": "略過 {{count}} 個無效網址"
     },
     "clipboard": {
       "detected": "偵測到剪貼簿中的連結",
@@ -104,7 +107,8 @@
       "timeElapsed": "已用時間",
       "activeDownloads": "進行中下載",
       "completedDownloads": "已完成下載",
-      "failedDownloads": "失敗下載"
+      "failedDownloads": "失敗下載",
+      "totalTasks": "任務總數"
     },
     "filters": {
       "all": "全部",
@@ -141,7 +145,8 @@
       "segmentProgress": "分段進度",
       "proxy": "代理",
       "noProxy": "無代理",
-      "noSegments": "無分段資訊"
+      "noSegments": "無分段資訊",
+      "nextRetryAt": "下次自動重試"
     },
     "priority": {
       "title": "優先度",
@@ -151,6 +156,19 @@
       "default": "預設",
       "aboveDefault": "高於預設",
       "high": "高"
+    },
+    "state": {
+      "scheduled": "已排程",
+      "queued": "排隊中",
+      "running": "下載中",
+      "paused": "已暫停",
+      "completed": "已完成",
+      "failed": "失敗",
+      "cancelled": "已取消"
+    },
+    "schedule": {
+      "startAt": "排程開始時間（選填）",
+      "help": "留空表示立即開始"
     }
   },
   "settings": {
@@ -206,7 +224,8 @@
       "resetFailed": "無法重設設定",
       "exportFailed": "無法匯出設定",
       "importFailed": "無法匯入設定"
-    }
+    },
+    "proxyFallbackDirect": "所有代理都無法使用時改用直接連線"
   },
   "proxy": {
     "title": "代理管理",

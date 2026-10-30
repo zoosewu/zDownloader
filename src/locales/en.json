@@ -65,7 +65,9 @@
       "clearCompleted": "Clear Completed",
       "openFile": "Open File",
       "openFolder": "Open Folder",
-      "copyUrl": "Copy URL"
+      "copyUrl": "Copy URL",
+      "title": "Actions",
+      "remove": "Remove"
     },
     "errors": {
       "emptyUrl": "Please enter a download URL",
@@ -88,7 +90,8 @@
       "importSuccess": "Successfully imported {{count}} download tasks",
       "importError": "Batch import failed: {{error}}",
       "selectFile": "Select URL file",
-      "fileFormat": "Text file with one URL per line"
+      "fileFormat": "Text file with one URL per line",
+      "importSkipped": "skipped {{count}} invalid URLs"
     },
     "clipboard": {
       "detected": "URL detected in clipboard",
@@ -104,7 +107,8 @@
       "timeElapsed": "Time Elapsed",
       "activeDownloads": "Active Downloads",
       "completedDownloads": "Completed Downloads",
-      "failedDownloads": "Failed Downloads"
+      "failedDownloads": "Failed Downloads",
+      "totalTasks": "Total tasks"
     },
     "filters": {
       "all": "All",
@@ -141,7 +145,8 @@
       "segmentProgress": "Segment Progress",
       "proxy": "Proxy",
       "noProxy": "No Proxy",
-      "noSegments": "No segment information"
+      "noSegments": "No segment information",
+      "nextRetryAt": "Next automatic retry"
     },
     "priority": {
       "title": "Priority",
@@ -151,6 +156,19 @@
       "default": "Default",
       "aboveDefault": "Above Default",
       "high": "High"
+    },
+    "state": {
+      "scheduled": "Scheduled",
+      "queued": "Queued",
+      "running": "Downloading",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "schedule": {
+      "startAt": "Scheduled start (optional)",
+      "help": "Leave empty to start now"
     }
   },
   "settings": {
@@ -206,7 +224,8 @@
       "resetFailed": "Failed to reset settings",
       "exportFailed": "Failed to export settings",
       "importFailed": "Failed to import settings"
-    }
+    },
+    "proxyFallbackDirect": "Connect directly when no proxy is usable"
   },
   "proxy": {
     "title": "Proxy Management",

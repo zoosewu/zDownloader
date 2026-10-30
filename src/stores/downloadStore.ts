@@ -1,78 +1,91 @@
-// Jotai atoms for download state management
+// Download state: one map of tasks by id, kept in sync with the backend by useDownloadSync.
 import { atom } from 'jotai';
-import { DownloadTask, DownloadStatus } from '../types/download';
+import type { DownloadEvent, Task, TaskId } from '../backend';
 
-// Download tasks atom - all download tasks
-export const downloadTasksAtom = atom<DownloadTask[]>([]);
+export type TaskMap = Record<TaskId, Task>;
 
-// Active downloads atom (derived) - tasks currently downloading or initializing
-export const activeDownloadsAtom = atom((get) => {
-  const tasks = get(downloadTasksAtom);
-  return tasks.filter(
-    (task) => task.status === DownloadStatus.Downloading || task.status === DownloadStatus.Initializing
-  );
-});
+/** Keep whichever copy of a task is newer (higher `rev`). */
+function newer(existing: Task | undefined, incoming: Task): Task {
+  return existing && existing.rev > incoming.rev ? existing : incoming;
+}
 
-// Completed downloads atom (derived) - successfully completed tasks
-export const completedDownloadsAtom = atom((get) => {
-  const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === DownloadStatus.Completed);
-});
-
-// Paused downloads atom (derived) - paused tasks
-export const pausedDownloadsAtom = atom((get) => {
-  const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === DownloadStatus.Paused);
-});
-
-// Unfinished downloads atom - detected on app startup
-export const unfinishedDownloadsAtom = atom<DownloadTask[]>([]);
-
-// Resume dialog visibility atom
-export const showResumeDialogAtom = atom<boolean>(false);
-
-// Helper atom to update a task
-export const updateTaskAtom = atom(
-  null,
-  (get, set, updatedTask: DownloadTask) => {
-    console.log('updateTaskAtom called with:', updatedTask.id, 'Progress:', updatedTask.progress);
-    const tasks = get(downloadTasksAtom);
-    const index = tasks.findIndex((t) => t.id === updatedTask.id);
-    console.log('Task index in array:', index, 'Total tasks:', tasks.length);
-    if (index !== -1) {
-      const newTasks = [...tasks];
-      newTasks[index] = updatedTask;
-      set(downloadTasksAtom, newTasks);
-      console.log('Task updated in store');
-    } else {
-      console.warn('Task not found in store:', updatedTask.id);
+/** Apply one backend event. Returns the same object when nothing changed. */
+export function applyEvent(tasks: TaskMap, event: DownloadEvent): TaskMap {
+  switch (event.type) {
+    case 'upserted': {
+      const kept = newer(tasks[event.data.id], event.data);
+      return kept === tasks[event.data.id] ? tasks : { ...tasks, [event.data.id]: kept };
+    }
+    case 'removed': {
+      if (!(event.data in tasks)) return tasks;
+      const { [event.data]: _removed, ...rest } = tasks;
+      return rest;
+    }
+    case 'progress': {
+      let next = tasks;
+      for (const tick of event.data) {
+        const task = next[tick.id];
+        if (!task) continue;
+        if (next === tasks) next = { ...tasks };
+        next[tick.id] = { ...task, downloaded: tick.downloaded, total: tick.total, speed: tick.speed };
+      }
+      return next;
     }
   }
+}
+
+/**
+ * Merge a full `downloads_list` snapshot. Events can arrive before or after the snapshot,
+ * so per task the higher `rev` wins; a task missing from the snapshot is dropped unless it
+ * is newer than everything in it (added after the snapshot was taken).
+ */
+export function mergeSnapshot(tasks: TaskMap, snapshot: Task[]): TaskMap {
+  const snapshotRev = snapshot.reduce((max, t) => Math.max(max, t.rev), 0);
+  const next: TaskMap = {};
+  for (const task of snapshot) next[task.id] = newer(tasks[task.id], task);
+  for (const task of Object.values(tasks)) {
+    if (!(task.id in next) && task.rev > snapshotRev) next[task.id] = task;
+  }
+  return next;
+}
+
+export const tasksByIdAtom = atom<TaskMap>({});
+
+/** All tasks, oldest first. */
+export const downloadTasksAtom = atom((get) =>
+  Object.values(get(tasksByIdAtom)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 );
 
-// Helper atom to remove a task
-export const removeTaskAtom = atom(
-  null,
-  (get, set, taskId: string) => {
-    const tasks = get(downloadTasksAtom);
-    set(downloadTasksAtom, tasks.filter((t) => t.id !== taskId));
-  }
+export const activeDownloadsAtom = atom((get) =>
+  get(downloadTasksAtom).filter((t) => t.state === 'running')
 );
 
-// Helper atom to set all tasks (for refreshing from backend)
-export const setTasksAtom = atom(
-  null,
-  (_get, set, tasks: DownloadTask[]) => {
-    set(downloadTasksAtom, tasks);
-  }
+export const pausedDownloadsAtom = atom((get) =>
+  get(downloadTasksAtom).filter((t) => t.state === 'paused')
 );
+
+export const completedDownloadsAtom = atom((get) =>
+  get(downloadTasksAtom).filter((t) => t.state === 'completed')
+);
+
+export const applyEventAtom = atom(null, (get, set, event: DownloadEvent) => {
+  set(tasksByIdAtom, applyEvent(get(tasksByIdAtom), event));
+});
+
+export const mergeSnapshotAtom = atom(null, (get, set, snapshot: Task[]) => {
+  set(tasksByIdAtom, mergeSnapshot(get(tasksByIdAtom), snapshot));
+});
+
+/** Apply a command's returned task immediately, without waiting for its event. */
+export const upsertTaskAtom = atom(null, (get, set, task: Task) => {
+  set(tasksByIdAtom, applyEvent(get(tasksByIdAtom), { type: 'upserted', data: task }));
+});
 
 // Selected task ID atom - tracks which download item is currently selected in the table
-export const selectedTaskIdAtom = atom<string | null>(null);
+export const selectedTaskIdAtom = atom<TaskId | null>(null);
 
 // Selected task atom (derived) - the full task object of the selected item
 export const selectedTaskAtom = atom((get) => {
-  const selectedId = get(selectedTaskIdAtom);
-  const tasks = get(downloadTasksAtom);
-  return tasks.find((t) => t.id === selectedId) || null;
+  const id = get(selectedTaskIdAtom);
+  return id ? get(tasksByIdAtom)[id] ?? null : null;
 });

@@ -2,60 +2,57 @@
 import React from 'react';
 import { Box, Typography, Alert, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { DownloadTask, DownloadStatus } from '../types/download';
+import type { Task } from '../backend';
+import { errorText } from './DownloadTableRow';
+import { formatAbsoluteTime } from '../utils/formatters';
 
 interface ErrorInfoTabProps {
-  task: DownloadTask;
+  task: Task;
 }
 
-/**
- * Error info tab - displays error message or "no error" message
- */
 const ErrorInfoTab: React.FC<ErrorInfoTabProps> = ({ task }) => {
   const { t } = useTranslation();
 
-  const hasError = task.status === DownloadStatus.Failed && task.errorMessage;
+  if (!task.error) {
+    return (
+      <Box sx={{ padding: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 150 }}>
+        <Alert severity="success" variant="outlined">
+          <Typography variant="body2">{t('downloads.details.noError')}</Typography>
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ padding: 3 }}>
-      {hasError ? (
-        <Stack spacing={2}>
-          {/* Error Status */}
-          <Alert severity="error" variant="outlined">
-            <Typography variant="subtitle2" gutterBottom>
-              {t('downloads.status.failed')}
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {task.errorMessage}
-            </Typography>
-          </Alert>
+      <Stack spacing={2}>
+        <Alert severity="error" variant="outlined">
+          <Typography variant="subtitle2" gutterBottom>
+            {t(`downloads.state.${task.state}`)}
+          </Typography>
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {errorText(task)}
+          </Typography>
+        </Alert>
 
-          {/* Additional Error Details */}
-          {task.retryCount > 0 && (
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                {t('downloads.details.retryCount')}
-              </Typography>
-              <Typography variant="body2">
-                {task.retryCount} / {task.maxRetries || 3}
-              </Typography>
-            </Box>
-          )}
-        </Stack>
-      ) : (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: 150,
-          }}
-        >
-          <Alert severity="success" variant="outlined">
-            <Typography variant="body2">{t('downloads.details.noError')}</Typography>
-          </Alert>
-        </Box>
-      )}
+        {task.retryCount > 0 && (
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              {t('downloads.details.retryCount')}
+            </Typography>
+            <Typography variant="body2">{task.retryCount}</Typography>
+          </Box>
+        )}
+
+        {task.nextRetryAt && (
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              {t('downloads.details.nextRetryAt')}
+            </Typography>
+            <Typography variant="body2">{formatAbsoluteTime(task.nextRetryAt)}</Typography>
+          </Box>
+        )}
+      </Stack>
     </Box>
   );
 };

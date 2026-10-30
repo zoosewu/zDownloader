@@ -14,7 +14,7 @@ import {
   clearAllProxiesAtom,
   resetFailedProxiesAtom,
 } from '../stores/proxyStore';
-import { ProxyStatus } from '../types/proxy';
+import type { ProxyStatus } from '../backend';
 import './ProxySettings.css';
 
 export default function ProxySettings() {
@@ -97,11 +97,11 @@ export default function ProxySettings() {
   // Get status badge class
   const getStatusClass = (status: ProxyStatus): string => {
     switch (status) {
-      case ProxyStatus.Active:
+      case 'active':
         return 'status-badge status-active';
-      case ProxyStatus.Failed:
+      case 'failed':
         return 'status-badge status-failed';
-      case ProxyStatus.Blacklisted:
+      case 'blacklisted':
         return 'status-badge status-blacklisted';
       default:
         return 'status-badge';

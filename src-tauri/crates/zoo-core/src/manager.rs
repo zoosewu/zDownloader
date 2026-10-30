@@ -57,6 +57,7 @@ impl DownloadManager {
     pub fn start(cfg: Config, store_dir: &Path, conn: Arc<dyn ConnectionSource>) -> Result<Self, CoreError> {
         let store = JsonStore::new(store_dir.join("tasks.json"));
         let mut tasks: Vec<Task> = store.load()?.unwrap_or_default();
+        let rev = tasks.iter().map(|t| t.rev).max().unwrap_or(0);
         for task in &mut tasks {
             task.speed = 0;
             if matches!(task.state, TaskState::Running | TaskState::Queued) {
@@ -77,6 +78,7 @@ impl DownloadManager {
             events: events.clone(),
             done_tx,
             shutting_down: false,
+            rev,
         };
         tokio::spawn(actor.run(cmd_rx, done_rx));
         Ok(Self { tx, events })
@@ -170,6 +172,8 @@ struct Actor {
     events: broadcast::Sender<Event>,
     done_tx: mpsc::UnboundedSender<(TaskId, Result<PathBuf, CoreError>)>,
     shutting_down: bool,
+    /// Last revision handed out; see `Task::rev`.
+    rev: u64,
 }
 
 impl Actor {
@@ -262,6 +266,7 @@ impl Actor {
             StartMode::Later => (TaskState::Paused, None),
             StartMode::At(at) => (TaskState::Scheduled, Some(at)),
         };
+        self.rev += 1;
         let task = Task {
             id: TaskId::new(),
             name: naming::filename_for(req.filename.as_deref(), &req.url),
@@ -279,6 +284,7 @@ impl Actor {
             scheduled_at,
             retry_count: 0,
             next_retry_at: None,
+            rev: self.rev,
         };
         self.tasks.push(task.clone());
         self.emit(Event::Upserted(task.clone()));
@@ -586,6 +592,8 @@ impl Actor {
     fn set(&mut self, id: TaskId, f: impl FnOnce(&mut Task)) -> Result<Task, CoreError> {
         let task = self.tasks.iter_mut().find(|t| t.id == id).ok_or(CoreError::NotFound)?;
         f(task);
+        self.rev += 1;
+        task.rev = self.rev;
         let task = task.clone();
         self.emit(Event::Upserted(task.clone()));
         Ok(task)

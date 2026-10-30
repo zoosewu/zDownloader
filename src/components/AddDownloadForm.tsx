@@ -7,12 +7,14 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { useTranslation } from 'react-i18next';
+import { backend, type StartMode } from '../backend';
+import { upsertTaskAtom } from '../stores/downloadStore';
 import { invoke } from '../utils/tauri';
 import { useNavigation } from '../hooks/useNavigation';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { settingsAtom } from '../stores/settingsStore';
-import { isTauriAvailable } from '../utils/tauri';
 import UrlDetectionIndicator, { UrlDetectionStatus } from './UrlDetectionIndicator';
 import CredentialPromptDialog from './CredentialPromptDialog';
 import { getModuleCredentialsStatus } from '../api/modules';
@@ -44,6 +46,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   initialUrl = '',
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
   const [url, setUrl] = useState(initialUrl);
   const [filename, setFilename] = useState('');
@@ -60,6 +63,8 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     moduleName: string;
     requiredKeys: string[];
   } | null>(null);
+  const [scheduleAt, setScheduleAt] = useState(''); // datetime-local value; empty = start now
+  const upsertTask = useSetAtom(upsertTaskAtom);
   const [pendingDownload, setPendingDownload] = useState<{
     url: string;
     filename: string;
@@ -74,12 +79,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       // Skip if we already have an initial URL
       if (initialUrl) {
         console.log('[AddDownloadForm] Initial URL provided, skipping clipboard check');
-        return;
-      }
-
-      // Check if Tauri is available
-      if (!isTauriAvailable()) {
-        console.log('[AddDownloadForm] Tauri not available, skipping clipboard check');
         return;
       }
 
@@ -123,11 +122,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       return;
     }
 
-    // Skip if Tauri is not available
-    if (!isTauriAvailable()) {
-      return;
-    }
-
     // Debounce the URL detection
     const timeoutId = setTimeout(async () => {
       try {
@@ -153,11 +147,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     // Reset detection status if URL is empty
     if (!url.trim()) {
       setDetectionStatus(null);
-      return;
-    }
-
-    // Skip if Tauri is not available
-    if (!isTauriAvailable()) {
       return;
     }
 
@@ -207,6 +196,15 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     }
   };
 
+  /** Queue the download (or schedule it) and show it in the list right away. */
+  const addDownload = async (downloadUrl: string, name: string, dir: string) => {
+    const start: StartMode = scheduleAt
+      ? { mode: 'at', at: new Date(scheduleAt).toISOString() }
+      : { mode: 'now' };
+    const task = await backend.downloads.add({ url: downloadUrl, filename: name || null, dir, start });
+    upsertTask(task);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -233,18 +231,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     setLoading(true);
 
     try {
-      // Check if Tauri API is available
-      console.log('[AddDownloadForm] Checking Tauri API availability...');
-      const tauriAvailable = isTauriAvailable();
-      console.log('[AddDownloadForm] Tauri API available:', tauriAvailable);
-
-      if (!tauriAvailable) {
-        console.log('[AddDownloadForm] ✗ Tauri API not available, aborting');
-        setError('下載管理器尚未準備就緒，請稍後再試');
-        setLoading(false);
-        return;
-      }
-
       // Try to validate URL with backend detector (optional)
       // If Tauri API is not ready, skip validation and let backend handle it
       console.log('[AddDownloadForm] Calling detect_url command...');
@@ -308,17 +294,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         }
       }
 
-      console.log('[AddDownloadForm] Calling create_download_with_path command...');
-      const taskId = await invoke<string>('create_download_with_path', {
-        url: url.trim(),
-        filename: filename.trim() || undefined,
-        downloadPath,
-      });
-      console.log('[AddDownloadForm] ✓ Download task created, taskId:', taskId);
-
-      console.log('[AddDownloadForm] Calling start_download command...');
-      await invoke('start_download', { taskId });
-      console.log('[AddDownloadForm] ✓ Download started successfully');
+      await addDownload(url.trim(), filename.trim(), downloadPath);
 
       console.log('[AddDownloadForm] Navigating to main page...');
       navigateTo('main');
@@ -353,17 +329,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
 
     try {
       // Create and start the download
-      console.log('[AddDownloadForm] Creating download with saved credentials...');
-      const taskId = await invoke<string>('create_download_with_path', {
-        url: pendingDownload.url,
-        filename: pendingDownload.filename || undefined,
-        downloadPath: pendingDownload.downloadPath,
-      });
-      console.log('[AddDownloadForm] ✓ Download task created, taskId:', taskId);
-
-      console.log('[AddDownloadForm] Starting download...');
-      await invoke('start_download', { taskId });
-      console.log('[AddDownloadForm] ✓ Download started successfully');
+      await addDownload(pendingDownload.url, pendingDownload.filename, pendingDownload.downloadPath);
 
       // Clear pending download
       setPendingDownload(null);
@@ -439,6 +405,18 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
             </InputAdornment>
           ),
         }}
+      />
+
+      <TextField
+        label={t('downloads.schedule.startAt')}
+        type="datetime-local"
+        value={scheduleAt}
+        onChange={(e) => setScheduleAt(e.target.value)}
+        fullWidth
+        margin="normal"
+        helperText={t('downloads.schedule.help')}
+        InputLabelProps={{ shrink: true }}
+        inputProps={{ min: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) }}
       />
 
       <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>

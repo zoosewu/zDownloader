@@ -1,69 +1,24 @@
-// Custom hook for listening to Tauri events
+// Non-download backend events (CAPTCHA prompts). Mounted once at the app root so they are
+// handled on every page; download events are handled by useDownloadSync.
 import { useEffect } from 'react';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { useSetAtom } from 'jotai';
-import { updateTaskAtom } from '../stores/downloadStore';
-import {
-  currentCaptchaAtom,
-  showCaptchaDialogAtom,
-} from '../stores/captchaStore';
-import { DownloadTask } from '../types/download';
+import { currentCaptchaAtom, showCaptchaDialogAtom } from '../stores/captchaStore';
 import { CaptchaRequiredEvent, CaptchaSolvedEvent } from '../types/captcha';
 
-interface ProgressUpdatePayload {
-  task: DownloadTask;
-}
-
-interface StatusChangedPayload {
-  task: DownloadTask;
-}
-
-export const useTauriEvents = () => {
-  const updateTask = useSetAtom(updateTaskAtom);
+export const useTauriEvents = (ready: boolean) => {
   const setCurrentCaptcha = useSetAtom(currentCaptchaAtom);
   const setShowCaptchaDialog = useSetAtom(showCaptchaDialogAtom);
 
   useEffect(() => {
-    let unlistenProgress: UnlistenFn | null = null;
-    let unlistenStatus: UnlistenFn | null = null;
-    let unlistenCaptchaRequired: UnlistenFn | null = null;
-    let unlistenCaptchaSolved: UnlistenFn | null = null;
+    if (!ready) return;
+    let disposed = false;
+    const unlisten: UnlistenFn[] = [];
 
-    // Listen for progress-updated events
-    const setupProgressListener = async () => {
-      unlistenProgress = await listen<ProgressUpdatePayload>(
-        'progress-updated',
-        (event) => {
-          console.log('Progress event received:', event.payload);
-          if (event.payload && event.payload.task) {
-            console.log('Updating task:', event.payload.task.id, 'Progress:', event.payload.task.progress);
-            updateTask(event.payload.task);
-          } else {
-            console.warn('Invalid progress event payload:', event.payload);
-          }
-        }
-      );
-    };
-
-    // Listen for status-changed events
-    const setupStatusListener = async () => {
-      unlistenStatus = await listen<StatusChangedPayload>(
-        'status-changed',
-        (event) => {
-          if (event.payload && event.payload.task) {
-            updateTask(event.payload.task);
-          }
-        }
-      );
-    };
-
-    // Listen for captcha-required events
-    const setupCaptchaRequiredListener = async () => {
-      unlistenCaptchaRequired = await listen<CaptchaRequiredEvent>(
-        'captcha-required',
-        (event) => {
-          if (event.payload) {
-            // Convert event payload to CaptchaChallenge format
+    (async () => {
+      try {
+        const subscriptions = await Promise.all([
+          listen<CaptchaRequiredEvent>('captcha-required', (event) => {
             setCurrentCaptcha({
               id: event.payload.challenge_id,
               captcha_type: event.payload.captcha_type,
@@ -74,43 +29,25 @@ export const useTauriEvents = () => {
               created_at: Date.now() / 1000,
             });
             setShowCaptchaDialog(true);
-          }
-        }
-      );
-    };
-
-    // Listen for captcha-solved events
-    const setupCaptchaSolvedListener = async () => {
-      unlistenCaptchaSolved = await listen<CaptchaSolvedEvent>(
-        'captcha-solved',
-        (event) => {
-          if (event.payload) {
-            // Clear CAPTCHA dialog when solved
+          }),
+          listen<CaptchaSolvedEvent>('captcha-solved', () => {
             setCurrentCaptcha(null);
             setShowCaptchaDialog(false);
-          }
-        }
-      );
-    };
+          }),
+        ]);
+        // Unmounted while subscribing: release now instead of leaking the listeners.
+        if (disposed) subscriptions.forEach((u) => u());
+        else unlisten.push(...subscriptions);
+      } catch (error) {
+        console.warn('[events] CAPTCHA events unavailable:', error);
+      }
+    })();
 
-    // Setup all listeners
-    setupProgressListener();
-    setupStatusListener();
-    setupCaptchaRequiredListener();
-    setupCaptchaSolvedListener();
-
-    // Cleanup on unmount
     return () => {
-      if (unlistenProgress) unlistenProgress();
-      if (unlistenStatus) unlistenStatus();
-      if (unlistenCaptchaRequired) unlistenCaptchaRequired();
-      if (unlistenCaptchaSolved) unlistenCaptchaSolved();
+      disposed = true;
+      unlisten.forEach((u) => u());
     };
-  }, [
-    updateTask,
-    setCurrentCaptcha,
-    setShowCaptchaDialog,
-  ]);
+  }, [ready, setCurrentCaptcha, setShowCaptchaDialog]);
 };
 
 export default useTauriEvents;

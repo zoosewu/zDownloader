@@ -1,7 +1,6 @@
 // Jotai atoms for proxy state management
 import { atom } from 'jotai';
-import { invoke } from '../utils/tauri';
-import { ProxyInfo, ProxyStatus } from '../types/proxy';
+import { backend, type ProxyInfo } from '../backend';
 
 // Proxy list atom - all proxies
 export const proxyListAtom = atom<ProxyInfo[]>([]);
@@ -9,19 +8,19 @@ export const proxyListAtom = atom<ProxyInfo[]>([]);
 // Active proxies atom (derived) - only active proxies
 export const activeProxiesAtom = atom((get) => {
   const proxies = get(proxyListAtom);
-  return proxies.filter((proxy) => proxy.status === ProxyStatus.Active);
+  return proxies.filter((proxy) => proxy.status === 'active');
 });
 
 // Failed proxies atom (derived) - failed proxies
 export const failedProxiesAtom = atom((get) => {
   const proxies = get(proxyListAtom);
-  return proxies.filter((proxy) => proxy.status === ProxyStatus.Failed);
+  return proxies.filter((proxy) => proxy.status === 'failed');
 });
 
 // Blacklisted proxies atom (derived) - blacklisted proxies
 export const blacklistedProxiesAtom = atom((get) => {
   const proxies = get(proxyListAtom);
-  return proxies.filter((proxy) => proxy.status === ProxyStatus.Blacklisted);
+  return proxies.filter((proxy) => proxy.status === 'blacklisted');
 });
 
 // Active proxy count atom (derived)
@@ -78,7 +77,7 @@ export const loadProxyListAtom = atom(null, async (_get, set) => {
   set(proxyErrorAtom, null);
 
   try {
-    const proxies = await invoke<ProxyInfo[]>('get_proxy_list');
+    const proxies = await backend.proxies.list();
     set(proxyListAtom, proxies);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -97,7 +96,7 @@ export const importProxyListAtom = atom(
     set(proxyErrorAtom, null);
 
     try {
-      const count = await invoke<number>('import_proxy_list', { filePath });
+      const count = (await backend.proxies.import(filePath)).added;
       // Reload the list after import
       await set(loadProxyListAtom);
       return count;
@@ -120,7 +119,7 @@ export const removeProxyAtom = atom(
     set(proxyErrorAtom, null);
 
     try {
-      await invoke('remove_proxy', { proxyId });
+      await backend.proxies.remove(proxyId);
       // Reload the list after removal
       await set(loadProxyListAtom);
     } catch (error) {
@@ -140,7 +139,7 @@ export const clearAllProxiesAtom = atom(null, async (_get, set) => {
   set(proxyErrorAtom, null);
 
   try {
-    await invoke('clear_all_proxies');
+    await backend.proxies.clear();
     set(proxyListAtom, []);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -158,7 +157,7 @@ export const resetFailedProxiesAtom = atom(null, async (_get, set) => {
   set(proxyErrorAtom, null);
 
   try {
-    await invoke('reset_failed_proxies');
+    await backend.proxies.resetFailed();
     // Reload the list after reset
     await set(loadProxyListAtom);
   } catch (error) {

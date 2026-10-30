@@ -17,12 +17,14 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppSettings, SpeedLimitMode } from '../types/settings';
-import { getSettings, updateSettings, resetSettings, exportSettings, importSettings } from '../api/settings';
+import { useAtom } from 'jotai';
+import { backend, type AppSettings, type SpeedLimitMode } from '../backend';
+import { settingsAtom } from '../stores/settingsStore';
 import { open, save } from '@tauri-apps/plugin-dialog';
 
 export default function AdvancedSettings() {
   const { t } = useTranslation();
+  const [, setGlobalSettings] = useAtom(settingsAtom);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,7 +38,7 @@ export default function AdvancedSettings() {
   async function loadSettings() {
     try {
       setLoading(true);
-      const loadedSettings = await getSettings();
+      const loadedSettings = await backend.settings.get();
       setSettings(loadedSettings);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -51,7 +53,7 @@ export default function AdvancedSettings() {
 
     try {
       setSaving(true);
-      await updateSettings(settings);
+      setGlobalSettings(await backend.settings.update(settings));
       setMessage({ type: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -67,7 +69,8 @@ export default function AdvancedSettings() {
     }
 
     try {
-      const defaultSettings = await resetSettings();
+      const defaultSettings = await backend.settings.reset();
+      setGlobalSettings(defaultSettings);
       setSettings(defaultSettings);
       setMessage({ type: 'success', text: t('settings.resetSuccess') || 'Settings reset to defaults' });
     } catch (error) {
@@ -87,7 +90,7 @@ export default function AdvancedSettings() {
       });
 
       if (exportPath) {
-        await exportSettings(exportPath as string);
+        await backend.settings.export(exportPath as string);
         setMessage({ type: 'success', text: t('settings.exportSuccess') || 'Settings exported successfully' });
       }
     } catch (error) {
@@ -107,7 +110,8 @@ export default function AdvancedSettings() {
       });
 
       if (importPath) {
-        const imported = await importSettings(importPath as string);
+        const imported = await backend.settings.import(importPath as string);
+        setGlobalSettings(imported);
         setSettings(imported);
         setMessage({ type: 'success', text: t('settings.importSuccess') || 'Settings imported successfully' });
       }
@@ -165,19 +169,19 @@ export default function AdvancedSettings() {
                 label={t('settings.speedLimitMode') || 'Speed Limit Mode'}
                 onChange={(e) => setSettings({ ...settings, speedLimitMode: e.target.value as SpeedLimitMode })}
               >
-                <MenuItem value={SpeedLimitMode.Unlimited}>{t('settings.unlimited') || 'Unlimited'}</MenuItem>
-                <MenuItem value={SpeedLimitMode.Fixed}>{t('settings.fixed') || 'Fixed'}</MenuItem>
+                <MenuItem value="unlimited">{t('settings.unlimited') || 'Unlimited'}</MenuItem>
+                <MenuItem value="fixed">{t('settings.fixed') || 'Fixed'}</MenuItem>
               </Select>
             </FormControl>
 
-            {settings.speedLimitMode === SpeedLimitMode.Fixed && (
+            {settings.speedLimitMode === 'fixed' && (
               <TextField
                 fullWidth
                 type="number"
                 label={t('settings.speedLimitValue') || 'Speed Limit (KB/s)'}
                 value={settings.speedLimitKbps ?? ''}
                 onChange={(e) => {
-                  const value = e.target.value === '' ? undefined : parseInt(e.target.value);
+                  const value = e.target.value === '' ? null : parseInt(e.target.value);
                   setSettings({ ...settings, speedLimitKbps: value });
                 }}
                 InputProps={{
@@ -244,16 +248,14 @@ export default function AdvancedSettings() {
             />
 
             {settings.enableProxy && (
-              <TextField
-                fullWidth
-                type="number"
-                label={t('settings.proxyVerificationInterval') || 'Proxy Verification Interval (hours)'}
-                value={settings.proxyVerificationIntervalHours}
-                onChange={(e) =>
-                  setSettings({ ...settings, proxyVerificationIntervalHours: parseInt(e.target.value) || 24 })
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.proxyFallbackDirect}
+                    onChange={(e) => setSettings({ ...settings, proxyFallbackDirect: e.target.checked })}
+                  />
                 }
-                inputProps={{ min: 1, max: 168 }}
-                helperText={t('settings.proxyVerificationHelp') || 'How often to verify proxy health (1-168 hours)'}
+                label={t('settings.proxyFallbackDirect')}
               />
             )}
           </Stack>

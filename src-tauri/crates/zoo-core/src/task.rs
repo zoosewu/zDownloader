@@ -87,6 +87,9 @@ pub struct Task {
     pub retry_count: u32,
     /// When a failed task will be re-queued automatically.
     pub next_retry_at: Option<DateTime<Utc>>,
+    /// Increases with every change; of two copies of a task, the higher `rev` is newer.
+    #[serde(default)]
+    pub rev: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

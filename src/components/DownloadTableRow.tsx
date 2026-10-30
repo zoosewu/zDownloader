@@ -1,85 +1,91 @@
 // Download table row component - single row in the download table
 import React from 'react';
-import { TableRow, TableCell, Chip, Box, LinearProgress, Tooltip } from '@mui/material';
+import { TableRow, TableCell, Chip, Box, LinearProgress, Tooltip, IconButton } from '@mui/material';
 import {
   CheckCircle as CompleteIcon,
   Error as ErrorIcon,
   Download as DownloadingIcon,
   Pause as PausedIcon,
   Schedule as PendingIcon,
+  Cancel as CancelledIcon,
+  PlayArrow as ResumeIcon,
+  Stop as CancelIcon,
+  Replay as RetryIcon,
+  DeleteOutline as RemoveIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { DownloadTask, DownloadStatus } from '../types/download';
+import type { Task, TaskState } from '../backend';
+import { useDownloadActions } from '../hooks/useDownloadActions';
 import { formatTaskForTable } from '../utils/downloadCalculations';
-import { formatRelativeTime, formatSpeedPriority } from '../utils/formatters';
+import { formatRelativeTime } from '../utils/formatters';
 
 interface DownloadTableRowProps {
-  task: DownloadTask;
+  task: Task;
   isSelected: boolean;
   onClick: (taskId: string) => void;
+  onActionError?: (message: string) => void;
   columnWidths?: Record<string, number>;
 }
 
-/**
- * Get status color for Chip component
- */
-function getStatusColor(
-  status: DownloadStatus
-): 'default' | 'primary' | 'success' | 'error' | 'warning' {
-  switch (status) {
-    case DownloadStatus.Downloading:
-    case DownloadStatus.Initializing:
-      return 'primary';
-    case DownloadStatus.Completed:
-      return 'success';
-    case DownloadStatus.Failed:
-      return 'error';
-    case DownloadStatus.Paused:
-      return 'warning';
-    default:
-      return 'default';
+const STATE_COLOR: Record<TaskState, 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info'> = {
+  scheduled: 'info',
+  queued: 'default',
+  running: 'primary',
+  paused: 'warning',
+  completed: 'success',
+  failed: 'error',
+  cancelled: 'default',
+};
+
+const STATE_ICON: Record<TaskState, React.ReactElement> = {
+  scheduled: <PendingIcon fontSize="small" />,
+  queued: <PendingIcon fontSize="small" />,
+  running: <DownloadingIcon fontSize="small" />,
+  paused: <PausedIcon fontSize="small" />,
+  completed: <CompleteIcon fontSize="small" />,
+  failed: <ErrorIcon fontSize="small" />,
+  cancelled: <CancelledIcon fontSize="small" />,
+};
+
+type Action = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove';
+
+/** Which buttons make sense in each state (mirrors the transitions zoo-core allows). */
+function actionsFor(state: TaskState): Action[] {
+  switch (state) {
+    case 'running':
+    case 'queued':
+    case 'scheduled':
+      return ['pause', 'cancel', 'remove'];
+    case 'paused':
+      return ['resume', 'cancel', 'remove'];
+    case 'failed':
+      return ['retry', 'cancel', 'remove'];
+    case 'cancelled':
+      return ['retry', 'remove'];
+    case 'completed':
+      return ['remove'];
   }
 }
 
-/**
- * Get status icon for Chip component
- */
-function getStatusIcon(status: DownloadStatus) {
-  switch (status) {
-    case DownloadStatus.Completed:
-      return <CompleteIcon fontSize="small" />;
-    case DownloadStatus.Failed:
-      return <ErrorIcon fontSize="small" />;
-    case DownloadStatus.Downloading:
-    case DownloadStatus.Initializing:
-      return <DownloadingIcon fontSize="small" />;
-    case DownloadStatus.Paused:
-      return <PausedIcon fontSize="small" />;
-    case DownloadStatus.Pending:
-      return <PendingIcon fontSize="small" />;
-    default:
-      return null;
-  }
-}
+const ACTION_ICON: Record<Action, React.ReactElement> = {
+  pause: <PausedIcon fontSize="small" />,
+  resume: <ResumeIcon fontSize="small" />,
+  cancel: <CancelIcon fontSize="small" />,
+  retry: <RetryIcon fontSize="small" />,
+  remove: <RemoveIcon fontSize="small" />,
+};
 
-/**
- * Download table row component with React.memo optimization
- * Only re-renders when task data actually changes
- */
 const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
-  ({ task, isSelected, onClick, columnWidths }) => {
+  ({ task, isSelected, onClick, onActionError, columnWidths }) => {
     const { t } = useTranslation();
-
-    // Format task data for display
+    const actions = useDownloadActions();
     const displayData = formatTaskForTable(task, t);
-    const createdAtFormatted = formatRelativeTime(task.createdAt);
 
-    // Handle row click
-    const handleClick = () => {
-      onClick(task.id);
+    const run = (action: Action) => (event: React.MouseEvent) => {
+      event.stopPropagation(); // don't select the row
+      actions[action](task.id).catch((error) => onActionError?.(error.message));
     };
 
-    // Helper to get cell width styles
     const getCellWidthStyle = (columnKey: string) =>
       columnWidths
         ? {
@@ -93,119 +99,94 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
       <TableRow
         hover
         selected={isSelected}
-        onClick={handleClick}
+        onClick={() => onClick(task.id)}
         sx={{
           cursor: 'pointer',
-          '&.Mui-selected': {
-            backgroundColor: 'action.selected',
-          },
-          '&.Mui-selected:hover': {
-            backgroundColor: 'action.selected',
-          },
+          '&.Mui-selected': { backgroundColor: 'action.selected' },
+          '&.Mui-selected:hover': { backgroundColor: 'action.selected' },
         }}
       >
-        {/* Filename Column */}
         <TableCell sx={getCellWidthStyle('filename')}>
-          <Tooltip title={task.filename} arrow placement="top-start">
-            <Box
-              sx={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
+          <Tooltip title={task.name} arrow placement="top-start">
+            <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {displayData.filename}
             </Box>
           </Tooltip>
         </TableCell>
 
-        {/* File Size Column */}
         <TableCell align="right" sx={getCellWidthStyle('fileSize')}>
           {displayData.filesizeFormatted}
         </TableCell>
 
-        {/* Progress Column */}
         <TableCell sx={getCellWidthStyle('progress')}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box sx={{ flex: 1 }}>
               <LinearProgress
-                variant="determinate"
+                variant={task.total === null && task.state === 'running' ? 'indeterminate' : 'determinate'}
                 value={displayData.progress}
-                color={
-                  task.status === DownloadStatus.Completed
-                    ? 'success'
-                    : task.status === DownloadStatus.Failed
-                    ? 'error'
-                    : 'primary'
-                }
+                color={task.state === 'completed' ? 'success' : task.state === 'failed' ? 'error' : 'primary'}
                 sx={{ height: 6, borderRadius: 3 }}
               />
             </Box>
-            <Box sx={{ minWidth: 45, textAlign: 'right' }}>
-              {displayData.progressFormatted}
-            </Box>
+            <Box sx={{ minWidth: 45, textAlign: 'right' }}>{displayData.progressFormatted}</Box>
           </Box>
         </TableCell>
 
-        {/* Speed Column */}
         <TableCell align="right" sx={getCellWidthStyle('currentSpeed')}>
           {displayData.speedFormatted}
         </TableCell>
 
-        {/* Status Column */}
         <TableCell sx={getCellWidthStyle('status')}>
-          <Chip
-            label={displayData.statusLabel}
-            color={getStatusColor(task.status)}
-            size="small"
-            icon={getStatusIcon(task.status) || undefined}
-          />
-        </TableCell>
-
-        {/* Priority Column */}
-        <TableCell align="center" sx={getCellWidthStyle('priority')}>
-          {formatSpeedPriority(task.speedPriority, t)}
-        </TableCell>
-
-        {/* Created At Column */}
-        <TableCell sx={getCellWidthStyle('createdAt')}>
-          <Tooltip title={task.createdAt} arrow>
-            <span>{createdAtFormatted}</span>
+          <Tooltip title={task.error ? `${displayData.statusLabel}: ${errorText(task)}` : ''} arrow>
+            <Chip
+              label={displayData.statusLabel}
+              color={STATE_COLOR[task.state]}
+              size="small"
+              icon={STATE_ICON[task.state]}
+            />
           </Tooltip>
         </TableCell>
 
-        {/* Remaining Time Column */}
-        <TableCell align="right" sx={getCellWidthStyle('timeRemaining')}>
-          {task.status === DownloadStatus.Downloading && displayData.remainingTimeFormatted !== '--' ? (
-            <Tooltip title={t('downloads.statistics.timeRemaining')} arrow>
-              <span>{displayData.remainingTimeFormatted}</span>
+        <TableCell align="center" sx={getCellWidthStyle('actions')}>
+          {actionsFor(task.state).map((action) => (
+            <Tooltip key={action} title={t(`downloads.actions.${action}`)} arrow>
+              <IconButton size="small" onClick={run(action)} aria-label={t(`downloads.actions.${action}`)}>
+                {ACTION_ICON[action]}
+              </IconButton>
             </Tooltip>
-          ) : (
-            <span>--</span>
-          )}
+          ))}
+        </TableCell>
+
+        <TableCell sx={getCellWidthStyle('createdAt')}>
+          <Tooltip title={task.createdAt} arrow>
+            <span>{formatRelativeTime(task.createdAt)}</span>
+          </Tooltip>
+        </TableCell>
+
+        <TableCell align="right" sx={getCellWidthStyle('timeRemaining')}>
+          {displayData.remainingTimeFormatted}
         </TableCell>
       </TableRow>
     );
   },
-  (prevProps, nextProps) => {
-    // Custom comparison function for React.memo
-    // Only re-render if these specific properties change
-    return (
-      prevProps.task.id === nextProps.task.id &&
-      prevProps.task.filename === nextProps.task.filename &&
-      prevProps.task.progress === nextProps.task.progress &&
-      prevProps.task.currentSpeed === nextProps.task.currentSpeed &&
-      prevProps.task.status === nextProps.task.status &&
-      prevProps.task.filesize === nextProps.task.filesize &&
-      prevProps.task.createdAt === nextProps.task.createdAt &&
-      prevProps.task.speedPriority === nextProps.task.speedPriority &&
-      prevProps.isSelected === nextProps.isSelected &&
-      prevProps.columnWidths === nextProps.columnWidths
-    );
-  }
+  (prev, next) =>
+    // `rev` covers every state change; progress ticks change downloaded/total/speed.
+    prev.task.rev === next.task.rev &&
+    prev.task.downloaded === next.task.downloaded &&
+    prev.task.total === next.task.total &&
+    prev.task.speed === next.task.speed &&
+    prev.isSelected === next.isSelected &&
+    prev.onClick === next.onClick &&
+    prev.onActionError === next.onActionError &&
+    prev.columnWidths === next.columnWidths
 );
 
-// Display name for debugging
 DownloadTableRow.displayName = 'DownloadTableRow';
+
+export function errorText(task: Task): string {
+  const error = task.error;
+  if (!error) return '';
+  return 'detail' in error ? `${error.kind}: ${error.detail}` : error.kind;
+}
 
 export default DownloadTableRow;

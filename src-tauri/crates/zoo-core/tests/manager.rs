@@ -286,3 +286,27 @@ async fn add_rejects_bad_urls_and_sanitizes_names() {
     r.filename = Some(r"..\..\Startup\evil.bat".into());
     assert_eq!(m.add(r).await.unwrap().name, "evil.bat");
 }
+
+#[tokio::test]
+async fn revisions_increase_with_every_change_and_survive_restart() {
+    let fx = Fixture::start().await;
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let m = start(config(), store.path());
+    let mut events = m.subscribe();
+
+    let id = m.add(req(fx.url("/file/1000"), dir.path(), StartMode::Now)).await.unwrap().id;
+    let done = wait_state(&m, id, TaskState::Completed).await;
+    let mut revs = Vec::new();
+    while let Ok(ev) = events.try_recv() {
+        if let Event::Upserted(t) = ev {
+            revs.push(t.rev);
+        }
+    }
+    assert!(revs.windows(2).all(|w| w[0] < w[1]), "not strictly increasing: {revs:?}");
+    assert_eq!(*revs.last().unwrap(), done.rev);
+    m.shutdown().await;
+
+    let again = start(config(), store.path());
+    let later = again.add(req(fx.url("/file/10"), dir.path(), StartMode::Later)).await.unwrap();
+    assert!(later.rev > done.rev, "revision counter restarted after reload");
+}

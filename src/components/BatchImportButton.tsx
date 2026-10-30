@@ -4,74 +4,35 @@ import { Button, CircularProgress } from '@mui/material';
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
-import { invoke } from '../utils/tauri';
+import { useSetAtom } from 'jotai';
+import { backend, type BatchResult } from '../backend';
+import { upsertTaskAtom } from '../stores/downloadStore';
 
 interface BatchImportButtonProps {
-  onImportSuccess?: (taskIds: string[]) => void;
+  onImportSuccess?: (result: BatchResult) => void;
   onImportError?: (error: string) => void;
 }
 
-const BatchImportButton: React.FC<BatchImportButtonProps> = ({
-  onImportSuccess,
-  onImportError,
-}) => {
+const BatchImportButton: React.FC<BatchImportButtonProps> = ({ onImportSuccess, onImportError }) => {
   const { t } = useTranslation();
+  const upsert = useSetAtom(upsertTaskAtom);
   const [loading, setLoading] = React.useState(false);
 
   const handleImport = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-
-      // Open file picker dialog for text files
       const selected = await open({
         multiple: false,
-        filters: [
-          {
-            name: 'Text Files',
-            extensions: ['txt'],
-          },
-        ],
+        filters: [{ name: 'Text Files', extensions: ['txt'] }],
       });
+      if (!selected) return;
 
-      if (!selected) {
-        setLoading(false);
-        return;
-      }
-
-      // Call Tauri command to import batch downloads
-      const taskIds = await invoke<string[]>('import_batch_downloads', {
-        filePath: selected,
-      });
-
-      onImportSuccess?.(taskIds);
+      // Imported URLs queue right away; the concurrency limit decides when each starts.
+      const result = await backend.downloads.importBatch(selected, { mode: 'now' });
+      result.added.forEach(upsert);
+      onImportSuccess?.(result);
     } catch (error) {
-      console.error('Failed to import batch downloads:', error);
-
-      // Extract error message from various error formats
-      let errorMessage = 'Unknown error';
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error && typeof error === 'object') {
-        // Handle Tauri error objects
-        if ('message' in error && typeof error.message === 'string') {
-          errorMessage = error.message;
-        } else {
-          // Try to stringify the error object
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch {
-            errorMessage = String(error);
-          }
-        }
-      } else if (error !== null && error !== undefined) {
-        errorMessage = String(error);
-      }
-
-      console.error('Extracted error message:', errorMessage);
-      onImportError?.(errorMessage);
+      onImportError?.(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }

@@ -65,7 +65,9 @@
       "clearCompleted": "完了を削除",
       "openFile": "ファイルを開く",
       "openFolder": "フォルダを開く",
-      "copyUrl": "URLをコピー"
+      "copyUrl": "URLをコピー",
+      "title": "操作",
+      "remove": "削除"
     },
     "errors": {
       "emptyUrl": "ダウンロードURLを入力してください",
@@ -88,7 +90,8 @@
       "importSuccess": "{{count}}個のダウンロードタスクを正常にインポートしました",
       "importError": "バッチインポートに失敗しました: {{error}}",
       "selectFile": "URLファイルを選択",
-      "fileFormat": "1行に1つのURLを含むテキストファイル"
+      "fileFormat": "1行に1つのURLを含むテキストファイル",
+      "importSkipped": "無効な URL を {{count}} 件スキップしました"
     },
     "clipboard": {
       "detected": "クリップボードでURLを検出しました",
@@ -104,7 +107,8 @@
       "timeElapsed": "経過時間",
       "activeDownloads": "アクティブなダウンロード",
       "completedDownloads": "完了したダウンロード",
-      "failedDownloads": "失敗したダウンロード"
+      "failedDownloads": "失敗したダウンロード",
+      "totalTasks": "タスク総数"
     },
     "filters": {
       "all": "すべて",
@@ -141,7 +145,8 @@
       "segmentProgress": "セグメント進捗",
       "proxy": "プロキシ",
       "noProxy": "プロキシなし",
-      "noSegments": "セグメント情報なし"
+      "noSegments": "セグメント情報なし",
+      "nextRetryAt": "次の自動再試行"
     },
     "priority": {
       "title": "優先度",
@@ -151,6 +156,19 @@
       "default": "デフォルト",
       "aboveDefault": "デフォルト以上",
       "high": "高"
+    },
+    "state": {
+      "scheduled": "予約済み",
+      "queued": "待機中",
+      "running": "ダウンロード中",
+      "paused": "一時停止",
+      "completed": "完了",
+      "failed": "失敗",
+      "cancelled": "キャンセル済み"
+    },
+    "schedule": {
+      "startAt": "開始予定時刻（任意）",
+      "help": "空欄の場合はすぐに開始します"
     }
   },
   "settings": {
@@ -206,7 +224,8 @@
       "resetFailed": "設定のリセットに失敗しました",
       "exportFailed": "設定のエクスポートに失敗しました",
       "importFailed": "設定のインポートに失敗しました"
-    }
+    },
+    "proxyFallbackDirect": "使用できるプロキシがない場合は直接接続する"
   },
   "dev": {
     "banner": {

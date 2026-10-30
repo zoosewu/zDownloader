@@ -1,5 +1,5 @@
 // Download table component - table view for all download items with resizable columns
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -12,23 +12,24 @@ import {
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { DownloadTask } from '../types/download';
+import type { Task } from '../backend';
 import DownloadTableRow from './DownloadTableRow';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 
 interface DownloadTableProps {
-  tasks: DownloadTask[];
+  tasks: Task[];
+  onActionError?: (message: string) => void;
 }
 
 // Column identifiers and default widths
-type ColumnKey = 'filename' | 'fileSize' | 'progress' | 'currentSpeed' | 'status' | 'priority' | 'createdAt' | 'timeRemaining';
+type ColumnKey = 'filename' | 'fileSize' | 'progress' | 'currentSpeed' | 'status' | 'actions' | 'createdAt' | 'timeRemaining';
 const DEFAULT_COLUMN_WIDTHS: Record<ColumnKey, number> = {
   filename: 200,
   fileSize: 100,
   progress: 180,
   currentSpeed: 100,
   status: 120,
-  priority: 80,
+  actions: 150,
   createdAt: 130,
   timeRemaining: 120,
 };
@@ -37,18 +38,21 @@ const DEFAULT_COLUMN_WIDTHS: Record<ColumnKey, number> = {
  * Download table component with sticky header and resizable columns
  * Displays all download tasks in a tabular format
  */
-const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
+const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) => {
   const { t } = useTranslation();
-  const { selectedTaskId, toggleSelection } = useSelectedDownload();
+  const { selectedTaskId, selectTask } = useSelectedDownload();
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(DEFAULT_COLUMN_WIDTHS);
   const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
 
-  // Handle row click - toggle selection
-  const handleRowClick = (taskId: string) => {
-    toggleSelection(taskId);
-  };
+  // Toggle selection; stable across renders so memoized rows skip re-rendering.
+  const selectedRef = useRef(selectedTaskId);
+  selectedRef.current = selectedTaskId;
+  const handleRowClick = useCallback(
+    (taskId: string) => selectTask(selectedRef.current === taskId ? null : taskId),
+    [selectTask]
+  );
 
   // Handle resize start
   const handleResizeStart = (e: React.MouseEvent, column: ColumnKey) => {
@@ -165,7 +169,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
             {renderHeaderCell('progress', t('common.progress', '進度'))}
             {renderHeaderCell('currentSpeed', t('downloads.statistics.currentSpeed'), 'right')}
             {renderHeaderCell('status', t('downloads.status.title', '狀態'))}
-            {renderHeaderCell('priority', t('downloads.priority.title', '優先度'), 'center')}
+            {renderHeaderCell('actions', t('downloads.actions.title'), 'center')}
             {renderHeaderCell('createdAt', t('downloads.details.createdAt'))}
             {renderHeaderCell('timeRemaining', t('downloads.statistics.timeRemaining'), 'right')}
           </TableRow>
@@ -177,6 +181,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks }) => {
               task={task}
               isSelected={selectedTaskId === task.id}
               onClick={handleRowClick}
+              onActionError={onActionError}
               columnWidths={columnWidths}
             />
           ))}

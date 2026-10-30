@@ -20,7 +20,7 @@ const Footer: React.FC = () => {
   const completedDownloads = useAtomValue(completedDownloadsAtom);
 
   // Calculate total download speed
-  const totalSpeed = activeDownloads.reduce((sum, task) => sum + task.currentSpeed, 0);
+  const totalSpeed = activeDownloads.reduce((sum, task) => sum + task.speed, 0);
   const speedMBps = (totalSpeed / 1024 / 1024).toFixed(2);
 
   return (
@@ -40,7 +40,7 @@ const Footer: React.FC = () => {
       {/* Left side - Download statistics */}
       <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
         <Typography variant="caption">
-          {t('downloads.statistics.totalDownloaded')}: <strong>{tasks.length}</strong>
+          {t('downloads.statistics.totalTasks')}: <strong>{tasks.length}</strong>
         </Typography>
         <Typography variant="caption">
           {t('downloads.statistics.activeDownloads')}: <strong>{activeDownloads.length}</strong>

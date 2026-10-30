@@ -2,13 +2,13 @@
 import React from 'react';
 import { Box, Typography, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { DownloadTask } from '../types/download';
+import type { Task } from '../backend';
 import { formatBytes } from '../utils/downloadCalculations';
 import { formatAbsoluteTime } from '../utils/formatters';
 import CollapsibleField from './CollapsibleField';
 
 interface BasicInfoTabProps {
-  task: DownloadTask;
+  task: Task;
 }
 
 /**
@@ -30,7 +30,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ task }) => {
         {/* File Path - Collapsible */}
         <CollapsibleField
           label={t('downloads.details.filePath')}
-          content={task.filepath || task.filename}
+          content={task.finalPath ?? `${task.dir}/${task.name}`}
           contentStyle="monospace"
         />
 
@@ -40,7 +40,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ task }) => {
             {t('downloads.details.fileSize')}
           </Typography>
           <Typography variant="body2">
-            {formatBytes(task.filesize)} ({task.filesize.toLocaleString()} bytes)
+            {task.total !== null ? `${formatBytes(task.total)} (${task.total.toLocaleString()} bytes)` : '--'}
           </Typography>
         </Box>
 
@@ -67,13 +67,13 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ task }) => {
         )}
 
         {/* Completed At */}
-        {task.completedAt && (
+        {task.state === 'completed' && task.finishedAt && (
           <Box>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               {t('downloads.details.completedAt')}
             </Typography>
             <Typography variant="body2">
-              {formatAbsoluteTime(task.completedAt)}
+              {formatAbsoluteTime(task.finishedAt)}
             </Typography>
           </Box>
         )}

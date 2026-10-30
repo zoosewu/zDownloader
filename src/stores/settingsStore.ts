@@ -1,19 +1,20 @@
 // Jotai atoms for global settings state
 import { atom } from 'jotai';
-import { AppSettings, Theme, SpeedLimitMode } from '../types/settings';
+import type { AppSettings } from '../backend';
 
 // Default settings
 const defaultSettings: AppSettings = {
   language: 'zh-TW',
-  theme: Theme.Dark,
+  theme: 'dark',
   autoStart: false,
   defaultDownloadDir: '',  // Will be set from backend
-  maxConcurrentDownloads: undefined,  // unlimited
+  maxConcurrentDownloads: null,  // unlimited
   segmentSizeMb: 10,
   threadCount: 8,
-  speedLimitMode: SpeedLimitMode.Unlimited,
-  speedLimitKbps: undefined,
+  speedLimitMode: 'unlimited',
+  speedLimitKbps: null,
   enableProxy: false,
+  proxyFallbackDirect: true,
   proxyVerificationIntervalHours: 24,
   enableClipboardMonitoring: true,
   enableNotifications: true,

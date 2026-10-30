@@ -19,4 +19,8 @@ speed: number, createdAt: string, startedAt: string | null, finishedAt: string |
 /**
  * When a failed task will be re-queued automatically.
  */
-nextRetryAt: string | null, };
+nextRetryAt: string | null, 
+/**
+ * Increases with every change; of two copies of a task, the higher `rev` is newer.
+ */
+rev: number, };
