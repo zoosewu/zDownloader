@@ -142,7 +142,7 @@ pub fn detect_url_with_modules(
     site_module_registry: &crate::modules::registry::ModuleRegistry,
 ) -> UrlDetectionInfo {
     // Step 1: Try to find a site module that can handle this URL
-    let module_match = site_module_registry.find_module_for_url(url);
+    let module_match = site_module_registry.find_js_module_for_url(url);
 
     if module_match.is_some() {
         // A site module was found - create result with ModuleCustom mode

@@ -14,12 +14,6 @@ fn test_module_directories_exist() {
 }
 
 #[test]
-fn test_audit_log_directory_exists() {
-    // Test that audit log directory is created
-    assert!(Path::new("../logs/audit").exists(), "logs/audit/ directory should exist");
-}
-
-#[test]
 fn test_k2s_manifest_exists() {
     // Test that K2S manifest file exists
     let manifest_path = Path::new("../modules/k2s/manifest.json");

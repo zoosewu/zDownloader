@@ -1,6 +1,4 @@
-// Module System Tests (Feature 004)
-//
-// This module contains tests for the site module integration system.
+// Site module system tests (Feature 004)
 
 #[cfg(test)]
 pub mod phase1_tests;
@@ -13,9 +11,3 @@ pub mod k2s_tests;
 
 #[cfg(test)]
 pub mod integration_tests;
-
-#[cfg(test)]
-pub mod security_tests;
-
-#[cfg(test)]
-pub mod run_security_tests;

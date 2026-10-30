@@ -6,7 +6,7 @@
 //! - Cancelling CAPTCHA challenges
 
 use crate::modules::captcha::{CaptchaManager, ChallengeEntry};
-use crate::modules::interface::CaptchaSolution;
+use crate::modules::captcha::CaptchaSolution;
 use crate::utils::error::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -145,7 +145,7 @@ pub fn get_active_captcha_count(
 mod tests {
     use super::*;
     use crate::modules::captcha::CaptchaManager;
-    use crate::modules::interface::CaptchaChallenge;
+    use crate::modules::captcha::CaptchaChallenge;
 
     fn create_test_manager() -> Arc<Mutex<CaptchaManager>> {
         Arc::new(Mutex::new(CaptchaManager::new()))

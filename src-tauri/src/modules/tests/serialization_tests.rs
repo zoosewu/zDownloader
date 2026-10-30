@@ -5,7 +5,6 @@
 
 use super::super::manifest::{ModuleManifest, ModulePermissions, NetworkPermission, CredentialPermission};
 use super::super::js_module::ModuleStatus;
-use super::super::audit::AuditSeverity;
 use serde_json;
 
 #[test]
@@ -49,29 +48,6 @@ fn test_module_status_deserialization_from_camel_case() {
         let result: Result<ModuleStatus, _> = serde_json::from_str(json);
         assert!(result.is_ok(), "Should deserialize \"{}\"", json);
         assert_eq!(result.unwrap(), expected);
-    }
-}
-
-#[test]
-fn test_audit_severity_serialization_uses_uppercase() {
-    // Test that AuditSeverity serializes to UPPERCASE
-    // Frontend expects: 'INFO', 'WARN', 'ERROR', 'CRITICAL'
-
-    let severities = vec![
-        (AuditSeverity::Info, "INFO"),
-        (AuditSeverity::Warn, "WARN"),
-        (AuditSeverity::Error, "ERROR"),
-        (AuditSeverity::Critical, "CRITICAL"),
-    ];
-
-    for (severity, expected) in severities {
-        let json = serde_json::to_string(&severity).unwrap();
-        let json = json.trim_matches('"');
-        assert_eq!(
-            json, expected,
-            "AuditSeverity::{:?} should serialize to \"{}\"",
-            severity, expected
-        );
     }
 }
 

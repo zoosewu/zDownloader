@@ -5,11 +5,31 @@
 //! and frontend UI for CAPTCHA verification.
 
 #![allow(dead_code)]
-use super::interface::{CaptchaChallenge, CaptchaSolution};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 use uuid::Uuid;
+
+/// CAPTCHA challenge information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CaptchaChallenge {
+    /// CAPTCHA type (e.g., "image", "recaptcha", "hcaptcha")
+    pub captcha_type: String,
+    /// CAPTCHA image URL or site key
+    pub challenge_data: String,
+    /// Additional parameters
+    pub params: HashMap<String, String>,
+}
+
+/// CAPTCHA solution from user
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CaptchaSolution {
+    /// Solution text or token
+    pub solution: String,
+    /// Additional data
+    pub metadata: HashMap<String, String>,
+}
 
 /// Result type for CAPTCHA operations
 pub type CaptchaResult<T> = Result<T, CaptchaError>;

@@ -1,6 +1,5 @@
 // Module registry for managing website support modules
 #![allow(dead_code)]
-use super::interface::{BoxedModule, ModuleMetadata};
 use super::loader::ModuleLoader;
 use super::js_module::SiteModule;
 use super::manifest::ModuleManifest;
@@ -8,19 +7,8 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::fs;
 
-/// Type of module (Phase 3: T042)
-#[derive(Debug, Clone, PartialEq)]
-pub enum ModuleType {
-    /// Native Rust module (dynamic library)
-    Rust,
-    /// JavaScript module
-    JavaScript,
-}
-
 /// Registry that manages all loaded website modules
 pub struct ModuleRegistry {
-    /// All registered Rust modules
-    modules: Arc<RwLock<Vec<BoxedModule>>>,
     /// All registered JavaScript modules (Phase 3: T041)
     js_modules: Arc<RwLock<Vec<SiteModule>>>,
     /// Module loader (kept to keep libraries alive)
@@ -39,19 +27,9 @@ impl ModuleRegistry {
     /// * `modules_dir` - Path to the modules directory
     pub fn with_path(modules_dir: impl AsRef<Path>) -> Self {
         Self {
-            modules: Arc::new(RwLock::new(Vec::new())),
             js_modules: Arc::new(RwLock::new(Vec::new())),
             _loader: ModuleLoader::new(modules_dir.as_ref().to_str().unwrap_or("./modules")),
         }
-    }
-
-    /// Registers a module
-    ///
-    /// # Arguments
-    /// * `module` - The module to register
-    pub fn register(&self, module: BoxedModule) {
-        let mut modules = self.modules.write().unwrap();
-        modules.push(module);
     }
 
     /// Scans a directory and registers all JavaScript modules found
@@ -75,101 +53,6 @@ impl ModuleRegistry {
         js_modules.extend(new_modules);
 
         count
-    }
-
-    /// Finds a module that can handle the given URL
-    ///
-    /// # Arguments
-    /// * `url` - The URL to check
-    ///
-    /// # Returns
-    /// Reference to the first module that can handle the URL,
-    /// or None if no module can handle it
-    ///
-    /// # Note
-    /// If multiple modules can handle the URL, the first one
-    /// registered is returned.
-    pub fn find_module_for_url(&self, url: &str) -> Option<Arc<RwLock<Vec<BoxedModule>>>> {
-        let modules = self.modules.read().unwrap();
-
-        for module in modules.iter() {
-            if module.can_handle(url) {
-                drop(modules); // Release read lock
-                return Some(Arc::clone(&self.modules));
-            }
-        }
-
-        None
-    }
-
-    /// Gets metadata for all registered modules
-    ///
-    /// # Returns
-    /// Vector of module metadata
-    pub fn get_all_metadata(&self) -> Vec<ModuleMetadata> {
-        let modules = self.modules.read().unwrap();
-        modules.iter().map(|m| m.metadata()).collect()
-    }
-
-    /// Gets metadata for a specific module by ID
-    ///
-    /// # Arguments
-    /// * `module_id` - The module ID to search for
-    ///
-    /// # Returns
-    /// Module metadata if found
-    pub fn get_module_metadata(&self, module_id: &str) -> Option<ModuleMetadata> {
-        let modules = self.modules.read().unwrap();
-
-        for module in modules.iter() {
-            let metadata = module.metadata();
-            if metadata.id == module_id {
-                return Some(metadata);
-            }
-        }
-
-        None
-    }
-
-    /// Checks if any module can handle the given URL
-    ///
-    /// # Arguments
-    /// * `url` - The URL to check
-    ///
-    /// # Returns
-    /// `true` if at least one module can handle the URL
-    pub fn can_handle_url(&self, url: &str) -> bool {
-        let modules = self.modules.read().unwrap();
-        modules.iter().any(|m| m.can_handle(url))
-    }
-
-    /// Returns the number of registered modules
-    pub fn count(&self) -> usize {
-        let modules = self.modules.read().unwrap();
-        modules.len()
-    }
-
-    /// Clears all registered modules
-    ///
-    /// # Note
-    /// This will drop all modules and potentially unload their libraries
-    pub fn clear(&self) {
-        let mut modules = self.modules.write().unwrap();
-        modules.clear();
-    }
-
-    /// Gets a list of all module IDs
-    pub fn get_module_ids(&self) -> Vec<String> {
-        let modules = self.modules.read().unwrap();
-        modules.iter().map(|m| m.metadata().id).collect()
-    }
-
-    /// Provides read-only access to modules for complex operations
-    ///
-    /// # Returns
-    /// Arc to the modules vector
-    pub fn modules(&self) -> Arc<RwLock<Vec<BoxedModule>>> {
-        Arc::clone(&self.modules)
     }
 
     /// Scans and registers JavaScript modules from a directory (Phase 3: T043-T044)
@@ -253,11 +136,6 @@ impl ModuleRegistry {
         self.js_modules.read().unwrap().len()
     }
 
-    /// Gets total module count (Rust + JavaScript)
-    pub fn total_module_count(&self) -> usize {
-        self.count() + self.js_module_count()
-    }
-
     /// Finds a JavaScript module for the given URL (Phase 3: T045)
     ///
     /// Returns the first JS module that can handle the URL
@@ -290,39 +168,6 @@ impl ModuleRegistry {
 
         // Exact match
         url == pattern || url.starts_with(pattern)
-    }
-
-    /// Finds best module for URL considering both Rust and JS modules (Phase 3: T045-T047)
-    ///
-    /// Priority order:
-    /// 1. JavaScript modules (checked first as they're more specific)
-    /// 2. Rust modules
-    /// 3. None if no module can handle (fallback to generic downloader - T047)
-    ///
-    /// # Returns
-    /// - `Some(("js", module_id))` if a JS module can handle
-    /// - `Some(("rust", module_id))` if a Rust module can handle
-    /// - `None` if no module can handle (should fallback to generic downloader)
-    pub fn find_best_module_for_url(&self, url: &str) -> Option<(ModuleType, String)> {
-        // Phase 3: T045 - URL matching logic
-        // Try JavaScript modules first
-        if let Some(js_id) = self.find_js_module_for_url(url) {
-            return Some((ModuleType::JavaScript, js_id));
-        }
-
-        // Try Rust modules
-        if self.can_handle_url(url) {
-            // Find the specific Rust module
-            let modules = self.modules.read().unwrap();
-            for module in modules.iter() {
-                if module.can_handle(url) {
-                    return Some((ModuleType::Rust, module.metadata().id));
-                }
-            }
-        }
-
-        // Phase 3: T047 - Fallback to generic downloader
-        None
     }
 
     /// Executes a function with mutable access to a JavaScript module
@@ -372,129 +217,6 @@ impl Default for ModuleRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::interface::{AuthCredentials, CaptchaChallenge, CaptchaSolution, DownloadInfo, ModuleResult, WebsiteModule};
-    use std::collections::HashMap;
-
-    // Mock module for testing
-    struct MockModule {
-        id: String,
-        can_handle_urls: Vec<String>,
-    }
-
-    impl MockModule {
-        fn new(id: &str, urls: Vec<&str>) -> Self {
-            Self {
-                id: id.to_string(),
-                can_handle_urls: urls.iter().map(|s| s.to_string()).collect(),
-            }
-        }
-    }
-
-    impl WebsiteModule for MockModule {
-        fn metadata(&self) -> ModuleMetadata {
-            ModuleMetadata {
-                id: self.id.clone(),
-                name: format!("Mock Module {}", self.id),
-                version: "1.0.0".to_string(),
-                author: "Test".to_string(),
-                url_patterns: self.can_handle_urls.clone(),
-                requires_auth: false,
-                supports_captcha: false,
-            }
-        }
-
-        fn can_handle(&self, url: &str) -> bool {
-            self.can_handle_urls.iter().any(|pattern| url.contains(pattern))
-        }
-
-        fn extract_download_info(
-            &self,
-            _url: &str,
-            _credentials: Option<&AuthCredentials>,
-        ) -> ModuleResult<DownloadInfo> {
-            Ok(DownloadInfo {
-                download_url: "http://example.com/file.zip".to_string(),
-                filename: Some("file.zip".to_string()),
-                file_size: Some(1024),
-                headers: HashMap::new(),
-                requires_auth: false,
-            })
-        }
-
-        fn handle_captcha(
-            &self,
-            _challenge: &CaptchaChallenge,
-            _solution: &CaptchaSolution,
-        ) -> ModuleResult<()> {
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn test_registry_creation() {
-        let registry = ModuleRegistry::new();
-        assert_eq!(registry.count(), 0);
-    }
-
-    #[test]
-    fn test_register_module() {
-        let registry = ModuleRegistry::new();
-        let module = Box::new(MockModule::new("test", vec!["example.com"]));
-
-        registry.register(module);
-        assert_eq!(registry.count(), 1);
-    }
-
-    #[test]
-    fn test_can_handle_url() {
-        let registry = ModuleRegistry::new();
-        let module = Box::new(MockModule::new("test", vec!["example.com"]));
-
-        registry.register(module);
-
-        assert!(registry.can_handle_url("http://example.com/file"));
-        assert!(!registry.can_handle_url("http://other.com/file"));
-    }
-
-    #[test]
-    fn test_get_metadata() {
-        let registry = ModuleRegistry::new();
-        let module = Box::new(MockModule::new("test-module", vec!["example.com"]));
-
-        registry.register(module);
-
-        let metadata = registry.get_module_metadata("test-module");
-        assert!(metadata.is_some());
-
-        let metadata = metadata.unwrap();
-        assert_eq!(metadata.id, "test-module");
-        assert_eq!(metadata.name, "Mock Module test-module");
-    }
-
-    #[test]
-    fn test_clear_modules() {
-        let registry = ModuleRegistry::new();
-        registry.register(Box::new(MockModule::new("test1", vec!["example.com"])));
-        registry.register(Box::new(MockModule::new("test2", vec!["other.com"])));
-
-        assert_eq!(registry.count(), 2);
-
-        registry.clear();
-        assert_eq!(registry.count(), 0);
-    }
-
-    #[test]
-    fn test_get_module_ids() {
-        let registry = ModuleRegistry::new();
-        registry.register(Box::new(MockModule::new("module1", vec!["example.com"])));
-        registry.register(Box::new(MockModule::new("module2", vec!["other.com"])));
-
-        let ids = registry.get_module_ids();
-        assert_eq!(ids.len(), 2);
-        assert!(ids.contains(&"module1".to_string()));
-        assert!(ids.contains(&"module2".to_string()));
-    }
-
     #[test]
     fn test_scan_nonexistent_directory() {
         let mut registry = ModuleRegistry::new();
@@ -573,44 +295,6 @@ mod tests {
         // Should not find for different URL
         let result = registry.find_js_module_for_url("https://other.com/file.zip");
         assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_find_best_module_priority() {
-        use crate::modules::js_module::SiteModule;
-        use crate::modules::manifest::{ModuleManifest, ModulePermissions, NetworkPermission};
-
-        let registry = ModuleRegistry::new();
-
-        // Register a JS module
-        let manifest = ModuleManifest {
-            id: "js-module".to_string(),
-            name: "JS Module".to_string(),
-            version: "1.0.0".to_string(),
-            author: "Test".to_string(),
-            description: "Test".to_string(),
-            homepage: None,
-            url_patterns: vec!["https://test.com/*".to_string()],
-            permissions: ModulePermissions {
-                network: NetworkPermission {
-                    allow_domains: vec!["test.com".to_string()],
-                },
-                credentials: None,
-            },
-            entrypoint: "index.js".to_string(),
-            class_name: None,
-        };
-
-        let code = "class JsModule {}".to_string();
-        let module = SiteModule::new("js-module".to_string(), manifest, code);
-        registry.register_js_module(module).unwrap();
-
-        // JS module should be found first (priority)
-        let result = registry.find_best_module_for_url("https://test.com/file.zip");
-        assert!(result.is_some());
-        let (module_type, id) = result.unwrap();
-        assert_eq!(module_type, ModuleType::JavaScript);
-        assert_eq!(id, "js-module");
     }
 
     #[test]
