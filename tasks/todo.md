@@ -27,7 +27,7 @@
   - 不做：i18n 未用 key（動態 key 難以可靠判定）、http_bridge 與 docker（待決策）、DownloadStatus 不可達變體（影響持久化資料，Phase 2 處理）
 - [ ] Phase 2 下載核心重建 — 分支 `rebuild/phase-2`，規格 `docs/architecture/phase-2-download-core.md`（已確認）
   - 範圍擴大：併入原 Phase 3（產生式契約、DownloadSync）+ 代理 + 自動重試/排程/限速/通知
-  - [ ] 2a workspace + zoo-core 骨架（naming、part_file、store、rate）
+  - [x] 2a workspace + zoo-core 骨架（naming、part_file、store、rate）
   - [ ] 2b transfer + Direct + fixture server
   - [ ] 2c manager actor（狀態機、並行、控制、自動重試、排程、持久化）
   - [ ] 2d ProxyPool adapter

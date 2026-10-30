@@ -7828,6 +7828,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zoo-core"
+version = "0.1.0"
+dependencies = [
+ "percent-encoding",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "zoo-downloader"
 version = "0.1.0"
 dependencies = [
@@ -7853,6 +7866,7 @@ dependencies = [
  "tokio",
  "uuid",
  "warp",
+ "zoo-core",
 ]
 
 [[package]]

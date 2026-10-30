@@ -16,10 +16,14 @@ name = "zoo_downloader_lib"
 # which is incompatible with shared libraries (Feature 004)
 crate-type = ["staticlib", "rlib"]
 
+[workspace]
+members = ["crates/zoo-core"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+zoo-core = { path = "crates/zoo-core" }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-clipboard-manager = "2"

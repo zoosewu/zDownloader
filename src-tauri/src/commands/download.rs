@@ -7,7 +7,7 @@ use crate::modules::url_detector::DetectionMode; // T086
 use crate::modules::registry::ModuleRegistry as SiteModuleRegistry; // T086
 use crate::proxy::pool::ProxyPool;
 use crate::storage::get_downloads_dir;
-use crate::utils::filename::safe_filename;
+use zoo_core::naming::filename_for;
 use crate::utils::parser::parse_url_file;
 use crate::utils::url_validator;
 use std::path::PathBuf;
@@ -31,7 +31,7 @@ pub async fn create_download(
 ) -> Result<String, String> {
     // Also reached from the Chrome extension HTTP endpoint: validate like every other ingress.
     url_validator::validate_url_format(&url)?;
-    let filename = safe_filename(filename, &url);
+    let filename = filename_for(filename.as_deref(), &url);
 
     // Get download directory from settings
     let downloads_dir = {
@@ -92,7 +92,7 @@ pub async fn create_download_with_path(
     }; // Drop site_registry and detection_result here
 
     // T086: Fall back to the module's suggested filename, then the URL path
-    let filename = safe_filename(filename.or(suggested_filename), &url);
+    let filename = filename_for(filename.or(suggested_filename).as_deref(), &url);
     log::info!("Final filename: {}", filename);
 
     // Validate download path
@@ -350,7 +350,7 @@ pub async fn import_batch_downloads(
         log::info!("Processing URL {}/{}: {}", index + 1, urls.len(), url);
 
         // Extract filename from URL
-        let filename = safe_filename(None, url);
+        let filename = filename_for(None, url);
         let filepath = downloads_dir.join(&filename).to_string_lossy().to_string();
 
         log::info!("  → Filename: {}", filename);
