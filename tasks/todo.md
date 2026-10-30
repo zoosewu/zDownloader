@@ -30,7 +30,7 @@
   - [x] 2a workspace + zoo-core 骨架（naming、part_file、store、rate）
   - [x] 2b transfer + Direct + fixture server
   - [x] 2c manager actor（狀態機、並行、控制、自動重試、排程、持久化）
-  - [ ] 2d ProxyPool adapter
+  - [x] 2d ProxyPool adapter（shell 改接留到 2e 與刪舊引擎一起做）
   - [ ] 2e Tauri shell（ts-rs 匯出、CommandError、入口、通知、刪舊引擎）
   - [ ] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）
   - [ ] 2g 實機驗證與文件

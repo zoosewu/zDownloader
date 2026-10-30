@@ -241,11 +241,15 @@ async fn scheduled_task_waits_for_its_time() {
 
     let id = m.add(req(fx.url("/file/1000"), dir.path(), StartMode::At(at))).await.unwrap().id;
     tokio::time::sleep(Duration::from_millis(200)).await;
-    assert_eq!(get(&m, id).await.state, TaskState::Scheduled);
-    assert!(fx.requests().is_empty());
+    let (task, now) = (get(&m, id).await, Utc::now());
+    // Only meaningful if the machine was not so busy that the sleep overshot `at`.
+    if now < at {
+        assert_eq!(task.state, TaskState::Scheduled);
+        assert!(fx.requests().is_empty());
+    }
 
     let done = wait_state(&m, id, TaskState::Completed).await;
-    assert!(done.started_at.unwrap() >= at);
+    assert!(done.started_at.unwrap() >= at, "started before its scheduled time");
 }
 
 #[tokio::test]

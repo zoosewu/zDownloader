@@ -9,6 +9,7 @@ pub mod error;
 pub mod manager;
 pub mod naming;
 pub mod part_file;
+pub mod proxy_pool;
 pub mod rate;
 pub mod store;
 pub mod task;
