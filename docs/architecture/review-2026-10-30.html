@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>zoo-downloader 架構檢視</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose", flowchart: { htmlLabels: true } });
+</script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  .seam { border-style: dashed !important; }
+  .deep { background: linear-gradient(135deg, #0f172a, #1e293b); color: #f8fafc; }
+  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .ghost { opacity: .45; }
+  .mass-i { background: #e2e8f0; border: 1px solid #94a3b8; }
+  .mass-m { background: #cbd5e1; border: 1px solid #64748b; }
+  pre.mermaid { background: transparent; }
+</style>
+</head>
+<body class="bg-stone-50 text-slate-900">
+<main class="max-w-5xl mx-auto px-4 sm:px-6 py-12 space-y-14">
+
+<header class="space-y-4">
+  <p class="lbl text-slate-500">zoo-downloader · branch main @ 5337134 · 2026-10-30</p>
+  <h1 class="font-serif text-4xl">架構檢視：規格、實作與重建方向</h1>
+  <div class="flex flex-wrap gap-4 text-xs text-slate-600">
+    <span class="flex items-center gap-2"><span class="inline-block w-5 h-4 border-2 border-slate-500 bg-white"></span>module</span>
+    <span class="flex items-center gap-2"><span class="inline-block w-5 h-4 border-2 border-slate-500 seam"></span>seam</span>
+    <span class="flex items-center gap-2"><span class="inline-block w-6 h-0.5 bg-red-600"></span>leak / 壞掉的路徑</span>
+    <span class="flex items-center gap-2"><span class="inline-block w-5 h-4 deep"></span>deep module</span>
+    <span class="flex items-center gap-2"><span class="inline-block w-5 h-4 border border-slate-300 bg-slate-100 ghost"></span>死碼（未接線）</span>
+  </div>
+</header>
+
+<!-- ============ 總體狀態 ============ -->
+<section class="space-y-6">
+  <h2 class="font-serif text-2xl">總體狀態</h2>
+  <p class="text-slate-700 max-w-3xl">規格與 tasks.md 大量標記 [X]，但多數功能停在「寫了 struct、沒接上呼叫路徑」。<code>#![allow(dead_code)]</code> 出現在 32 個檔案、開發模式假資料使用 PascalCase，兩者共同掩蓋了真實狀態。</p>
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+      <p class="lbl text-slate-500">A · 下載引擎（spec 001）</p>
+      <div class="flex h-3 rounded overflow-hidden"><div class="bg-emerald-500" style="width:22%"></div><div class="bg-amber-400" style="width:22%"></div><div class="bg-red-500" style="width:56%"></div></div>
+      <p class="text-sm">只有 happy path 可用。暫停/取消/重試/續傳/代理/排程/並行/速度 皆假或壞。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+      <p class="lbl text-slate-500">B · 網站模組（spec 004）</p>
+      <div class="flex h-3 rounded overflow-hidden"><div class="bg-emerald-500" style="width:15%"></div><div class="bg-amber-400" style="width:15%"></div><div class="bg-red-500" style="width:70%"></div></div>
+      <p class="text-sm">JS 永遠回傳 <code>"{}"</code>；下載不使用模組；安全機制全未接線；每次偵測洩漏 V8 isolate。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+      <p class="lbl text-slate-500">C · 前端（spec 002/003）</p>
+      <div class="flex h-3 rounded overflow-hidden"><div class="bg-emerald-500" style="width:45%"></div><div class="bg-amber-400" style="width:20%"></div><div class="bg-red-500" style="width:35%"></div></div>
+      <p class="text-sm">表格/面板結構完成，但 enum 大小寫不符使狀態、按鈕、主題設定在真實後端下全壞。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+      <p class="lbl text-slate-500">D · 跨端接縫</p>
+      <div class="flex h-3 rounded overflow-hidden"><div class="bg-emerald-500" style="width:20%"></div><div class="bg-amber-400" style="width:25%"></div><div class="bg-red-500" style="width:55%"></div></div>
+      <p class="text-sm">本機 HTTP 允許任何網頁寫任意路徑檔案；Chrome 擴充無法載入；模組 d.ts 與執行期三方不一致。</p>
+    </div>
+  </div>
+  <p class="text-xs text-slate-500">色條為定性估計：綠 = 可用、黃 = 部分、紅 = 缺漏 / 未接線 / 壞掉。</p>
+
+  <div class="rounded-lg border border-red-200 bg-red-50 p-5 space-y-2">
+    <p class="lbl text-red-700">立即處理（不需等架構決策）</p>
+    <ul class="text-sm list-disc pl-5 space-y-1 text-red-900">
+      <li><b>任意檔案寫入</b>：<code>native_messaging/http_server.rs</code> 綁 127.0.0.1:45677、無驗證、<code>allow_any_origin</code>；<code>commands/download.rs:50</code> 以未清理的 <code>filename</code> 做 <code>join</code>（<code>..\</code> 或絕對路徑可寫到啟動資料夾）。</li>
+      <li><b>剪貼簿外洩到區網</b>：<code>http_bridge.rs</code> 綁 0.0.0.0:3030、任意 origin，<code>scripts/run-tauri-dev.sh</code> 預設開啟。</li>
+      <li><b>enum 大小寫</b>：Rust <code>rename_all="camelCase"</code> 輸出 <code>"downloading"</code>/<code>"light"</code>，TS 比對 <code>'Downloading'</code>/<code>'Light'</code>（約 83 處）→ 狀態顯示、全部暫停/繼續、主題儲存失敗。</li>
+      <li><b>30 秒總逾時</b>：<code>download/client.rs:27</code> reqwest <code>.timeout(30s)</code> 涵蓋整個 body → 超過 30 秒的傳輸必失敗。</li>
+      <li><b>重試/續傳寫壞資料</b>：checkpoint 只寫一次、片段檔以 append 重開 → 合併大小不符，任務永遠無法完成。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 規格本身 ============ -->
+<section class="space-y-4">
+  <h2 class="font-serif text-2xl">規格本身的問題</h2>
+  <div class="grid md:grid-cols-2 gap-4 text-sm">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-1">
+      <p class="lbl text-slate-500">不健全的需求</p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>001 FR-021「±1 byte 容差」：差 1 byte 即損毀；與 merger 的精確檢查互相矛盾。</li>
+        <li>001 FR-013「預設無上限並行」vs queue 預設 3 vs 實際 1。</li>
+        <li>004 FR-026「模組對使用者不可見」vs UI 顯示模組名稱與模組管理頁。</li>
+      </ul>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-1">
+      <p class="lbl text-slate-500">MVP 過度範圍</p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>FR-039 headless browser、FR-056 關閉 app 後背景服務、FR-033 速度平分到代理。</li>
+        <li>004 的權限對話框、稽核、自動停權 — 在模組還不能發一個 request 前全部先寫了。</li>
+      </ul>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-1">
+      <p class="lbl text-slate-500">與實作分歧</p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>001 plan.md 寫 libloading 動態庫；實作改 deno_core JS（<code>example-downloader/</code> 是殘骸）。</li>
+        <li>003 規格 7 欄，實作 8 欄（多出不存在於 Rust 的 <code>speedPriority</code>）。</li>
+        <li>媒體驗證（ffmpeg, commit 179ba89）不在任何規格，且未被編譯。</li>
+      </ul>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-1">
+      <p class="lbl text-slate-500">狀態文件不可信</p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>specs/004 下 15 份 *_COMPLETE / STATUS / REPORT（約 6k 行）宣稱 Context API 完成。</li>
+        <li>003 tasks 39/39 完成 — 只對假資料成立。</li>
+        <li>CLAUDE.md 843 行，Feature 003/004 段落重複；其 enum 規則正是大小寫 bug 的來源。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 候選 ============ -->
+<section id="candidates" class="space-y-12">
+  <h2 class="font-serif text-2xl">候選項</h2>
+
+  <!-- 1 -->
+  <article id="c1" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">1. DownloadManager：一個 module 擁有全部任務狀態</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Strong</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">rewrite</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">local-substitutable</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">download/{engine,queue,scheduler,resume,merger,recovery,writer}.rs · commands/{download,scheduler}.rs · lib.rs · storage/</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-2">Before：狀態三份、控制旗標沒人讀</p>
+<pre class="mermaid">
+flowchart TB
+  CMD[commands/download.rs<br/>+ retry_download_direct 複製版]
+  CMD --> E["Mutex&lt;Engine&gt;<br/>整個下載期間持鎖 → 並行=1"]
+  CMD --> Q["Mutex&lt;Queue&gt;<br/>status 旗標"]
+  CMD --> S["Mutex&lt;Scheduler&gt;<br/>從未 start()"]
+  E --> SEG[片段檔 %TEMP%]
+  SEG --> CK[checkpoint 只寫一次]
+  CK --> M[merger 大小不符]
+  Q -.pause/cancel 無效.-> E
+  classDef bad stroke:#dc2626,stroke-width:2px;
+  class Q,S,CK,M bad
+</pre>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-2">After：一個 interface、一個擁有者</p>
+<pre class="mermaid">
+flowchart TB
+  CMD[commands：一行轉呼叫]
+  CMD --> DM["DownloadManager<br/>submit / pause / resume / cancel<br/>retry / schedule / list / subscribe"]
+  DM --> T["Transfer job<br/>CancellationToken + JoinSet"]
+  T --> PF["PartFile<br/>write_at / mark_done / finalize"]
+  DM --> TS[TaskStore 原子寫入]
+  classDef deep fill:#0f172a,color:#f8fafc,stroke:#0f172a;
+  class DM deep
+</pre>
+      </div>
+    </div>
+    <p><b>Problem：</b>任務狀態散在 queue、engine、scheduler 三處，暫停/取消只改旗標、引擎不讀；續傳以三種互相矛盾的「完成」定義寫壞資料。</p>
+    <p><b>Solution：</b>重寫為 tokio actor：唯一擁有 <code>HashMap&lt;TaskId, TaskRecord&gt;</code>，依 settings 的 <code>max_concurrent</code> 排程，每個 job 有 cancel token；片段改為單一預配置 <code>.part</code> 檔 + 原子寫入的已完成區段 bitmap，結束時一次 rename（刪除 merger 與大部分 resume/recovery）。</p>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>locality：每個狀態轉移在同一檔案</li>
+      <li>leverage：commands 變一行</li>
+      <li>續傳正確性由結構保證</li>
+      <li>test 經 interface + 本機 fixture server</li>
+      <li>刪除 queue / merger / scheduler 迴圈</li>
+      <li>progress 事件節流至 ~4Hz</li>
+    </ul>
+  </article>
+
+  <!-- 2 -->
+  <article id="c2" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">2. 由 Rust 產生前後端契約（tauri-specta）</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Strong</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">deepen</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">ports &amp; adapters</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">src-tauri/src/{commands,models}/* · src/types/* · src/api/* · src/utils/tauri.ts · ~40 處直接 invoke</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-slate-200 p-4 space-y-2">
+        <p class="lbl text-slate-500">Before：字串 seam，型別手抄兩份</p>
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="space-y-1">
+            <div class="border-2 border-slate-400 p-2 bg-white">Rust DownloadStatus<br/><code>"downloading"</code></div>
+            <div class="border-2 border-slate-400 p-2 bg-white">Theme <code>"light"</code></div>
+            <div class="border-2 border-slate-400 p-2 bg-white">String 錯誤</div>
+          </div>
+          <div class="space-y-1">
+            <div class="border-2 border-red-500 p-2 bg-red-50">TS enum<br/><code>'Downloading'</code></div>
+            <div class="border-2 border-red-500 p-2 bg-red-50"><code>'Light'</code></div>
+            <div class="border-2 border-red-500 p-2 bg-red-50">讀 <code>e.message</code> → undefined</div>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600">UrlDetectionResult 定義 3 次；captcha 型別 snake/camel 相反；<code>api/modules.ts</code> 繞過共用 invoke。</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4 space-y-2">
+        <p class="lbl text-slate-500">After：一份來源、一個 seam、三個 adapter</p>
+        <div class="text-xs space-y-2">
+          <div class="border-2 border-slate-500 p-2 bg-white">Rust commands + DTO <span class="text-slate-500">#[specta]</span></div>
+          <div class="text-center text-slate-400">↓ 產生 bindings.ts</div>
+          <div class="deep p-3 rounded">backend.downloads.start(id) → Result&lt;Task, CommandError&gt;</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="border-2 seam border-slate-500 p-1 text-center">IPC</div>
+            <div class="border-2 seam border-slate-500 p-1 text-center">fake（測試）</div>
+            <div class="border-2 seam border-slate-300 p-1 text-center ghost">HTTP bridge？</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p><b>Problem：</b>前後端 interface 是「字串命令名 + 手抄型別」，已有 enum 大小寫、欄位缺漏、錯誤形狀三類漂移，沒有測試抓得到。</p>
+    <p><b>Solution：</b>採用 tauri-specta 產生型別與型別化命令/事件；統一 <code>CommandError {code, message}</code>；前端只透過一個 <code>backend</code> module 呼叫，ESLint 禁止其他地方 import <code>@tauri-apps/*</code>。</p>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>漂移變成編譯錯誤</li>
+      <li>leverage：一個 generator 涵蓋全部命令</li>
+      <li>fake adapter 讓元件可測</li>
+      <li>刪除 3 份重複型別定義</li>
+    </ul>
+    <div class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm">⚠ 與 CLAUDE.md「enum 必須 rename_all camelCase」規則衝突 — 該規則是 bug 來源，產生式契約讓規則本身變得不必要。</div>
+  </article>
+
+  <!-- 3 -->
+  <article id="c3" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">3. SiteResolver：網站模組的單一 host 與單一執行 seam</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Strong</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">re-architect</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">ports &amp; adapters</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">modules/{js_runtime,js_module,loader,registry,context_api,credential_proxy,url_validator,…}.rs（23 檔 ≈10k 行）· url_detector/ · commands/module_management.rs · clipboard.rs</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-2">Before：每次呼叫重建 registry + V8，再洩漏</p>
+<pre class="mermaid">
+flowchart TB
+  UI[detect_url_module / scan / list] --> R[new ModuleRegistry]
+  R --> L[loader：regex 去掉 export]
+  L --> V["new V8 isolate ×N<br/>無 heap / CPU 限制"]
+  V --> X["extractDownloadInfo<br/>未 await、無 context → '{}'"]
+  V -.drop.-> F[mem::forget 洩漏]
+  DL[create_download] --> E["空的 SiteModuleRegistry::new()"]
+  P[permission / SSRF / audit / rate-limit] -.無呼叫者.- V
+  classDef bad stroke:#dc2626,stroke-width:2px;
+  classDef dead fill:#f1f5f9,stroke:#cbd5e1,color:#94a3b8;
+  class X,F,E bad
+  class P dead
+</pre>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-2">After：一個 actor、一個 enforcement 咽喉</p>
+<pre class="mermaid">
+flowchart TB
+  C[commands / DownloadManager] --> H["SiteModuleHost（Send handle）<br/>list / match_url / resolve / reload"]
+  H --> RT["JS runtime 專屬執行緒<br/>載入一次；deadline + memory limit"]
+  RT --> OPS["host functions：http / log / captcha"]
+  OPS --> POL["Policy::check<br/>allowlist → SSRF → rate → audit<br/>credential 只在此替換"]
+  POL --> NET[(HTTP adapter / fake)]
+  classDef deep fill:#0f172a,color:#f8fafc,stroke:#0f172a;
+  class H,POL deep
+</pre>
+      </div>
+    </div>
+    <p><b>Problem：</b>約 3.5k 行安全機制通過 deletion test 的錯誤方向（刪了沒有任何呼叫者受影響）；真正執行路徑只有載入與 glob 比對，且每次都跑不受限的第三方頂層程式碼並洩漏 isolate。</p>
+    <p><b>Solution：</b>刪除未接線的 scaffolding，重建為單一 <code>SiteModuleHost</code>：專屬執行緒擁有 runtime，所有 I/O 經過一個 <code>Policy</code>；DownloadManager 在傳輸前呼叫 <code>resolve</code> 取得真正 URL/headers/檔名。d.ts 由同一份 host function 清單產生。</p>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>interface 從 23 檔縮為 4 方法</li>
+      <li>locality：一個 enforcement 咽喉</li>
+      <li>兩個 adapter：真 HTTP / fake HTTP</li>
+      <li>惡意模組測試經 resolve 實跑</li>
+    </ul>
+    <div class="rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm space-y-1">
+      <p class="lbl text-slate-500">需要你決定：runtime 選擇</p>
+      <p><b>QuickJS（rquickjs）</b>：記憶體上限與中斷處理是一等公民、原生 ESM、建置數秒、無 Windows symlink 問題。<b>V8（現況）</b>：最大建置成本、目前零實際功能。<b>先砍掉</b>：網站模組今天沒有任何可運作行為，deletion test 支持先移除，等第一個真實需求再加回。</p>
+    </div>
+  </article>
+
+  <!-- 4 -->
+  <article id="c4" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">4. 單一入口：Downloads::add 擁有檔名清理與 URL 驗證</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Strong</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">deepen + delete</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">ports &amp; adapters</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">native_messaging/* · http_bridge.rs · commands/download.rs · chrome-extension/* · main.rs</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-slate-200 p-4 space-y-2 text-xs">
+        <p class="lbl text-slate-500">Before：三條進入後端的路，各自（不）驗證</p>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2"><div class="border-2 border-slate-400 p-2 w-28 bg-white">Tauri IPC</div><span>→</span><div class="border-2 border-slate-400 p-2 flex-1 bg-white">create_download_with_path（驗 URL 格式）</div></div>
+          <div class="flex items-center gap-2"><div class="border-2 border-red-500 p-2 w-28 bg-red-50">HTTP :45677<br/>任何 origin</div><span class="text-red-600">→</span><div class="border-2 border-red-500 p-2 flex-1 bg-red-50">create_download（不驗 URL、filename 直接 join）</div></div>
+          <div class="flex items-center gap-2"><div class="border-2 border-red-500 p-2 w-28 bg-red-50">bridge 0.0.0.0:3030</div><span class="text-red-600">→</span><div class="border-2 border-red-500 p-2 flex-1 bg-red-50">假的 80% 命令 + 真剪貼簿</div></div>
+          <div class="flex items-center gap-2 ghost"><div class="border-2 border-slate-300 p-2 w-28">native msg stdio</div><span>→</span><div class="border-2 border-slate-300 p-2 flex-1">main.rs 直接 exit(1)</div></div>
+        </div>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4 space-y-2 text-xs">
+        <p class="lbl text-slate-500">After：所有 adapter 繼承同一套檢查</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="border-2 seam border-slate-500 p-2 text-center">Tauri IPC adapter</div>
+          <div class="border-2 seam border-slate-500 p-2 text-center">擴充 adapter<br/><span class="text-slate-500">native messaging（Chrome 驗證 extension ID）</span></div>
+        </div>
+        <div class="text-center text-slate-400">↓</div>
+        <div class="deep p-3 rounded">Downloads::add(url, Source)<br/><span class="opacity-75">basename-only 檔名 · 拒絕 .. / 絕對路徑 · URL 驗證 · 衝突改名 · 讀取 settings</span></div>
+        <div class="text-center text-slate-400">↓</div>
+        <div class="border-2 border-slate-500 p-2 bg-white">DownloadManager（候選 1）</div>
+      </div>
+    </div>
+    <p><b>Problem：</b>安全檢查散落在個別命令，最寬鬆的入口（本機 HTTP）反而檢查最少；Chrome 擴充缺圖示無法載入、缺 downloads/alarms 權限、native messaging 從未接線。</p>
+    <p><b>Solution：</b>刪除 http_bridge；把清理與驗證收進 <code>Downloads::add</code>；擴充只保留一種傳輸（建議真正的 native messaging），重寫為約 150 行正確的 MV3。</p>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>locality：安全修正只在一處</li>
+      <li>兩個真 adapter → 真 seam</li>
+      <li>關閉任意檔案寫入</li>
+      <li>刪除 http_bridge 與 warp → hyper 0.14</li>
+    </ul>
+  </article>
+
+  <!-- 5 -->
+  <article id="c5" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">5. 前端 DownloadSync：根部唯一的狀態同步 module</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Strong</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">rewrite</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">in-process</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">stores/downloadStore.ts · hooks/{useTauriEvents,useDownloads}.ts · App.tsx · pages/MainPage.tsx · stores/devStore.ts · utils/mockData.ts</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-2">Before：監聽只活在 MainPage</p>
+<pre class="mermaid">
+sequenceDiagram
+  participant B as Backend
+  participant A as App.tsx
+  participant M as MainPage
+  B->>A: unfinished-downloads-detected（setup 時，React 未掛載）
+  Note over A: 事件遺失
+  B->>M: progress（只有在 MainPage）
+  Note over M: 切到設定/新增頁 → 事件遺失<br/>未知 task id → 丟棄
+  M->>B: setTimeout 100ms 後 refresh
+</pre>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-2">After：先訂閱、再快照、upsert</p>
+<pre class="mermaid">
+sequenceDiagram
+  participant B as Backend
+  participant S as DownloadSync（根部）
+  participant V as 任何頁面
+  S->>B: subscribe(所有事件)
+  S->>B: list() 快照 + 待恢復任務
+  B->>S: progress / status（未知 id → upsert）
+  V->>S: useTasks() / actions.pause(id)
+</pre>
+      </div>
+    </div>
+    <p><b>Problem：</b>事件訂閱綁在單一頁面、啟動事件早於監聽、未知任務被丟棄、listener 在 StrictMode 下洩漏或重複；開發用假資料層的旗標不控制任何東西，卻掩蓋了大小寫 bug。</p>
+    <p><b>Solution：</b>tauriReady 後於根部掛載一個同步 module；命令回傳更新後實體；刪除 devStore/mockData/DevModeBanner，以候選 2 的 fake adapter 取代。補回表格列的暫停/取消/重試操作。</p>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>一次修掉 5 個事件類 bug</li>
+      <li>locality：同步邏輯一處</li>
+      <li>刪除整個 mock 層</li>
+      <li>啟動狀態改為 pull，不靠一次性事件</li>
+    </ul>
+  </article>
+
+  <!-- 6 -->
+  <article id="c6" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">6. 刪除假表面：讓 codebase 誠實</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Strong</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">delete</span>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-slate-200 p-4">
+        <p class="lbl text-slate-500 mb-3">Mass：可執行 vs 不可達（估計行數）</p>
+        <div class="space-y-3 text-xs">
+          <div><div class="flex justify-between"><span>download/ + proxy/</span><span>~1.5k 不可達</span></div><div class="flex h-4"><div class="mass-m" style="width:55%"></div><div class="mass-i ghost" style="width:45%"></div></div></div>
+          <div><div class="flex justify-between"><span>modules/（Rust）</span><span>~3.5k 不可達 + 洩漏路徑</span></div><div class="flex h-4"><div class="mass-m" style="width:20%"></div><div class="mass-i ghost" style="width:80%"></div></div></div>
+          <div><div class="flex justify-between"><span>前端</span><span>DownloadItem 等 ~1k</span></div><div class="flex h-4"><div class="mass-m" style="width:85%"></div><div class="mass-i ghost" style="width:15%"></div></div></div>
+          <div><div class="flex justify-between"><span>文件</span><span>~70% 過時或重複</span></div><div class="flex h-4"><div class="mass-m" style="width:30%"></div><div class="mass-i ghost" style="width:70%"></div></div></div>
+        </div>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4 text-sm space-y-2">
+        <p class="lbl text-slate-500">刪除清單（節錄）</p>
+        <ul class="list-disc pl-5 space-y-1 font-mono text-xs">
+          <li>modules/{browser,auth,init,error_format,resource_limiter,network_monitor,audit,context_api,permission,interface}.rs</li>
+          <li>download/verification.rs（未編譯）· proxy/{validator,health_scorer}.rs · storage/tasks.rs（TODO）</li>
+          <li>components/{DownloadItem,UrlInput,CredentialManager}.tsx · 5 個無效 atom · ~129 個未用 i18n key</li>
+          <li>Cargo：libloading、tracing-appender、headless_chrome；reqwest 0.11→0.12</li>
+          <li>modules/example-downloader（libloading 殘骸）；test-malicious → tests/fixtures</li>
+          <li>specs/004 下 15 份狀態文件；CLAUDE.md 重複段落；docs/docker（引用不存在的檔案）</li>
+          <li>32 個檔案的 <code>#![allow(dead_code)]</code></li>
+        </ul>
+      </div>
+    </div>
+    <p><b>Problem：</b>大量程式碼與文件宣稱存在但不可達，誤導開發者與 AI，並讓真實狀態看不出來。</p>
+    <p><b>Solution：</b>先刪除、移除 <code>allow(dead_code)</code> 讓編譯器把關；需要的功能在新 module 內以小 policy 重新加入。</p>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>deletion test 全數通過</li>
+      <li>建置時間與依賴下降</li>
+      <li>重建前的乾淨基線</li>
+      <li>文件不再說謊</li>
+    </ul>
+  </article>
+
+  <!-- 7 -->
+  <article id="c7" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">7. Settings 作為被觀察的設定來源</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">Worth exploring</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">deepen</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">in-process</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">models/settings.rs · commands/settings.rs · components/{General,Advanced}Settings.tsx · i18n.ts · utils/clipboard.rs</p>
+    <div class="grid md:grid-cols-2 gap-4 text-xs">
+      <div class="rounded-lg border border-slate-200 p-4 space-y-1">
+        <p class="lbl text-slate-500 mb-2">Before：寫得進去、沒人讀</p>
+        <div class="h-8 border-l-4 border-red-400 pl-2 flex items-center bg-red-50">9 個引擎欄位：thread_count、segment_size、max_concurrent、proxy、speed limit…→ 無讀取者</div>
+        <div class="h-8 border-l-4 border-red-400 pl-2 flex items-center bg-red-50">剪貼簿每 200ms 輪詢，無視開關</div>
+        <div class="h-8 border-l-4 border-amber-400 pl-2 flex items-center bg-amber-50">兩個設定分頁各持舊副本，互相覆寫</div>
+        <div class="h-8 border-l-4 border-amber-400 pl-2 flex items-center bg-amber-50">語言/主題啟動時不套用；非原子寫入</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4 space-y-1">
+        <p class="lbl text-slate-500 mb-2">After</p>
+        <div class="h-16 deep rounded flex items-center px-3">Settings：唯一來源 · watch channel 推送給 DownloadManager / 剪貼簿監控 · temp+rename 原子寫入</div>
+        <div class="h-8 border-l-4 border-emerald-500 pl-2 flex items-center bg-emerald-50">前端一個表單、一個 atom、啟動時套用</div>
+        <div class="h-8 border-l-4 border-slate-300 pl-2 flex items-center bg-slate-50">未實作的欄位（速度限制）先從 model 移除</div>
+      </div>
+    </div>
+    <ul class="text-sm grid sm:grid-cols-2 gap-x-6 list-disc pl-5">
+      <li>UI 選項 = 真實行為</li>
+      <li>locality：設定變更一處傳播</li>
+    </ul>
+  </article>
+
+  <!-- 8 -->
+  <article id="c8" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <h3 class="font-serif text-xl mr-2">8. ConnectionSource：讓代理池成為真正的 seam</h3>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-700">Speculative</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">deepen</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">ports &amp; adapters</span>
+    </div>
+    <p class="font-mono text-sm text-slate-600">proxy/{pool,cache}.rs · download/client.rs · engine.rs:157–235</p>
+    <div class="grid md:grid-cols-2 gap-4 text-xs">
+      <div class="rounded-lg border border-slate-200 p-4 space-y-2">
+        <p class="lbl text-slate-500">Before</p>
+        <div class="flex gap-2 items-center"><div class="border-2 border-slate-500 p-2 bg-white">Engine::new()</div><span>→</span><div class="border-2 border-slate-500 p-2 bg-white">直連</div></div>
+        <div class="flex gap-2 items-center ghost"><div class="border-2 border-slate-300 p-2">ProxyPool（有填入）</div><span>✕</span><div class="border-2 border-slate-300 p-2">with_proxy_pool 從未呼叫</div></div>
+        <p class="text-slate-600">fallback 判斷靠字串比對 <code>ALL_PROXIES_FAILED</code>；<code>Proxy::http</code> 只涵蓋 http://。</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4 space-y-2">
+        <p class="lbl text-slate-500">After</p>
+        <div class="deep p-2 rounded">ConnectionSource：acquire() → (Client, Lease) · report(Lease, outcome)</div>
+        <div class="grid grid-cols-2 gap-2"><div class="border-2 seam border-slate-500 p-2 text-center">Direct</div><div class="border-2 seam border-slate-500 p-2 text-center">ProxyPool</div></div>
+      </div>
+    </div>
+    <p><b>Problem / Solution：</b>代理是規格核心之一但完全不可達；若保留此需求，以兩個 adapter 的 seam 接入候選 1 的 Transfer。若代理不是你實際會用的功能，改列入候選 6 的刪除清單。</p>
+  </article>
+</section>
+
+<!-- ============ 重建藍圖 ============ -->
+<section class="space-y-4">
+  <h2 class="font-serif text-2xl">若整體翻新：目標結構</h2>
+  <div class="rounded-lg border border-slate-200 bg-white p-4">
+<pre class="mermaid">
+flowchart LR
+  subgraph FE[前端 React]
+    UI[頁面 lazy-load] --> SYNC[DownloadSync]
+    SYNC --> BK[backend module<br/>bindings.ts 產生]
+  end
+  subgraph SHELL[Tauri shell（薄）]
+    CMDS[specta commands + typed events<br/>CommandError]
+  end
+  subgraph CORE[core crate（無 Tauri 依賴）]
+    ADD[Downloads::add] --> DM[DownloadManager]
+    DM --> TR[Transfer] --> PF[PartFile]
+    TR --> CS[ConnectionSource]
+    DM --> RES[SiteResolver]
+    RES --> HOST[SiteModuleHost + Policy]
+    SET[Settings watch] --> DM
+    DM --> STORE[TaskStore]
+  end
+  EXT[Chrome MV3] -->|native messaging| ADD
+  BK --> CMDS --> ADD
+  CMDS --> DM
+  classDef deep fill:#0f172a,color:#f8fafc,stroke:#0f172a;
+  class DM,HOST,ADD,SYNC deep
+</pre>
+  </div>
+  <div class="grid md:grid-cols-5 gap-3 text-sm">
+    <div class="rounded-lg border border-red-200 bg-red-50 p-3"><p class="lbl text-red-700">Phase 0</p>熱修：檔名清理、CORS/bridge 關閉、enum 大小寫、30s 逾時</div>
+    <div class="rounded-lg border border-slate-200 bg-white p-3"><p class="lbl text-slate-500">Phase 1</p>候選 6：刪除假表面、文件瘦身</div>
+    <div class="rounded-lg border border-slate-200 bg-white p-3"><p class="lbl text-slate-500">Phase 2</p>候選 1 + 4 + 7：core crate、DownloadManager、單一入口</div>
+    <div class="rounded-lg border border-slate-200 bg-white p-3"><p class="lbl text-slate-500">Phase 3</p>候選 2 + 5：產生式契約、前端同步</div>
+    <div class="rounded-lg border border-slate-200 bg-white p-3"><p class="lbl text-slate-500">Phase 4</p>候選 3 (+8)：網站模組 host、擴充重寫</div>
+  </div>
+  <p class="text-sm text-slate-600">保留：<code>segment.rs</code>（純函式、有測試）、<code>manifest.rs</code>、keychain CRUD、<code>CaptchaManager</code>、<code>url_detector</code>、前端 DownloadTable / DetailPanel / SegmentVisualization / ModuleList、settings commands、proxy commands。</p>
+</section>
+
+<!-- ============ Top ============ -->
+<section id="top-recommendation" class="rounded-xl deep p-8 space-y-3">
+  <p class="lbl opacity-70">Top recommendation</p>
+  <h2 class="font-serif text-3xl"><a href="#c1" class="underline decoration-emerald-400 underline-offset-4">1. DownloadManager</a></h2>
+  <p class="text-slate-200 max-w-3xl">下載是產品本身；網站模組、擴充、前端同步、設定全部都要接到它。目前狀態有三個擁有者、續傳會寫壞資料，任何其他改善都建在這個不穩的地基上。先完成 Phase 0 熱修與 Phase 1 刪除（成本低、立即降低風險），再以 DownloadManager + PartFile 作為第一個重建的 deep module，並用本機 fixture server 經其 interface 測試。</p>
+</section>
+
+</main>
+</body>
+</html>

@@ -5,6 +5,12 @@
 
 前端和 tauri 接口對接時，永遠使用「優雅降級」模式，確保用戶在 Tauri API 尚未完全初始化時會看到清楚的錯誤訊息，而不是技術性的異常。
 
+## 先讀這些（2026-10-30 架構檢視後）
+
+- `docs/architecture/review-2026-10-30.md`：已知問題清單（SEC / A / B / C / D / SET / SPEC 編號）、候選改善項 CAND-1..8、建議階段。修改相關程式前先查，修正後在該條目標註。
+- `GLOSSARY.md`：領域術語。`docs/adr/`：已定案的決策，不要重新提議被否決的方案。
+- 本檔下方的 specs / tasks 完成度描述與實際狀態不符，以檢視紀錄為準。
+
 Auto-generated from all feature plans. Last updated: 2025-11-27
 
 ## Active Technologies
