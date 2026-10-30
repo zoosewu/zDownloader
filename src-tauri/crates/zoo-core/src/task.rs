@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
+use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 pub struct TaskId(Uuid);
 
 impl TaskId {
@@ -45,7 +45,7 @@ impl std::str::FromStr for TaskId {
 ///                  Paused ◀─pause─────┘   (Queued / Scheduled / Failed can pause too)
 /// any unfinished ─cancel─▶ Cancelled
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum TaskState {
     Scheduled,
@@ -63,7 +63,7 @@ impl TaskState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
     pub id: TaskId,
@@ -89,7 +89,7 @@ pub struct Task {
     pub next_retry_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgressTick {
     pub id: TaskId,
@@ -98,7 +98,7 @@ pub struct ProgressTick {
     pub speed: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum Event {
     /// A task was added or changed state.
@@ -108,7 +108,7 @@ pub enum Event {
     Progress(Vec<ProgressTick>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "mode", content = "at", rename_all = "camelCase")]
 pub enum StartMode {
     /// Queue now; starts as soon as a slot is free.
@@ -118,7 +118,7 @@ pub enum StartMode {
     At(DateTime<Utc>),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct AddRequest {
     pub url: String,
@@ -159,5 +159,25 @@ impl Default for Config {
             auto_retry: AutoRetry { enabled: true, max_attempts: 3, interval: Duration::from_secs(30) },
             transfer_retry: RetryPolicy::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wire_shapes() {
+        let id = TaskId::new();
+        assert_eq!(serde_json::to_value(id).unwrap(), serde_json::Value::String(id.to_string()));
+        assert_eq!(serde_json::from_value::<TaskId>(serde_json::json!(id.to_string())).unwrap(), id);
+        assert_eq!(
+            serde_json::to_value(StartMode::Now).unwrap(),
+            serde_json::json!({ "mode": "now" })
+        );
+        assert_eq!(
+            serde_json::to_value(Event::Removed(id)).unwrap(),
+            serde_json::json!({ "type": "removed", "data": id.to_string() })
+        );
     }
 }

@@ -2,7 +2,7 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, Runtime,
+    AppHandle, Manager, Runtime,
 };
 
 /// Create system tray icon with menu
@@ -28,12 +28,20 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 }
             }
             "pause_all" => {
-                // Emit pause all event
-                let _ = app.emit("tray-pause-all", ());
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(d) = app.try_state::<crate::downloads::Downloads>() {
+                        let _ = d.manager.pause_all().await;
+                    }
+                });
             }
             "resume_all" => {
-                // Emit resume all event
-                let _ = app.emit("tray-resume-all", ());
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(d) = app.try_state::<crate::downloads::Downloads>() {
+                        let _ = d.manager.resume_all().await;
+                    }
+                });
             }
             "quit" => {
                 app.exit(0);

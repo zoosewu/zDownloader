@@ -1,7 +1,6 @@
 // HTTP server for Chrome extension integration
 // Provides a REST API for the extension to communicate with the app
 
-use crate::commands::download::AppState;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
@@ -143,48 +142,33 @@ async fn handle_add_download(
     req: AddDownloadRequest,
     app: Arc<AppHandle>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    log::info!("Received add-download request: {:?}", req);
+    log::info!("Received add-download request for {}", req.url);
 
-    // Get app state
-    let state = app.state::<AppState>();
-    let settings_state = app.state::<crate::commands::settings::SettingsState>();
-
-    // Create download task
-    match crate::commands::download::create_download(req.url.clone(), req.filename, state.clone(), settings_state)
+    let dir = app
+        .state::<crate::commands::settings::SettingsState>()
+        .settings
+        .lock()
         .await
-    {
-        Ok(task_id) => {
-            // Start download immediately
-            match crate::commands::download::start_download(task_id.clone(), state, app.as_ref().clone())
-                .await
-            {
-                Ok(_) => {
-                    log::info!("Download started: {}", task_id);
-                    Ok(warp::reply::json(&AddDownloadResponse {
-                        success: true,
-                        task_id: Some(task_id),
-                        message: "Download started successfully".to_string(),
-                    }))
-                }
-                Err(e) => {
-                    log::error!("Failed to start download: {}", e);
-                    Ok(warp::reply::json(&AddDownloadResponse {
-                        success: false,
-                        task_id: None,
-                        message: format!("Failed to start download: {}", e),
-                    }))
-                }
-            }
-        }
+        .default_download_dir
+        .clone();
+    let request = zoo_core::AddRequest {
+        url: req.url,
+        filename: req.filename,
+        dir,
+        start: zoo_core::StartMode::Now,
+    };
+    let reply = match app.state::<crate::downloads::Downloads>().manager.add(request).await {
+        Ok(task) => AddDownloadResponse {
+            success: true,
+            task_id: Some(task.id.to_string()),
+            message: "Download queued".to_string(),
+        },
         Err(e) => {
-            log::error!("Failed to create download task: {}", e);
-            Ok(warp::reply::json(&AddDownloadResponse {
-                success: false,
-                task_id: None,
-                message: format!("Failed to create download: {}", e),
-            }))
+            log::warn!("Rejected add-download request: {e}");
+            AddDownloadResponse { success: false, task_id: None, message: e.to_string() }
         }
-    }
+    };
+    Ok(warp::reply::json(&reply))
 }
 
 #[cfg(test)]

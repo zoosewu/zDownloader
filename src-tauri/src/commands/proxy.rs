@@ -1,63 +1,38 @@
-// Proxy command handlers - Tauri commands for proxy management
-use crate::commands::download::AppState;
-use crate::models::ProxyInfo;
-use crate::proxy::cache::import_proxies_from_file;
+//! Proxy pool commands.
+
+use crate::commands::error::{CmdResult, CommandError};
+use crate::downloads::Downloads;
 use tauri::State;
-use uuid::Uuid;
+use zoo_core::proxy_pool::{ImportResult, ProxyInfo};
 
-/// Import proxy list from a file
-/// Expected file format: one proxy per line in format "host:port"
-/// Lines starting with # are treated as comments
+/// Import `host:port` lines from a text file; `#` comments and blank lines are ignored.
 #[tauri::command]
-pub async fn import_proxy_list(
-    file_path: String,
-    state: State<'_, AppState>,
-) -> Result<usize, String> {
-    // Import proxies from file
-    let proxies = import_proxies_from_file(&file_path)?;
-    let count = proxies.len();
-
-    // Add to proxy pool
-    state.proxy_pool.add_proxies(proxies).await;
-
-    Ok(count)
+pub async fn proxies_import(file_path: String, downloads: State<'_, Downloads>) -> CmdResult<ImportResult> {
+    let text = std::fs::read_to_string(&file_path)
+        .map_err(|e| CommandError::new("io", format!("cannot read {file_path}: {e}")))?;
+    Ok(downloads.pool.import(&text))
 }
 
-/// Get all proxies with their current status and health scores
 #[tauri::command]
-pub async fn get_proxy_list(state: State<'_, AppState>) -> Result<Vec<ProxyInfo>, String> {
-    let proxies = state.proxy_pool.get_all_proxies().await;
-    Ok(proxies)
+pub async fn proxies_list(downloads: State<'_, Downloads>) -> CmdResult<Vec<ProxyInfo>> {
+    Ok(downloads.pool.list())
 }
 
-/// Remove a specific proxy from the pool by its ID
 #[tauri::command]
-pub async fn remove_proxy(
-    proxy_id: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
-    let uuid = Uuid::parse_str(&proxy_id).map_err(|e| e.to_string())?;
-    state.proxy_pool.remove_proxy(uuid).await?;
+pub async fn proxies_remove(id: String, downloads: State<'_, Downloads>) -> CmdResult<()> {
+    let id = uuid::Uuid::parse_str(&id).map_err(|_| CommandError::invalid(format!("not a proxy id: {id}")))?;
+    Ok(downloads.pool.remove(id)?)
+}
+
+#[tauri::command]
+pub async fn proxies_clear(downloads: State<'_, Downloads>) -> CmdResult<()> {
+    downloads.pool.clear();
     Ok(())
 }
 
-/// Clear all proxies from the pool
+/// Give failed and blacklisted proxies another chance.
 #[tauri::command]
-pub async fn clear_all_proxies(state: State<'_, AppState>) -> Result<(), String> {
-    state.proxy_pool.clear().await;
-    Ok(())
-}
-
-/// Get count of active proxies
-#[tauri::command]
-pub async fn get_active_proxy_count(state: State<'_, AppState>) -> Result<usize, String> {
-    let count = state.proxy_pool.count_active().await;
-    Ok(count)
-}
-
-/// Reset all failed proxies to active status
-#[tauri::command]
-pub async fn reset_failed_proxies(state: State<'_, AppState>) -> Result<(), String> {
-    state.proxy_pool.reset_failed_proxies().await;
+pub async fn proxies_reset_failed(downloads: State<'_, Downloads>) -> CmdResult<()> {
+    downloads.pool.reset_failed();
     Ok(())
 }

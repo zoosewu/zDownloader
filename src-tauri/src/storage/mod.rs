@@ -1,4 +1,2 @@
-// Storage module - JSON-based persistence
+// Storage module - where app data lives on disk
 pub mod paths;
-
-pub use paths::*;

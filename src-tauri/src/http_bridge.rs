@@ -2,7 +2,7 @@
 use warp::Filter;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Deserialize)]
 struct InvokeRequest {
@@ -128,29 +128,14 @@ async fn handle_invoke(
             Ok(detection_result)
         }
 
-        "get_settings" => {
-            // Return default settings for development
-            let settings = serde_json::json!({
-                "theme": "light",
-                "defaultDownloadDir": "/tmp/downloads",
-                "maxConcurrentDownloads": 3,
-                "enableClipboardMonitoring": true,
-                "autoStart": false,
-                "minimizeToTray": false,
-            });
-
-            Ok(settings)
+        "settings_get" => {
+            let settings = app.state::<crate::commands::settings::SettingsState>().settings.lock().await.clone();
+            serde_json::to_value(settings).map_err(|e| e.to_string())
         }
 
-        "get_download_list" => {
-            // Return empty list for development
-            Ok(serde_json::json!([]))
-        }
-
-        "create_download_with_path" | "start_download" | "pause_download" | "cancel_download" => {
-            // These commands need full Tauri context
-            // For development, just return success
-            Ok(serde_json::json!("dev-mode-success"))
+        "downloads_list" => {
+            let tasks = app.state::<crate::downloads::Downloads>().manager.list().await;
+            tasks.map_err(|e| e.to_string()).and_then(|t| serde_json::to_value(t).map_err(|e| e.to_string()))
         }
 
         _ => {

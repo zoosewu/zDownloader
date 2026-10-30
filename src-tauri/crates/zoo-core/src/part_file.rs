@@ -46,6 +46,7 @@ pub struct PartFile {
     file: File,
     validator: Validator,
     state: Mutex<State>,
+    auto_flush: bool,
 }
 
 impl PartFile {
@@ -99,7 +100,15 @@ impl PartFile {
             file,
             validator,
             state: Mutex::new(State { done, last_flush: Instant::now(), unflushed: 0 }),
+            auto_flush: true,
         }
+    }
+
+    /// Only explicit `flush` calls persist progress; lets tests model "not flushed yet" without timing.
+    #[cfg(test)]
+    fn without_auto_flush(mut self) -> Self {
+        self.auto_flush = false;
+        self
     }
 
     pub fn size(&self) -> Option<u64> {
@@ -122,7 +131,7 @@ impl PartFile {
             let mut st = self.state.lock().unwrap();
             st.done.insert(offset..offset + buf.len() as u64);
             st.unflushed += buf.len() as u64;
-            st.unflushed >= FLUSH_BYTES || st.last_flush.elapsed() >= FLUSH_INTERVAL
+            self.auto_flush && (st.unflushed >= FLUSH_BYTES || st.last_flush.elapsed() >= FLUSH_INTERVAL)
         };
         if due {
             self.flush()?;
@@ -315,7 +324,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("f.bin"), b"existing").unwrap();
 
-        let part = PartFile::create(dir.path().join("f.part"), validator(Some(4))).unwrap();
+        let part = PartFile::create(dir.path().join("f.part"), validator(Some(4))).unwrap().without_auto_flush();
         part.write_at(0, b"ab").unwrap();
         let part = match part.finalize(dir.path(), "f.bin") {
             Err(e) => {
@@ -360,8 +369,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("f.part");
         {
-            let part = PartFile::create(path.clone(), validator(Some(8))).unwrap();
-            part.write_at(0, b"abcd").unwrap(); // below both flush thresholds
+            let part = PartFile::create(path.clone(), validator(Some(8))).unwrap().without_auto_flush();
+            part.write_at(0, b"abcd").unwrap(); // written but never flushed
         }
         let resumed = PartFile::resume(path, &validator(Some(8))).unwrap().unwrap();
         assert_eq!(resumed.downloaded(), 0);

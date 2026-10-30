@@ -18,6 +18,7 @@ tokio-util = "0.7"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 log = "0.4"
+ts-rs = { version = "12", features = ["chrono-impl", "uuid-impl", "serde-json-impl"] }
 
 [dev-dependencies]
 tempfile = "3"

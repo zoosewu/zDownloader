@@ -64,52 +64,23 @@ fn write_message(response: &NativeResponse) -> io::Result<()> {
 async fn handle_message(app: &AppHandle, message: NativeMessage) -> NativeResponse {
     match message {
         NativeMessage::Ping => NativeResponse::Pong,
-
-        NativeMessage::AddDownload {
-            url,
-            filename,
-            referer: _,
-        } => {
-            // Create download task using existing commands
-            match crate::commands::download::create_download(
-                url.clone(),
-                Some(filename.clone()),
-                app.state(),
-                app.state(),
-            )
-            .await
-            {
-                Ok(task_id) => {
-                    // Start download immediately
-                    match crate::commands::download::start_download(
-                        task_id.clone(),
-                        app.state(),
-                        app.clone(),
-                    )
-                    .await
-                    {
-                        Ok(_) => {
-                            log::info!(
-                                "Download started from Chrome extension: {} ({})",
-                                filename,
-                                task_id
-                            );
-                            NativeResponse::DownloadStarted { filename }
-                        }
-                        Err(e) => {
-                            log::error!("Failed to start download: {}", e);
-                            NativeResponse::Error {
-                                message: format!("Failed to start download: {}", e),
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    log::error!("Failed to create download task: {}", e);
-                    NativeResponse::Error {
-                        message: format!("Failed to create download: {}", e),
-                    }
-                }
+        NativeMessage::AddDownload { url, filename, referer: _ } => {
+            let dir = app
+                .state::<crate::commands::settings::SettingsState>()
+                .settings
+                .lock()
+                .await
+                .default_download_dir
+                .clone();
+            let request = zoo_core::AddRequest {
+                url,
+                filename: Some(filename),
+                dir,
+                start: zoo_core::StartMode::Now,
+            };
+            match app.state::<crate::downloads::Downloads>().manager.add(request).await {
+                Ok(task) => NativeResponse::DownloadStarted { filename: task.name },
+                Err(e) => NativeResponse::Error { message: e.to_string() },
             }
         }
     }

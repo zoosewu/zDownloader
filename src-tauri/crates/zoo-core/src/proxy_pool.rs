@@ -14,9 +14,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProxyInfo {
     pub id: Uuid,
@@ -35,13 +36,13 @@ pub struct ProxyInfo {
     pub health_score: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ProxyType {
     Http,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ProxyStatus {
     Unknown,
@@ -98,7 +99,8 @@ pub fn parse_proxy_line(line: &str) -> Result<ProxyInfo, String> {
     Ok(ProxyInfo::new(host.to_string(), port))
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub struct ImportResult {
     pub added: usize,
     pub duplicates: usize,

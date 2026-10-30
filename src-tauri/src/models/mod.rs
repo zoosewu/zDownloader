@@ -1,20 +1,14 @@
-// Models module - data structures for the application
-pub mod download_segment;
-pub mod download_task;
-pub mod proxy_info;
+// Models module - data structures owned by the shell (download data lives in zoo-core)
 pub mod settings;
 
-pub use download_segment::*;
-pub use download_task::*;
-pub use proxy_info::*;
-
 /// Wire contract: every enum's serialized value must match test-fixtures/api-samples.json,
-/// which the frontend test suite checks against the TS enums as well.
+/// which the frontend test suite checks against the TS types as well.
 #[cfg(test)]
 mod enum_contract_tests {
     use super::settings::{SpeedLimitMode, Theme};
-    use super::*;
     use serde::Serialize;
+    use zoo_core::proxy_pool::ProxyStatus;
+    use zoo_core::TaskState;
 
     fn fixture(name: &str) -> Vec<String> {
         let raw = include_str!("../../../test-fixtures/api-samples.json");
@@ -31,16 +25,10 @@ mod enum_contract_tests {
 
     #[test]
     fn enums_match_shared_fixture() {
-        use DownloadStatus::*;
+        use TaskState::*;
         assert_eq!(
-            wire(&[Pending, Initializing, Downloading, Paused, Cancelling, Cancelled,
-                   Completed, Failed, VerifyingIntegrity, MergingSegments]),
-            fixture("downloadStatus")
-        );
-        assert_eq!(
-            wire(&[SegmentStatus::Pending, SegmentStatus::Downloading,
-                   SegmentStatus::Completed, SegmentStatus::Failed]),
-            fixture("segmentStatus")
+            wire(&[Scheduled, Queued, Running, Paused, Completed, Failed, Cancelled]),
+            fixture("taskState")
         );
         assert_eq!(wire(&[Theme::Light, Theme::Dark]), fixture("theme"));
         assert_eq!(
