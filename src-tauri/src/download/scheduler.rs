@@ -124,68 +124,6 @@ impl DownloadScheduler {
     }
 }
 
-/// Retry manager for handling failed downloads
-pub struct RetryManager {
-    /// Retry interval in seconds
-    retry_interval_secs: u64,
-}
-
-impl RetryManager {
-    /// Create a new retry manager
-    pub fn new(retry_interval_secs: u64) -> Self {
-        Self {
-            retry_interval_secs,
-        }
-    }
-
-    /// Check if a task should be retried
-    pub fn should_retry(&self, task: &DownloadTask, max_retries: u32) -> bool {
-        // Only retry failed tasks
-        if !matches!(task.status, crate::models::DownloadStatus::Failed) {
-            return false;
-        }
-
-        // Check retry count
-        if task.retry_count >= max_retries {
-            return false;
-        }
-
-        // Check if enough time has passed since last retry
-        if let Some(last_retry) = task.last_retry_at {
-            let elapsed = Utc::now().signed_duration_since(last_retry);
-            if elapsed < Duration::seconds(self.retry_interval_secs as i64) {
-                return false;
-            }
-        }
-
-        true
-    }
-
-    /// Prepare task for retry (increment retry count, update timestamp)
-    pub fn prepare_retry(&self, task: &mut DownloadTask) {
-        task.retry_count += 1;
-        task.last_retry_at = Some(Utc::now());
-        task.status = crate::models::DownloadStatus::Pending;
-        task.error_message = None;
-    }
-
-    /// Get time until next retry
-    pub fn time_until_retry(&self, task: &DownloadTask) -> Option<Duration> {
-        if let Some(last_retry) = task.last_retry_at {
-            let elapsed = Utc::now().signed_duration_since(last_retry);
-            let wait_duration = Duration::seconds(self.retry_interval_secs as i64);
-
-            if elapsed < wait_duration {
-                Some(wait_duration - elapsed)
-            } else {
-                Some(Duration::zero())
-            }
-        } else {
-            Some(Duration::zero())
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,26 +148,5 @@ mod tests {
 
         let tasks = scheduler.get_scheduled_tasks().await;
         assert_eq!(tasks.len(), 1);
-    }
-
-    #[test]
-    fn test_retry_manager() {
-        let manager = RetryManager::new(5);
-        let mut task = DownloadTask::new(
-            "https://example.com/file.zip".to_string(),
-            "file.zip".to_string(),
-            "/tmp/file.zip".to_string(),
-        );
-
-        // Initially should not retry (not failed)
-        assert!(!manager.should_retry(&task, 3));
-
-        // Mark as failed
-        task.status = crate::models::DownloadStatus::Failed;
-        assert!(manager.should_retry(&task, 3));
-
-        // After max retries
-        task.retry_count = 3;
-        assert!(!manager.should_retry(&task, 3));
     }
 }

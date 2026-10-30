@@ -16,7 +16,15 @@
 ## 建議階段（待確認）
 
 - [x] Phase 0 熱修：檔名清理 / 本機 HTTP 來源檢查 / http_bridge 改綁 loopback / enum 大小寫（含 proxy 欄位）+ 雙邊契約測試 / reqwest 30s 總逾時
-- Phase 1 刪除假表面（候選 6）
+- [ ] Phase 1 刪除假表面（候選 6）— 分支 `rebuild/phase-1`
+  - 原則：只刪無呼叫者的程式碼；已註冊但無作用的 command 留給 Phase 2；仍在執行路徑上的（sandbox）保留；每批編譯 + 測試
+  - [x] 1a Rust 網站模組 scaffolding（browser/auth/init/error_format/resource_limiter/network_monitor/audit/context_api/permission/interface 死的部分/registry Rust 半邊/安全測試框架）
+  - [x] 1b Rust 下載/代理死碼（verification.rs、proxy validator/health_scorer、storage/tasks.rs、RetryManager）— engine 內部重複路徑移到 1c 由編譯器判定
+  - [ ] 1c 移除 `#![allow(dead_code)]`，清掉編譯器指出的剩餘死碼
+  - [ ] 1d Cargo 依賴（libloading、tracing-appender、headless_chrome）、examples/*.rs、modules/example-downloader；test-malicious 移到 tests/fixtures
+  - [ ] 1e 前端死碼（UrlInput、CredentialManager、ProgressBar、ScheduleDialog、CredentialRetryHandler+其測試、credentialError、api/scheduler、無效 atom、dev mock 層）
+  - [ ] 1f 文件：specs/004 狀態文件、CLAUDE.md 去重、重疊的模組文件
+  - 不做：i18n 未用 key（動態 key 難以可靠判定）、http_bridge 與 docker（待決策）、DownloadStatus 不可達變體（影響持久化資料，Phase 2 處理）
 - Phase 2 core crate：DownloadManager + PartFile、Downloads::add、Settings（候選 1、4、7）
 - Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）
 - Phase 4 網站模組 host + 擴充重寫（候選 3、8）
