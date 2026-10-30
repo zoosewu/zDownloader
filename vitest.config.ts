@@ -10,6 +10,8 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/__tests__/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
     exclude: ['node_modules', 'dist', 'src-tauri'],
+    // @mui/icons-material v7 ESM directory-imports @mui/material/utils (v6); inline so the alias below applies
+    server: { deps: { inline: [/@mui\//] } },
   },
   resolve: {
     alias: {

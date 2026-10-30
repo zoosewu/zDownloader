@@ -55,9 +55,9 @@ fn main() {
     match loader.load_module(&k2s_path) {
         Ok(module) => {
             println!("✅ Successfully loaded k2s module!");
-            println!("   ID: {}", module.manifest().id);
-            println!("   Name: {}", module.manifest().name);
-            println!("   Version: {}", module.manifest().version);
+            println!("   ID: {}", module.manifest.id);
+            println!("   Name: {}", module.manifest.name);
+            println!("   Version: {}", module.manifest.version);
         }
         Err(e) => {
             println!("❌ Failed to load k2s module: {}", e);

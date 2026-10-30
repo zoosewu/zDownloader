@@ -3,7 +3,7 @@ mod commands;
 mod download;
 mod http_bridge;
 mod models;
-mod modules;
+pub mod modules;
 pub mod native_messaging;
 mod proxy;
 mod storage;

@@ -429,8 +429,8 @@ mod module_loading_tests {
 
     #[test]
     fn test_load_k2s_module() {
-        let loader = ModuleLoader::new("/nodejs/zoo-downloader/modules");
-        let result = loader.load_module("/nodejs/zoo-downloader/modules/k2s");
+        let loader = ModuleLoader::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../modules"));
+        let result = loader.load_module(concat!(env!("CARGO_MANIFEST_DIR"), "/../modules/k2s"));
         
         match result {
             Ok(module) => {
@@ -448,8 +448,8 @@ mod module_loading_tests {
 
     #[test]
     fn test_load_example_simple_module() {
-        let loader = ModuleLoader::new("/nodejs/zoo-downloader/modules");
-        let result = loader.load_module("/nodejs/zoo-downloader/modules/example-simple");
+        let loader = ModuleLoader::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../modules"));
+        let result = loader.load_module(concat!(env!("CARGO_MANIFEST_DIR"), "/../modules/example-simple"));
         
         match result {
             Ok(module) => {

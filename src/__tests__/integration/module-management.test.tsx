@@ -14,15 +14,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ModuleMetadata } from '../../types/module';
 
-// Mock i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: any) => {
-      return options?.defaultValue || key;
-    },
-    i18n: { language: 'zh-TW' },
-  }),
-}));
+// Mock i18next with real zh-TW strings (ModuleList passes no defaultValue)
+vi.mock('react-i18next', async () => {
+  const zh = (await import('../../locales/zh-TW.json')).default;
+  const t = (key: string, options?: any) => {
+    const value = key.split('.').reduce<any>((node, k) => node?.[k], zh);
+    if (typeof value !== 'string') return options?.defaultValue || key;
+    return value.replace(/\{\{(\w+)\}\}/g, (_, name) => String(options?.[name] ?? ''));
+  };
+  return { useTranslation: () => ({ t, i18n: { language: 'zh-TW' } }) };
+});
 
 // Mock module API
 vi.mock('../../api/modules', () => ({
@@ -48,7 +49,7 @@ describe('T137: Module Management UI Integration', () => {
         network: {
           allowDomains: ['k2s.cc', 'keep2share.cc', 'api.keep2share.cc'],
         },
-        credentials: ['username', 'password'],
+        credentials: { required: true, credentialKeys: ['username', 'password'] },
       },
       status: 'loaded' as const,
     },
@@ -96,7 +97,7 @@ describe('T137: Module Management UI Integration', () => {
     render(<ModuleList />);
 
     await waitFor(() => {
-      expect(screen.getByText(/沒有找到模組/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/未找到可用模組/).length).toBeGreaterThan(0);
     });
   });
 
@@ -118,7 +119,7 @@ describe('T137: Module Management UI Integration', () => {
 
     // Wait for initial load
     await waitFor(() => {
-      expect(screen.getByText(/沒有找到模組/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/未找到可用模組/).length).toBeGreaterThan(0);
     });
 
     // Click scan button
@@ -245,7 +246,7 @@ describe('T137: Module Management UI Integration', () => {
     render(<ModuleList />);
 
     await waitFor(() => {
-      expect(screen.getByText(/沒有找到模組/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/未找到可用模組/).length).toBeGreaterThan(0);
     });
 
     const scanButton = screen.getByRole('button', {
@@ -256,7 +257,7 @@ describe('T137: Module Management UI Integration', () => {
     // After scan, modules should be visible
     await waitFor(() => {
       expect(screen.getByText('Keep2Share')).toBeInTheDocument();
-      expect(screen.queryByText(/沒有找到模組/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/未找到可用模組/)).not.toBeInTheDocument();
     });
   });
 });

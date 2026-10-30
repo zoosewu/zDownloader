@@ -683,7 +683,7 @@ mod registry_drop_tests {
         // This test ensures that ModuleRegistry can be created, used, and dropped
         // without V8 HandleScope errors
         
-        let modules_dir = "/nodejs/zoo-downloader/modules";
+        let modules_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../modules");
         let mut registry = ModuleRegistry::with_path(modules_dir);
         
         // Scan and load modules

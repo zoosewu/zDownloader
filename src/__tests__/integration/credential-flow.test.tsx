@@ -103,7 +103,7 @@ describe('T120: Credential Flow Integration', () => {
 
     // Wait for dialog to appear (using actual translated text)
     await waitFor(() => {
-      expect(screen.getByText(/需要認證/i)).toBeInTheDocument();
+      expect(screen.getByText('需要認證')).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 
@@ -124,7 +124,7 @@ describe('T120: Credential Flow Integration', () => {
 
     // Step 2: Wait for dialog to appear
     await waitFor(() => {
-      expect(screen.getByText(/需要認證/i)).toBeInTheDocument();
+      expect(screen.getByText('需要認證')).toBeInTheDocument();
     }, { timeout: 3000 });
 
     // Step 3: Find input fields by label text
