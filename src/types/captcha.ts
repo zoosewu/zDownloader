@@ -28,9 +28,3 @@ export interface CaptchaCancelledEvent {
   challenge_id: string;
   task_id: string;
 }
-
-export interface AuthCredentials {
-  username: string;
-  password: string;
-  extra?: Record<string, string>;
-}

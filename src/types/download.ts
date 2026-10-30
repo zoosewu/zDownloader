@@ -58,33 +58,3 @@ export enum DownloadStatus {
   VerifyingIntegrity = 'verifyingIntegrity',
   MergingSegments = 'mergingSegments',
 }
-
-export interface DownloadProgress {
-  progress: number;
-  speed: number;
-  etaSeconds: number;
-  downloadedBytes: number;
-  totalBytes: number;
-}
-
-export interface ProgressUpdateEvent {
-  taskId: string;
-  progress: number;
-  speed: number;
-  etaSeconds: number;
-}
-
-export interface StatusChangeEvent {
-  taskId: string;
-  oldStatus: DownloadStatus;
-  newStatus: DownloadStatus;
-}
-
-export interface ClipboardDetectedEvent {
-  url: string;
-  timestamp: number;
-}
-
-export interface UnfinishedDownloadsDetectedEvent {
-  tasks: DownloadTask[];
-}

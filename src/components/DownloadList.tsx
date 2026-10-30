@@ -6,7 +6,6 @@ import { useAtom } from 'jotai';
 import { downloadTasksAtom } from '../stores/downloadStore';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
-import DevModeBanner from './DevModeBanner';
 import QueueControls from './QueueControls';
 import BatchImportButton from './BatchImportButton';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
@@ -130,7 +129,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
         </Box>
       </Box>
 
-      {/* Scrollable Content Area - DevModeBanner + DownloadTable */}
+      {/* Scrollable Content Area - DownloadTable */}
       <Box
         sx={{
           flex: 1,
@@ -138,8 +137,6 @@ const DownloadList: React.FC<DownloadListProps> = ({
           minHeight: 200,
         }}
       >
-        {/* Dev Mode Banner - only shows in dev mode with mock features enabled */}
-        <DevModeBanner />
 
         {/* Download Table */}
         <DownloadTable tasks={tasks} />

@@ -12,13 +12,11 @@ import {
   pausedDownloadsAtom,
   completedDownloadsAtom,
 } from '../stores/downloadStore';
-import { useMockTasksAtom } from '../stores/devStore';
 
 const MainPage: React.FC = () => {
   const { t } = useTranslation();
   const { refreshDownloadList } = useDownloads();
   const { navigateTo } = useNavigation();
-  const useMockTasks = useAtomValue(useMockTasksAtom);
 
   // Get download counts for queue controls
   const activeDownloads = useAtomValue(activeDownloadsAtom);
@@ -39,21 +37,15 @@ const MainPage: React.FC = () => {
   // Setup Tauri event listeners
   useTauriEvents();
 
-  // Load initial download list (skip if using mock tasks)
+  // Load initial download list
   useEffect(() => {
-    // Skip backend sync when using mock tasks in dev mode
-    if (useMockTasks) {
-      console.log('[Dev Mode] Skipping backend sync - using mock tasks');
-      return;
-    }
-
     // Add a small delay to ensure Tauri API is ready
     const timer = setTimeout(() => {
       refreshDownloadList();
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [refreshDownloadList, useMockTasks]);
+  }, [refreshDownloadList]);
 
   const handleBatchImportSuccess = (taskIds: string[]) => {
     setSnackbar({
@@ -61,10 +53,7 @@ const MainPage: React.FC = () => {
       message: t('downloads.batch.importSuccess', { count: taskIds.length }),
       severity: 'success',
     });
-    // Skip backend sync when using mock tasks
-    if (!useMockTasks) {
-      refreshDownloadList();
-    }
+    refreshDownloadList();
   };
 
   const handleBatchImportError = (error: string) => {
@@ -76,10 +65,7 @@ const MainPage: React.FC = () => {
   };
 
   const handleQueueControlSuccess = () => {
-    // Skip backend sync when using mock tasks
-    if (!useMockTasks) {
-      refreshDownloadList();
-    }
+    refreshDownloadList();
   };
 
   const handleQueueControlError = (error: string) => {

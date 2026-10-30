@@ -1,6 +1,6 @@
 // Footer component - displays app info and mode controls
 import React from 'react';
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useAtomValue } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,18 +8,16 @@ import {
   downloadTasksAtom,
   completedDownloadsAtom,
 } from '../stores/downloadStore';
-import { devModeStatusAtom } from '../stores/devStore';
 
 /**
  * Footer - displays at the bottom of the app
- * Shows download statistics and development mode status
+ * Shows download statistics
  */
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const tasks = useAtomValue(downloadTasksAtom);
   const activeDownloads = useAtomValue(activeDownloadsAtom);
   const completedDownloads = useAtomValue(completedDownloadsAtom);
-  const devStatus = useAtomValue(devModeStatusAtom);
 
   // Calculate total download speed
   const totalSpeed = activeDownloads.reduce((sum, task) => sum + task.currentSpeed, 0);
@@ -57,16 +55,8 @@ const Footer: React.FC = () => {
         )}
       </Box>
 
-      {/* Right side - Dev mode indicator and app info */}
+      {/* Right side - app info */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        {devStatus.isActive && (
-          <Chip
-            label={t('dev.banner.title')}
-            size="small"
-            color="warning"
-            sx={{ height: '20px', fontSize: '0.7rem' }}
-          />
-        )}
         <Typography variant="caption" color="text.secondary">
           Zoo Downloader v0.1.0
         </Typography>

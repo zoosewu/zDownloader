@@ -24,7 +24,6 @@ import Footer from './components/Footer';
 import { useNavigation } from './hooks/useNavigation';
 import { useClipboard } from './hooks/useClipboard';
 import CaptchaDialog from './components/CaptchaDialog';
-import LoginDialog from './components/LoginDialog';
 import {
   unfinishedDownloadsAtom,
   showResumeDialogAtom,
@@ -268,7 +267,6 @@ function App() {
           onClose={handleCloseDialog}
         />
         <CaptchaDialog />
-        <LoginDialog />
       </Box>
     </ThemeProvider>
   );

@@ -19,57 +19,17 @@ export const completedDownloadsAtom = atom((get) => {
   return tasks.filter((task) => task.status === DownloadStatus.Completed);
 });
 
-// Failed downloads atom (derived) - failed tasks
-export const failedDownloadsAtom = atom((get) => {
-  const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === DownloadStatus.Failed);
-});
-
 // Paused downloads atom (derived) - paused tasks
 export const pausedDownloadsAtom = atom((get) => {
   const tasks = get(downloadTasksAtom);
   return tasks.filter((task) => task.status === DownloadStatus.Paused);
 });
 
-// Pending downloads atom (derived) - pending tasks
-export const pendingDownloadsAtom = atom((get) => {
-  const tasks = get(downloadTasksAtom);
-  return tasks.filter((task) => task.status === DownloadStatus.Pending);
-});
-
-// Active download count atom (derived)
-export const activeDownloadCountAtom = atom((get) => {
-  return get(activeDownloadsAtom).length;
-});
-
-// Total download progress atom (derived) - average progress of active downloads
-export const totalProgressAtom = atom((get) => {
-  const activeTasks = get(activeDownloadsAtom);
-  if (activeTasks.length === 0) return 0;
-  const totalProgress = activeTasks.reduce((sum, task) => sum + task.progress, 0);
-  return totalProgress / activeTasks.length;
-});
-
-// Clipboard URL atom - detected URL from clipboard
-export const clipboardUrlAtom = atom<string | null>(null);
-
-// Clipboard hint visibility atom
-export const showClipboardHintAtom = atom<boolean>(false);
-
 // Unfinished downloads atom - detected on app startup
 export const unfinishedDownloadsAtom = atom<DownloadTask[]>([]);
 
 // Resume dialog visibility atom
 export const showResumeDialogAtom = atom<boolean>(false);
-
-// Helper atom to add a task
-export const addTaskAtom = atom(
-  null,
-  (get, set, task: DownloadTask) => {
-    const tasks = get(downloadTasksAtom);
-    set(downloadTasksAtom, [...tasks, task]);
-  }
-);
 
 // Helper atom to update a task
 export const updateTaskAtom = atom(
@@ -96,15 +56,6 @@ export const removeTaskAtom = atom(
   (get, set, taskId: string) => {
     const tasks = get(downloadTasksAtom);
     set(downloadTasksAtom, tasks.filter((t) => t.id !== taskId));
-  }
-);
-
-// Helper atom to clear completed tasks
-export const clearCompletedAtom = atom(
-  null,
-  (get, set) => {
-    const tasks = get(downloadTasksAtom);
-    set(downloadTasksAtom, tasks.filter((t) => t.status !== DownloadStatus.Completed));
   }
 );
 
