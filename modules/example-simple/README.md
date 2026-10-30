@@ -110,7 +110,7 @@ context.log.error('錯誤訊息');
 
 - **TypeScript 型別**: `modules/@types/zoo-downloader/index.d.ts`
 - **VS Code 程式碼片段**: `modules/.vscode/zoo-downloader.code-snippets`
-- **測試工具**: `modules/test-module.js`
+- **測試工具**: `src-tauri/tests/fixtures/site-modules/test-module.js`
 
 ---
 
