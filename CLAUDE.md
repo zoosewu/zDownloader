@@ -30,13 +30,16 @@ tests/
 ## Commands
 
 ```bash
-cd src-tauri && cargo test          # 後端測試（含 enum 契約測試）
-pnpm test:run                       # 前端測試（vitest，含 enum 契約測試）
+cd src-tauri && cargo test --workspace   # zoo-core + shell（含 bindings 一致性、enum 契約）
+UPDATE_BINDINGS=1 cargo test bindings     # Rust DTO 變更後重新產生 src/backend/bindings
+pnpm test:run                       # 前端測試（vitest，含命令名稱一致性）
 pnpm exec tsc --noEmit              # 型別檢查
 pnpm build                          # 生產建置
 ```
 
 Windows 注意：v8 crate 在 target 目錄與 cargo registry 位於不同磁碟時需要建立 symlink（未開啟開發人員模式會失敗，錯誤 1314），可設 `CARGO_TARGET_DIR` 到與 registry 同一磁碟。
+
+前後端介面：前端只透過 `src/backend` 呼叫後端，型別一律來自 ts-rs 產生的 `src/backend/bindings`（不要手寫或手改）。新增 Tauri command 時同步加入 `generate_handler!` 與 `src/backend/index.ts`。下載核心在 `src-tauri/crates/zoo-core`（不依賴 Tauri），shell 只做轉接。
 
 ## Code Style
 

@@ -6,9 +6,12 @@ zoo-downloader 的領域術語。程式碼、文件、討論都使用這些名�
 
 - **Download task（下載任務）**：使用者要求下載的一個檔案，從加入到完成、失敗或取消為止。以 `TaskId` 識別。
 - **Segment（片段）**：任務中的一段 byte range，可由一條連線獨立下載。
-- **PartFile**：下載中的目標檔（`<name>.part`），連同已完成區段的紀錄；完成時 rename 成最終檔名。（目標設計，見 CAND-1）
-- **Transfer**：實際執行一個任務的傳輸工作，可被取消。（目標設計）
-- **DownloadManager**：唯一擁有所有任務狀態並決定何時執行的 module。（目標設計）
+- **PartFile**：下載中的目標檔（`<name>.<task-id>.part`），連同已完成區段的紀錄（`.part.json`）；完成時 rename 成最終檔名。
+- **Transfer**：實際執行一個任務的傳輸工作（探測、分段或串流、重試），可被取消。
+- **DownloadManager**：唯一擁有所有任務狀態並決定何時執行的 module（`zoo-core`）。
+- **Task state（任務狀態）**：Scheduled → Queued → Running → Completed / Failed / Paused / Cancelled。
+- **rev（版本）**：任務每次變更遞增的序號；同一任務的兩份資料，以 rev 較大者為準。
+- **ConnectionSource**：每個請求取得連線的來源，有直連（Direct）與代理池（ProxyPool）兩個 adapter。
 
 ## 網站模組
 
