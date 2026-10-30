@@ -15,6 +15,9 @@ percent-encoding = "2"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream", "http2"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 tokio-util = "0.7"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+log = "0.4"
 
 [dev-dependencies]
 tempfile = "3"

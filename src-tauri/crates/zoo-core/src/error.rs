@@ -1,8 +1,8 @@
 //! Errors crossing the zoo-core interface.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum CoreError {
     /// The server answered with a non-success status.

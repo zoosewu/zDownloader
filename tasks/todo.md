@@ -29,7 +29,7 @@
   - 範圍擴大：併入原 Phase 3（產生式契約、DownloadSync）+ 代理 + 自動重試/排程/限速/通知
   - [x] 2a workspace + zoo-core 骨架（naming、part_file、store、rate）
   - [x] 2b transfer + Direct + fixture server
-  - [ ] 2c manager actor（狀態機、並行、控制、自動重試、排程、持久化）
+  - [x] 2c manager actor（狀態機、並行、控制、自動重試、排程、持久化）
   - [ ] 2d ProxyPool adapter
   - [ ] 2e Tauri shell（ts-rs 匯出、CommandError、入口、通知、刪舊引擎）
   - [ ] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）

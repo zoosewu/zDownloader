@@ -8020,7 +8020,9 @@ dependencies = [
 name = "zoo-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "futures-util",
+ "log",
  "percent-encoding",
  "reqwest 0.13.5",
  "serde",
@@ -8030,6 +8032,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+ "uuid",
 ]
 
 [[package]]
