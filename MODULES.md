@@ -1,5 +1,7 @@
 # 模組系統使用指南
 
+> **現況（2026-10-30）**：載入、manifest 驗證與 URL 比對可運作；`extractDownloadInfo` 尚未在下載流程中被呼叫，`context` API（http / credentials / captcha）也尚未注入。詳見 `docs/architecture/review-2026-10-30.md` 的 B 段與 ADR-0001。
+
 ## 📦 模組載入
 
 ### 1. 模組目錄結構

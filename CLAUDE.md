@@ -29,7 +29,14 @@ tests/
 
 ## Commands
 
-# Add commands for 
+```bash
+cd src-tauri && cargo test          # 後端測試（含 enum 契約測試）
+pnpm test:run                       # 前端測試（vitest，含 enum 契約測試）
+pnpm exec tsc --noEmit              # 型別檢查
+pnpm build                          # 生產建置
+```
+
+Windows 注意：v8 crate 在 target 目錄與 cargo registry 位於不同磁碟時需要建立 symlink（未開啟開發人員模式會失敗，錯誤 1314），可設 `CARGO_TARGET_DIR` 到與 registry 同一磁碟。
 
 ## Code Style
 
@@ -45,6 +52,8 @@ tests/
 ## API 命名規範與序列化 (Critical)
 
 ### 規則：前端 camelCase，後端 snake_case + Serde 轉換
+
+> **enum 值也會被轉換**：`rename_all = "camelCase"` 會讓 `DownloadStatus::Downloading` 序列化成 `"downloading"`，TS enum 的值必須是 `'downloading'`，並在程式中引用 enum 成員而非寫死字串。新增或修改 enum 時同步更新 `test-fixtures/api-samples.json` 的 `enums` 段（Rust 與 TS 兩邊的契約測試都會比對它）。
 
 **問題背景**：
 - Rust 慣例使用 `snake_case`（例如：`is_valid`, `detector_name`）
@@ -709,141 +718,3 @@ pub struct ModulePermissions {
 **重要**：這些檔案是模組開發者的主要參考，必須保持高品質和最新狀態。
 
 <!-- MANUAL ADDITIONS END -->
-
-## Download List UI Redesign (Feature 003)
-
-### Overview
-完整重新設計下載列表 UI，從卡片視圖改為表格視圖，並添加選擇功能和詳細信息面板。
-
-### Core Components
-
-**DownloadTable** - 主表格組件，7欄位顯示  
-**DownloadTableRow** - 單一行，React.memo 優化  
-**DownloadDetailPanel** - 4 Tabs 詳細面板  
-**SegmentVisualization** - CSS Grid 分段視覺化  
-**SegmentGridItem** - 12px 彩色方格
-
-### Utilities & State
-
-**downloadCalculations.ts** - 計算與格式化函數  
-**formatters.ts** - 時間格式化（相對/絕對）  
-**useSelectedDownload** - 選擇狀態管理 Hook
-
-### Performance
-
-- React.memo + 自定義比較函數
-- Jotai 細粒度狀態訂閱
-- CSS Grid 原生性能
-
-### i18n & Theme
-
-完整支持 zh-TW/en/ja 三種語言，自動支持深淺色模式。
-
-
-
----
-
-## 模組開發者體驗 (Feature 004 - Module System)
-
-### TypeScript 型別定義維護規則
-
-當實作或修改模組系統相關功能時，**必須**檢查並更新以下檔案以保持同步：
-
-#### 檢查清單
-
-**每次修改 Context API、模組接口或資料結構時，執行以下檢查：**
-
-1. **型別定義檔** (`modules/@types/zoo-downloader/index.d.ts`)
-   - [ ] Context 接口是否反映最新的 API？
-   - [ ] HttpClient, Logger, CaptchaClient 等接口是否完整？
-   - [ ] DownloadInfo, HttpResponse 等資料型別是否正確？
-   - [ ] 所有新增的欄位都有 JSDoc 註解？
-   - [ ] 所有範例程式碼是否可執行？
-   - [ ] 全域型別別名是否需要更新？
-
-2. **VS Code 程式碼片段** (`modules/.vscode/zoo-downloader.code-snippets`)
-   - [ ] 是否需要新增常用模式的 snippet？
-   - [ ] 現有 snippets 是否反映最新 API？
-   - [ ] Placeholder 變數是否正確？
-
-3. **模組模板** (`modules/_template/`)
-   - [ ] index.js 是否使用最新的型別定義？
-   - [ ] manifest.json 是否包含所有新增的權限？
-   - [ ] README.md 是否說明新功能？
-
-4. **範例模組** (`modules/k2s/`)
-   - [ ] 是否展示新 API 的最佳實踐？
-   - [ ] JSDoc 註解是否完整？
-   - [ ] 是否包含錯誤處理範例？
-
-5. **開發者文件** (`specs/004-site-module-integration/quickstart.md`)
-   - [ ] 是否更新 API 參考？
-   - [ ] 是否提供新功能的使用範例？
-   - [ ] 是否更新限制和注意事項？
-
-#### 常見更新場景
-
-**場景 1：新增 Context API**
-
-當後端新增 API 時（例如：新增 `op_http_delete`），必須更新：
-1. ✅ `modules/@types/zoo-downloader/index.d.ts` - 添加 `delete()` 方法
-2. ✅ `modules/.vscode/zoo-downloader.code-snippets` - 添加 `zoo-http-delete` snippet  
-3. ✅ `modules/_template/index.js` - 在註解中提示可用
-4. ✅ `quickstart.md` - 在 API 參考中說明
-
-**場景 2：修改資料結構**
-
-當修改 `DownloadInfo` 等資料結構時（例如：新增 `expiryTime` 欄位），必須更新：
-1. ✅ `modules/@types/zoo-downloader/index.d.ts` - 添加新欄位型別
-2. ✅ `modules/_template/index.js` - 在返回範例中添加
-3. ✅ `modules/k2s/index.js` - 展示如何使用（如果適用）
-
-**場景 3：新增權限類型**
-
-當新增權限類型時（例如：新增 `storage` 權限），必須更新：
-1. ✅ `modules/@types/zoo-downloader/index.d.ts` - 添加權限型別定義
-2. ✅ `modules/_template/manifest.json` - 在註解中說明
-3. ✅ `quickstart.md` - 在權限章節說明
-
-#### 驗證流程
-
-**完成模組系統功能後，執行以下驗證**：
-
-```bash
-# 1. 檢查型別定義語法
-cd modules/@types/zoo-downloader
-npx tsc --noEmit index.d.ts
-
-# 2. 驗證 snippets JSON 格式  
-jq . modules/.vscode/zoo-downloader.code-snippets > /dev/null
-
-# 3. 驗證模板檔案
-cd modules/_template
-node -c index.js  # 檢查 JavaScript 語法
-jq . manifest.json > /dev/null  # 檢查 JSON 格式
-```
-
-#### 維護週期
-
-- **即時更新**：每次修改模組 API 時立即更新
-- **Phase 完成時檢查**：每個 Phase 完成後完整檢查一次  
-- **Release 前審查**：正式發布前完整審查所有開發者文件
-
-### Code Snippets 設計原則
-
-1. **簡潔優先**：snippets 應該生成最少但可用的程式碼
-2. **提供佔位符**：使用 `${1:description}` 提供有意義的預設值
-3. **包含註解**：關鍵位置加入註解提示  
-4. **遵循最佳實踐**：生成的程式碼應展示正確的錯誤處理和型別使用
-5. **保持更新**：API 變更時立即更新對應的 snippets
-
-### 型別定義撰寫原則
-
-1. **完整的 JSDoc**：每個接口、方法、屬性都要有說明
-2. **實用的範例**：在 `@example` 中提供真實可用的程式碼
-3. **清晰的型別**：避免過度使用 `any`，提供具體型別
-4. **一致的命名**：遵循 camelCase 慣例
-5. **版本註記**：重大變更時在註解中標記版本
-
-**重要**：這些檔案是模組開發者的主要參考，必須保持高品質和最新狀態。
-

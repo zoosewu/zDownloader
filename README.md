@@ -201,7 +201,7 @@ For developers who want to add support for new sites:
    # Edit manifest.json and index.js
 
    # Test your module
-   node ../test-module.js
+   node ../../src-tauri/tests/fixtures/site-modules/test-module.js
    ```
 
 2. **Full TypeScript Support**
@@ -302,7 +302,7 @@ zoo-downloader/
 │   ├── .vscode/                  # VS Code snippets for module development
 │   ├── _template/                # Module template
 │   ├── k2s/                      # Keep2Share module (built-in)
-│   └── test-module.js            # Module testing utility
+│   └── example-simple/           # Minimal example module
 │
 └── package.json                  # Node.js dependencies
 ```

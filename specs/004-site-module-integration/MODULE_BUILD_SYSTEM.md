@@ -1,7 +1,7 @@
 # 模組構建系統架構
 
 **日期**: 2025-12-10
-**狀態**: ✅ **Production Ready**
+**狀態**: 建置流程可用；執行期 context API 尚未接線（見 docs/architecture/review-2026-10-30.md 的 B 段）
 
 ---
 
@@ -816,10 +816,8 @@ export default defineConfig({
 ---
 
 **完成時間**: 2025-12-10
-**狀態**: ✅ **Production Ready**
+**狀態**: 建置流程可用；執行期 context API 尚未接線（見 docs/architecture/review-2026-10-30.md 的 B 段）
 **範例**: K2S 模組（17.43 KB，使用 Vite 構建）
 
 **相關文檔**:
-- `ES6_MODULE_SYNTAX_FIX.md` - ES6 語法自動轉換
 - `SMART_MODULE_PATH.md` - 智能路徑解析
-- `CONDITIONAL_COMPILATION_OPTIMIZATION.md` - 條件編譯優化

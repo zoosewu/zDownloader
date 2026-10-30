@@ -101,7 +101,7 @@ context.log.error('錯誤訊息');
 
 ## 下一步
 
-1. **閱讀完整教學**: `specs/004-site-module-integration/TUTORIAL.md`
+1. **閱讀模組文件**: `MODULES.md`
 2. **查看複雜範例**: `modules/k2s/index.js` (617 行的完整實作)
 3. **使用模組模板**: `modules/_template/` (包含更多功能示範)
 4. **查看 API 文件**: `specs/004-site-module-integration/quickstart.md`
