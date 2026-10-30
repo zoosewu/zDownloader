@@ -25,8 +25,16 @@
   - [x] 1e 前端死碼（UrlInput、CredentialManager、ProgressBar、ScheduleDialog、CredentialRetryHandler+其測試、credentialError、api/scheduler、無效 atom、dev mock 層）
   - [x] 1f 文件：specs/004 狀態文件、CLAUDE.md 去重、重疊的模組文件
   - 不做：i18n 未用 key（動態 key 難以可靠判定）、http_bridge 與 docker（待決策）、DownloadStatus 不可達變體（影響持久化資料，Phase 2 處理）
-- Phase 2 core crate：DownloadManager + PartFile、Downloads::add、Settings（候選 1、4、7）
-- Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）
+- [ ] Phase 2 下載核心重建 — 分支 `rebuild/phase-2`，規格 `docs/architecture/phase-2-download-core.md`（已確認）
+  - 範圍擴大：併入原 Phase 3（產生式契約、DownloadSync）+ 代理 + 自動重試/排程/限速/通知
+  - [ ] 2a workspace + zoo-core 骨架（naming、part_file、store、rate）
+  - [ ] 2b transfer + Direct + fixture server
+  - [ ] 2c manager actor（狀態機、並行、控制、自動重試、排程、持久化）
+  - [ ] 2d ProxyPool adapter
+  - [ ] 2e Tauri shell（ts-rs 匯出、CommandError、入口、通知、刪舊引擎）
+  - [ ] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）
+  - [ ] 2g 實機驗證與文件
+- ~~Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）~~ 併入 Phase 2
 - Phase 4 網站模組 host + 擴充重寫（候選 3、8）
 
 ## 已知待辦（合併時發現）
