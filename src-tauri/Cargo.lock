@@ -8000,6 +8000,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "zoo-module"
+version = "0.1.0"
+dependencies = [
+ "deno_core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "zoo-module-client",
+]
+
+[[package]]
+name = "zoo-module-client"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "zune-core"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"

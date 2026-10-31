@@ -1,0 +1,17 @@
+[package]
+name = "zoo-module"
+version = "0.1.0"
+edition = "2021"
+description = "Site module host (`zoo-module serve`) and module developer CLI. The only crate that links V8."
+publish = false
+
+[dependencies]
+zoo-module-client = { path = "../zoo-module-client" }
+deno_core = "0.372"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "time"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

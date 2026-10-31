@@ -35,8 +35,8 @@
   - [x] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）— 分段視覺化已補回（downloads_segments）
   - [ ] 2g 實機驗證與文件 — 文件已更新、app 可啟動；手動清單見 phase-2-download-core.md
 - ~~Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）~~ 併入 Phase 2
-- [ ] Phase 4 網站模組系統重建 — 規格 `docs/architecture/phase-4-site-modules.md`（草案待確認），依 ADR-0001、ADR-0002
-  - [ ] 4a protocol + host 骨架 + Supervisor（資源上限、崩潰隔離）
+- [ ] Phase 4 網站模組系統重建 — 分支 `rebuild/phase-4`，規格 `docs/architecture/phase-4-site-modules.md`（已確認），依 ADR-0001、ADR-0002
+  - [x] 4a client（協定 + Supervisor）+ host 骨架（資源上限、崩潰隔離）— shell 接線移到 4c
   - [ ] 4b Policy + fetch + Web API + DOMParser + zoo API
   - [ ] 4c zoo-core Resolver seam、任務 phase、重新解析
   - [ ] 4d 開發 CLI（new/check/test、錄製重播）、範本、AGENTS.md

@@ -1,6 +1,6 @@
 # Phase 4 設計規格：網站模組系統重建
 
-- 狀態：草案，待確認（2026-10-31）
+- 狀態：已確認（2026-10-31），實作中：4a 完成
 - 依據：[ADR-0001 marketplace](../adr/0001-site-module-marketplace.md)、[ADR-0002 執行環境](../adr/0002-site-module-runtime.md)
 - 修正：review B 段全部、SEC-3..6、D-4、D-5、C-11（偵測競態）
 - 術語見 [GLOSSARY.md](../../GLOSSARY.md)
@@ -19,13 +19,13 @@
 │ zoo-core DownloadManager                                  │
 │   └─ Resolver（seam）── Direct：直接下載                   │
 │                      └─ ModuleResolver ──┐                │
-│ shell：Supervisor（啟動/重啟 host、轉送 captcha/帳密）     │
+│ shell：zoo-module-client 的 Supervisor（啟動/重啟 host）   │
 │        Marketplace（來源、目錄、安裝、權限同意）           │
 └──────────────────────────────────────────┼────────────────┘
-                     stdio JSON lines（zoo-module-protocol）
+                     stdio JSON lines（zoo-module-client::protocol）
 ┌──────────────────── zoo-module（獨立執行檔）─────────────────┐
 │ serve 模式：給 app 用    test/check/new 模式：給模組作者用     │
-│ ├─ ModuleRuntime：每個模組一個 V8 context，heap 上限、執行時限│
+│ ├─ runtime：每次 resolve 一個 isolate，heap 上限、執行時限    │
 │ ├─ Web API：fetch / URL / Headers / TextEncoder / crypto /     │
 │ │           DOMParser / console                                │
 │ ├─ zoo API：credentials.placeholder / captcha / wait / log     │
@@ -38,11 +38,11 @@
 
 | crate | 內容 | 依賴 |
 |---|---|---|
-| `zoo-module-protocol` | IPC 訊息、manifest、`Resolved` 等共用型別（serde + ts-rs） | 只有 serde |
-| `zoo-module` (bin) | host 與開發 CLI 同一個執行檔 | deno_core、reqwest、protocol |
-| `zoo-core`（擴充） | `Resolver` seam、任務 phase | protocol |
+| `zoo-module-client` | IPC 協定型別（`Request`/`Reply`/`Resolved`/`ModuleError`/`Limits`）與 `Supervisor`；app 需要的全部 | serde、tokio（無 V8） |
+| `zoo-module` (bin) | host 與開發 CLI 同一個執行檔 | deno_core、client |
+| `zoo-core`（擴充） | `Resolver` seam、任務 phase | client 的型別 |
 
-主程式（shell）不依賴 `zoo-module`，只依賴 protocol；V8 只在 `zoo-module` 編譯。
+主程式（shell）不依賴 `zoo-module`，只依賴 client；V8 只在 `zoo-module` 編譯。Supervisor 放在 client 而非 shell，才能在 `zoo-module` 的整合測試中對真實 host 行程測試。
 
 ## 模組格式（給作者看的樣子）
 
@@ -85,8 +85,8 @@ export default defineModule({
 | 項目 | 做法 |
 |---|---|
 | 行程隔離 | 模組只在 `zoo-module serve` 中執行；崩潰時 Supervisor 重啟並讓進行中的解析失敗（可重試） |
-| 記憶體 | 每個 context 的 V8 heap 上限（預設 128 MB），`near_heap_limit_callback` 觸發即終止該次解析；Windows 再加 Job Object 行程上限 |
-| CPU | 每次 `resolve` 的執行時限（預設 30 秒，不含 `zoo.wait` 與等待 captcha），watchdog 以 `terminate_execution` 中斷 |
+| 記憶體 | 每次 resolve 一個獨立 isolate，heap 上限預設 128 MB，`near_heap_limit_callback` 觸發即終止該次解析；呼叫之間不共享狀態、不洩漏。Windows 另以 Job Object 限制整個 host 2 GB，且 app 結束時 host 一併結束 |
+| CPU | 每次 `resolve` 的執行時限（預設 30 秒，不含 `zoo.wait` 與等待 captcha）：同步迴圈由 watchdog 執行緒以 `terminate_execution` 中斷，等待 I/O 由 tokio timeout 中斷；host 本身卡住時 Supervisor 在時限加 2 秒後 kill 並重啟 |
 | 網路 | 只有 `fetch`，且只能連 manifest `permissions.network.allowDomains`；擋私有/保留位址（含 IPv4-mapped、CGNAT、link-local）；DNS 解析後再檢查、redirect 每一跳重新檢查；回應大小上限 |
 | 帳密 | 只存在主程式的系統鑰匙圈；每次解析只把該模組宣告的 key 傳給 host；替換只發生在送往白名單網域的請求 |
 | 其他能力 | 沒有檔案系統、子行程、環境變數、`eval` 以外的動態載入；不再用 JS 層刪全域物件的假 sandbox |
@@ -131,9 +131,9 @@ export default defineModule({
 
 | 子階段 | 內容 | 驗證 |
 |---|---|---|
-| 4a | protocol crate；`zoo-module serve` 骨架：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限；shell Supervisor（啟動、重啟、逾時） | 惡意模組測試：無窮迴圈、OOM、崩潰都被限制在 host 內，主程式不受影響 |
+| 4a ✅ | client crate（協定 + Supervisor + Job Object）；`zoo-module serve`：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限、隱藏 `Deno.core`、console 改走 stderr | `crates/zoo-module/tests/host.rs`：無窮迴圈、OOM、並行隔離、模組形狀錯誤、回傳值驗證、host 崩潰/卡住/不存在 |
 | 4b | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
-| 4c | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
+| 4c | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
 | 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
 | 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |
@@ -141,9 +141,9 @@ export default defineModule({
 
 每個子階段各自 commit 並通過全部測試；4f 之前舊模組系統保留不動。
 
-## 待確認（附建議）
+## 已確認的決定（2026-10-31，全部照建議）
 
-| # | 問題 | 建議 | 理由 |
+| # | 問題 | 決定 | 理由 |
 |---|---|---|---|
 | 1 | IPC 傳輸 | stdio JSON lines | 跨平台、無需處理 pipe 名稱與權限；host 的 log 走 stderr |
 | 2 | HTML 解析 | 在 host 內預載 `linkedom`（純 JS），提供 `DOMParser` | 行為接近瀏覽器、AI 熟悉；Rust 端解析再橋接 DOM 太複雜 |
