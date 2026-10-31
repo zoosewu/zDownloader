@@ -92,6 +92,27 @@ pub struct Task {
     pub rev: u64,
 }
 
+/// Which bytes of a task are done and which are being fetched; byte ranges are `[start, end)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SegmentMap {
+    pub total: Option<u64>,
+    /// Size of the pieces the transfer hands to its connections.
+    pub segment_size: u64,
+    pub done: Vec<(u64, u64)>,
+    pub active: Vec<ActiveRange>,
+}
+
+/// A range one connection is fetching right now.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveRange {
+    pub start: u64,
+    pub end: u64,
+    /// The last attempt failed and the connection is waiting to retry.
+    pub retrying: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgressTick {

@@ -167,8 +167,15 @@
       "cancelled": "已取消"
     },
     "schedule": {
-      "startAt": "排程開始時間（選填）",
-      "help": "留空表示立即開始"
+      "startAt": "排程開始時間（選填）"
+    },
+    "segments": {
+      "completed": "已完成",
+      "partial": "部分完成",
+      "downloading": "下載中",
+      "retrying": "等待重試",
+      "pending": "未開始",
+      "unknownSize": "伺服器未提供檔案大小，無法顯示分段。"
     }
   },
   "settings": {

@@ -167,8 +167,15 @@
       "cancelled": "キャンセル済み"
     },
     "schedule": {
-      "startAt": "開始予定時刻（任意）",
-      "help": "空欄の場合はすぐに開始します"
+      "startAt": "開始予定時刻（任意）"
+    },
+    "segments": {
+      "completed": "完了",
+      "partial": "一部完了",
+      "downloading": "ダウンロード中",
+      "retrying": "再試行待ち",
+      "pending": "未開始",
+      "unknownSize": "サーバーがファイルサイズを返さなかったため、セグメントを表示できません。"
     }
   },
   "settings": {

@@ -156,6 +156,19 @@ impl PartFile {
         self.state.lock().unwrap().done.covered()
     }
 
+    /// Finished byte ranges `[start, end)`, sorted.
+    pub fn done_ranges(&self) -> Vec<(u64, u64)> {
+        self.state.lock().unwrap().done.0.clone()
+    }
+
+    /// Size and finished ranges recorded for the part file at `path`, without opening it.
+    /// `None` when there is no (readable) record. Reflects the last flush, not unflushed writes.
+    pub fn read_record(path: &Path) -> Option<(Option<u64>, Vec<(u64, u64)>)> {
+        let bytes = std::fs::read(sidecar_path(path)).ok()?;
+        let sidecar: Sidecar = serde_json::from_slice(&bytes).ok()?;
+        Some((sidecar.validator.size, sidecar.done.0))
+    }
+
     /// Byte ranges still to fetch. Empty for unknown-size files (they are never resumed).
     pub fn missing(&self) -> Vec<Range<u64>> {
         match self.validator.size {

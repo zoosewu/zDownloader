@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tauri::State;
 use ts_rs::TS;
-use zoo_core::{AddRequest, StartMode, Task, TaskId};
+use zoo_core::{AddRequest, SegmentMap, StartMode, Task, TaskId};
 
 fn task_id(id: &str) -> CmdResult<TaskId> {
     Ok(id.parse()?)
@@ -114,4 +114,10 @@ pub async fn downloads_resume_all(downloads: State<'_, Downloads>) -> CmdResult<
 #[tauri::command]
 pub async fn downloads_clear_finished(downloads: State<'_, Downloads>) -> CmdResult<Vec<TaskId>> {
     Ok(downloads.manager.clear_finished().await?)
+}
+
+/// Done and in-flight byte ranges, for the segment view (polled while it is open).
+#[tauri::command]
+pub async fn downloads_segments(id: String, downloads: State<'_, Downloads>) -> CmdResult<SegmentMap> {
+    Ok(downloads.manager.segments(task_id(&id)?).await?)
 }

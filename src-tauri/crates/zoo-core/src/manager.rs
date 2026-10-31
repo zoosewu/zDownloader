@@ -14,7 +14,7 @@ use crate::naming;
 use crate::part_file::PartFile;
 use crate::rate::RateLimiter;
 use crate::store::JsonStore;
-use crate::task::{AddRequest, Config, Event, ProgressTick, StartMode, Task, TaskId, TaskState};
+use crate::task::{AddRequest, Config, Event, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};
 use crate::transfer::{self, Ctx, Progress, TransferSpec};
 use chrono::Utc;
 use std::collections::HashMap;
@@ -46,6 +46,7 @@ enum Cmd {
     ResumeAll(oneshot::Sender<Vec<Task>>),
     ClearFinished(oneshot::Sender<Vec<TaskId>>),
     List(oneshot::Sender<Vec<Task>>),
+    Segments(TaskId, Reply<SegmentMap>),
     UpdateConfig(Config),
     SetConnection(Arc<dyn ConnectionSource>),
     Shutdown(oneshot::Sender<()>),
@@ -118,6 +119,10 @@ impl DownloadManager {
     /// Remove completed and cancelled tasks from the list.
     pub async fn clear_finished(&self) -> Result<Vec<TaskId>, CoreError> {
         self.ask(Cmd::ClearFinished).await
+    }
+    /// Done and in-flight byte ranges of a task, for the segment view.
+    pub async fn segments(&self, id: TaskId) -> Result<SegmentMap, CoreError> {
+        self.ask(|r| Cmd::Segments(id, r)).await?
     }
     pub async fn list(&self) -> Result<Vec<Task>, CoreError> {
         self.ask(Cmd::List).await
@@ -241,6 +246,10 @@ impl Actor {
                     let _ = self.remove(*id);
                 }
                 let _ = reply.send(ids);
+            }
+            Cmd::Segments(id, reply) => {
+                let _ = reply.send(self.segments(id));
+                return; // read-only: nothing to save
             }
             Cmd::List(reply) => {
                 let _ = reply.send(self.tasks.clone());
@@ -366,6 +375,30 @@ impl Actor {
         self.tasks.retain(|t| t.id != id);
         self.emit(Event::Removed(id));
         Ok(())
+    }
+
+    fn segments(&self, id: TaskId) -> Result<SegmentMap, CoreError> {
+        let task = self.task(id)?;
+        let mut map = SegmentMap {
+            total: task.total,
+            segment_size: self.cfg.segment_size,
+            done: Vec::new(),
+            active: Vec::new(),
+        };
+        if let Some(job) = self.jobs.get(&id) {
+            map.total = job.progress.total().or(task.total);
+            match job.progress.segments() {
+                Some((done, active)) => (map.done, map.active) = (done, active),
+                // Stream mode fills the file front to back.
+                None => map.done = Some((0, job.progress.downloaded())).filter(|&(_, end)| end > 0).into_iter().collect(),
+            }
+        } else if task.state == TaskState::Completed {
+            map.done = task.total.map(|t| (0, t)).into_iter().collect();
+        } else if let Some((size, done)) = PartFile::read_record(&part_path_of(task)) {
+            map.total = size.or(task.total);
+            map.done = done;
+        }
+        Ok(map)
     }
 
     fn stop_job(&mut self, id: TaskId, stop: Stop) {

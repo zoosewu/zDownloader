@@ -17,4 +17,4 @@ pub mod transfer;
 
 pub use error::CoreError;
 pub use manager::DownloadManager;
-pub use task::{AddRequest, AutoRetry, Config, Event, ProgressTick, StartMode, Task, TaskId, TaskState};
+pub use task::{ActiveRange, AddRequest, AutoRetry, Config, Event, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};

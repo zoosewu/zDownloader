@@ -13,6 +13,7 @@ import type { Event as DownloadEvent } from './bindings/Event';
 import type { ImportResult } from './bindings/ImportResult';
 import type { ProxyInfo } from './bindings/ProxyInfo';
 import type { StartMode } from './bindings/StartMode';
+import type { SegmentMap } from './bindings/SegmentMap';
 import type { Task } from './bindings/Task';
 import type { TaskId } from './bindings/TaskId';
 
@@ -26,6 +27,8 @@ export type { ProxyInfo } from './bindings/ProxyInfo';
 export type { ProxyStatus } from './bindings/ProxyStatus';
 export type { SpeedLimitMode } from './bindings/SpeedLimitMode';
 export type { StartMode } from './bindings/StartMode';
+export type { SegmentMap } from './bindings/SegmentMap';
+export type { ActiveRange } from './bindings/ActiveRange';
 export type { Task } from './bindings/Task';
 export type { TaskId } from './bindings/TaskId';
 export type { TaskState } from './bindings/TaskState';
@@ -89,6 +92,7 @@ export const backend = {
     pauseAll: () => call<Task[]>('downloads_pause_all'),
     resumeAll: () => call<Task[]>('downloads_resume_all'),
     clearFinished: () => call<TaskId[]>('downloads_clear_finished'),
+    segments: (id: TaskId) => call<SegmentMap>('downloads_segments', { id }),
   },
   settings: {
     get: () => call<AppSettings>('settings_get'),

@@ -414,7 +414,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         onChange={(e) => setScheduleAt(e.target.value)}
         fullWidth
         margin="normal"
-        helperText={t('downloads.schedule.help')}
         InputLabelProps={{ shrink: true }}
         inputProps={{ min: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) }}
       />

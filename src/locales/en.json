@@ -167,8 +167,15 @@
       "cancelled": "Cancelled"
     },
     "schedule": {
-      "startAt": "Scheduled start (optional)",
-      "help": "Leave empty to start now"
+      "startAt": "Scheduled start (optional)"
+    },
+    "segments": {
+      "completed": "Completed",
+      "partial": "Partly done",
+      "downloading": "Downloading",
+      "retrying": "Waiting to retry",
+      "pending": "Not started",
+      "unknownSize": "The server did not report a file size, so segments cannot be shown."
     }
   },
   "settings": {

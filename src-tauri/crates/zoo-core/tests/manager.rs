@@ -310,3 +310,33 @@ async fn revisions_increase_with_every_change_and_survive_restart() {
     let later = again.add(req(fx.url("/file/10"), dir.path(), StartMode::Later)).await.unwrap();
     assert!(later.rev > done.rev, "revision counter restarted after reload");
 }
+
+#[tokio::test]
+async fn segment_map_follows_the_task_through_running_paused_and_completed() {
+    let fx = Fixture::start().await;
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let m = start(config(), store.path());
+    let size = 1024 * KB;
+
+    let id = m.add(req(fx.url(&format!("/file/{size}?delay_ms=10")), dir.path(), StartMode::Now)).await.unwrap().id;
+    wait_until(&m, id, 15, |t| t.downloaded > 100 * KB).await;
+
+    let running = m.segments(id).await.unwrap();
+    assert_eq!((running.total, running.segment_size), (Some(size), 64 * KB));
+    assert!(!running.active.is_empty(), "connections are fetching");
+    assert!(running.active.len() <= 2, "at most connections_per_task ranges in flight");
+    assert!(running.active.iter().all(|r| r.start < r.end && r.end <= size && !r.retrying));
+    let covered = |map: &zoo_core::SegmentMap| map.done.iter().map(|(s, e)| e - s).sum::<u64>();
+    assert!(covered(&running) > 0);
+
+    m.pause(id).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let paused = m.segments(id).await.unwrap();
+    assert!(paused.active.is_empty());
+    assert!(covered(&paused) >= covered(&running), "progress is read back from the part record");
+
+    m.resume(id).await.unwrap();
+    wait_state(&m, id, TaskState::Completed).await;
+    assert_eq!(m.segments(id).await.unwrap().done, vec![(0, size)]);
+    assert!(matches!(m.segments(TaskId::new()).await, Err(CoreError::NotFound)));
+}

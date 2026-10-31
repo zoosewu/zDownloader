@@ -13,10 +13,11 @@ use crate::connection::{ConnectionSource, Lease, Outcome};
 use crate::error::CoreError;
 use crate::part_file::{PartFile, Validator};
 use crate::rate::RateLimiter;
+use crate::task::ActiveRange;
 use futures_util::StreamExt;
 use reqwest::header::{CONTENT_RANGE, ETAG, LAST_MODIFIED, RANGE};
 use reqwest::{Response, StatusCode};
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::future::Future;
 use std::ops::Range;
 use std::path::PathBuf;
@@ -60,22 +61,50 @@ impl RetryPolicy {
     }
 }
 
-/// Live counters the manager samples for progress and speed.
-#[derive(Debug)]
+/// Live counters the manager samples for progress and speed, plus the segment picture.
 pub struct Progress {
     downloaded: AtomicU64,
     total: AtomicU64,
+    /// The part file while a ranged transfer runs; `None` in stream mode or between attempts.
+    part: Mutex<Option<Arc<PartFile>>>,
+    /// What each worker is fetching right now, by worker index.
+    active: Mutex<BTreeMap<usize, ActiveRange>>,
 }
 
 const UNKNOWN: u64 = u64::MAX;
 
 impl Default for Progress {
     fn default() -> Self {
-        Self { downloaded: AtomicU64::new(0), total: AtomicU64::new(UNKNOWN) }
+        Self {
+            downloaded: AtomicU64::new(0),
+            total: AtomicU64::new(UNKNOWN),
+            part: Mutex::new(None),
+            active: Mutex::new(BTreeMap::new()),
+        }
     }
 }
 
 impl Progress {
+    /// Finished and in-flight ranges of a running ranged transfer; `None` in stream mode.
+    pub fn segments(&self) -> Option<(Vec<(u64, u64)>, Vec<ActiveRange>)> {
+        let done = self.part.lock().unwrap().as_ref()?.done_ranges();
+        let active = self.active.lock().unwrap().values().copied().collect();
+        Some((done, active))
+    }
+
+    fn set_part(&self, part: Option<Arc<PartFile>>) {
+        *self.part.lock().unwrap() = part;
+        self.active.lock().unwrap().clear();
+    }
+
+    fn set_active(&self, worker: usize, range: Option<ActiveRange>) {
+        let mut active = self.active.lock().unwrap();
+        match range {
+            Some(r) => active.insert(worker, r),
+            None => active.remove(&worker),
+        };
+    }
+
     pub fn downloaded(&self) -> u64 {
         self.downloaded.load(Ordering::Relaxed)
     }
@@ -196,32 +225,13 @@ async fn ranged(spec: &TransferSpec, ctx: &Ctx, validator: Validator) -> Result<
     };
     ctx.progress.reset(part.downloaded(), part.size());
     let part = Arc::new(part);
-
-    let queue: VecDeque<Range<u64>> = part
-        .missing()
-        .into_iter()
-        .flat_map(|gap| split(gap, spec.segment_size.max(1)))
-        .collect();
-    let workers = spec.connections.max(1).min(queue.len());
-    let queue = Arc::new(Mutex::new(queue));
-
-    let mut set = JoinSet::new();
-    for _ in 0..workers {
-        let (queue, part, ctx) = (queue.clone(), part.clone(), ctx.clone());
-        let (url, retry) = (spec.url.clone(), spec.retry);
-        set.spawn(async move { worker(&url, retry, &queue, &part, &ctx).await });
-    }
-    let mut failure = None;
-    while let Some(joined) = set.join_next().await {
-        let result = joined.unwrap_or_else(|e| Err(CoreError::Protocol(format!("worker crashed: {e}")).into()));
-        if let Err(e) = result {
-            set.abort_all();
-            failure.get_or_insert(e);
-        }
-    }
+    ctx.progress.set_part(Some(part.clone()));
+    let result = run_workers(spec, ctx, &part).await;
+    // Release the shared handle before flushing, finalizing or deleting the file.
+    ctx.progress.set_part(None);
     // Keep whatever was fetched for the next attempt, whether we failed or not.
     part.flush()?;
-    if let Some(e) = failure {
+    if let Err(e) = result {
         if matches!(e, SegmentError::RangeIgnored) {
             drop(part);
             PartFile::discard(&spec.part_path)?;
@@ -233,13 +243,50 @@ async fn ranged(spec: &TransferSpec, ctx: &Ctx, validator: Validator) -> Result<
     Ok(part.finalize(&spec.dir, &spec.name)?)
 }
 
+/// Fetch every missing range of `part` with up to `spec.connections` workers.
+async fn run_workers(spec: &TransferSpec, ctx: &Ctx, part: &Arc<PartFile>) -> Result<(), SegmentError> {
+    let queue: VecDeque<Range<u64>> = part
+        .missing()
+        .into_iter()
+        .flat_map(|gap| split(gap, spec.segment_size.max(1)))
+        .collect();
+    let workers = spec.connections.max(1).min(queue.len());
+    let queue = Arc::new(Mutex::new(queue));
+
+    let mut set = JoinSet::new();
+    for id in 0..workers {
+        let (queue, part, ctx) = (queue.clone(), part.clone(), ctx.clone());
+        let (url, retry) = (spec.url.clone(), spec.retry);
+        set.spawn(async move {
+            let result = worker(id, &url, retry, &queue, &part, &ctx).await;
+            ctx.progress.set_active(id, None);
+            result
+        });
+    }
+    let mut failure = None;
+    while let Some(joined) = set.join_next().await {
+        let result = joined.unwrap_or_else(|e| Err(CoreError::Protocol(format!("worker crashed: {e}")).into()));
+        if let Err(e) = result {
+            set.abort_all();
+            failure.get_or_insert(e);
+        }
+    }
+    failure.map_or(Ok(()), Err)
+}
+
 fn split(range: Range<u64>, size: u64) -> impl Iterator<Item = Range<u64>> {
     (range.start..range.end)
         .step_by(size as usize)
         .map(move |start| start..(start + size).min(range.end))
 }
 
+/// Show what `worker` is fetching (or waiting to retry) in the segment picture.
+fn mark(ctx: &Ctx, worker: usize, range: &Range<u64>, retrying: bool) {
+    ctx.progress.set_active(worker, Some(ActiveRange { start: range.start, end: range.end, retrying }));
+}
+
 async fn worker(
+    id: usize,
     url: &str,
     retry: RetryPolicy,
     queue: &Mutex<VecDeque<Range<u64>>>,
@@ -250,6 +297,7 @@ async fn worker(
         let Some(mut range) = queue.lock().unwrap().pop_front() else { return Ok(()) };
         let mut attempt = 0;
         loop {
+            mark(ctx, id, &range, false);
             let (result, reached) = fetch_range(url, range.clone(), part, ctx).await;
             match result {
                 Ok(()) => break,
@@ -260,6 +308,7 @@ async fn worker(
                         return Err(e.into());
                     }
                     range.start = reached;
+                    mark(ctx, id, &range, true);
                     sleep_or_cancel(retry.delay(attempt), &ctx.cancel).await?;
                 }
                 Err(e) => return Err(e),
