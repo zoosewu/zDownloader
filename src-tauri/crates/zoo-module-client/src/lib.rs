@@ -4,6 +4,7 @@
 //! over stdio JSON lines (`protocol`), and restarts it when it dies or hangs.
 //! Design: docs/architecture/phase-4-site-modules.md
 
+pub mod manifest;
 pub mod protocol;
 pub mod supervisor;
 #[cfg(windows)]

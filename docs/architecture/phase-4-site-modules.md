@@ -124,7 +124,11 @@ export default defineModule({
 | `zoo-module test --record` / 預設重播 | 首次實連並錄製到 `tests/cassettes/`，之後離線重播 |
 | `zoo-module test --inspect` | 開 Inspector 埠，可從 VS Code 下中斷點 |
 
-- d.ts（`zoo-module` 套件的型別）由 host 的 zoo API 定義產生，與執行期一致。
+- **SDK**（`crates/zoo-module/sdk/`，已完成）：`zoo-module.d.ts`、`globals.d.ts`、`manifest.schema.json`。
+  - 型別是手寫的。執行期是否一致由 `tests/sdk.rs` 檢查：全域物件完全相同、宣告的成員都存在、schema 與 `Manifest::parse` 判定相同。
+  - 範本以 `lib: ["ES2023"]`、`types: []` 檢查型別，用到不支援的 API 會被標錯。
+  - `resolve` 回傳多餘欄位時，型別錯誤會指出欄位名稱與合法欄位。
+- 不做自訂 LSP 與 MCP server（2026-11-04 決定）：編輯器靠 TypeScript 與 JSON Schema 提供補全與檢查。
 - CLI 與 app 隨附的 host 是同一個執行檔；另外以 GitHub Release 單獨發佈給模組作者。
 
 ## Marketplace（ADR-0001）

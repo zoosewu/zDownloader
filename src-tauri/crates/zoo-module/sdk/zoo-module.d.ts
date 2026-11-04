@@ -1,0 +1,131 @@
+/**
+ * zoo-downloader site module API, apiVersion 1.
+ *
+ * A site module is one ES module file whose default export is `defineModule({ resolve })`.
+ * zoo-downloader calls `resolve` with a page URL the user pasted (one that matches the
+ * manifest's `urlPatterns`) and downloads whatever direct URL it returns.
+ *
+ * Runtime facts that matter when writing one:
+ * - Only `import ... from 'zoo-module'` is allowed. Bundle everything else into the one file.
+ * - Globals are Web APIs (see globals.d.ts), not Node or Deno: no `fs`, `process`, `require`.
+ * - `fetch` can only reach hosts listed in manifest `permissions.network.allowDomains`
+ *   (subdomains included), never private or local addresses. Cookies persist for the call.
+ * - Each call runs in a fresh JavaScript context: no state survives between calls.
+ * - A call has 30 s of time (excluding `zoo.wait` and captchas) and 128 MB of memory.
+ *
+ * @example
+ * import { defineModule } from 'zoo-module';
+ *
+ * export default defineModule({
+ *   async resolve(url, zoo) {
+ *     const page = await fetch(url).then((r) => r.text());
+ *     const doc = new DOMParser().parseFromString(page, 'text/html');
+ *     const href = doc.querySelector('a.download')?.getAttribute('href');
+ *     if (!href) throw zoo.fail('download link not found', { hint: 'the page layout may have changed' });
+ *     return { url: new URL(href, url).href, filename: doc.title };
+ *   },
+ * });
+ */
+declare module "zoo-module" {
+  /** What `resolve` returns: the direct download. */
+  export interface Resolved {
+    /** Absolute http(s) URL of the file itself. May contain credential placeholders. */
+    url: string;
+    /** File name to save as. Defaults to the name the server or URL gives. */
+    filename?: string;
+    /**
+     * Headers for the download request (e.g. `Referer`). May contain credential placeholders.
+     * If you set no `Cookie`, the cookies this call collected for `url` are sent.
+     */
+    headers?: Record<string, string>;
+    /** Size in bytes, if the site tells you before downloading. */
+    size?: number;
+  }
+
+  export interface SiteModule {
+    /**
+     * Turn a share page URL into a direct download. Throw (preferably `zoo.fail`) when it
+     * cannot be done; the message is shown to the user.
+     */
+    resolve(url: string, zoo: Zoo): Resolved | Promise<Resolved>;
+  }
+
+  /** `R` with any field `Resolved` does not have turned into an error message (the host rejects them). */
+  type OnlyResolvedFields<R> = {
+    [K in keyof R]: K extends keyof Resolved ? R[K] : `'${K & string}' is not a Resolved field (url, filename, headers, size)`;
+  };
+
+  /** Marks the default export as a site module and type-checks it. Returns `module` unchanged. */
+  export function defineModule<R extends Resolved>(module: {
+    resolve(url: string, zoo: Zoo): OnlyResolvedFields<R> | Promise<OnlyResolvedFields<R>>;
+  }): SiteModule;
+
+  /** Platform features that have no Web API equivalent. Passed to `resolve`. */
+  export interface Zoo {
+    /**
+     * An error to throw, with an optional hint telling the user (or you, while developing)
+     * what to do about it.
+     * @example throw zoo.fail('file was deleted', { hint: 'ask the uploader for a new link' });
+     */
+    fail(message: string, options?: { hint?: string }): Error;
+
+    /** Diagnostics; visible in the module test output and app logs. Same as `console`. */
+    log: ZooLog;
+
+    /** The user's credentials for this site, as placeholders only. */
+    credentials: ZooCredentials;
+
+    /** Ask the user to solve a captcha. Time spent here does not count against the limit. */
+    captcha: ZooCaptcha;
+
+    /**
+     * Wait out a site countdown (e.g. "free users wait 30 seconds"). The app shows it; it does
+     * not count against the time limit. At most 600 seconds per call to `wait`.
+     * @example await zoo.wait(30, 'free download countdown');
+     */
+    wait(seconds: number, reason?: string): Promise<void>;
+  }
+
+  export interface ZooLog {
+    debug(...args: unknown[]): void;
+    info(...args: unknown[]): void;
+    warn(...args: unknown[]): void;
+    error(...args: unknown[]): void;
+  }
+
+  /**
+   * Credentials the user entered for keys declared in manifest `permissions.credentials`.
+   * You never see the values. `placeholder(key)` returns a stand-in string: put it anywhere in
+   * a `fetch` URL, header or body (including `URLSearchParams` and `JSON.stringify` bodies) and
+   * the real value is sent, encoded correctly for where it sits. If a response echoes a value
+   * back, you see the placeholder instead. Do not transform placeholders (no `btoa`,
+   * slicing or hashing): the result will not be recognized.
+   */
+  export interface ZooCredentials {
+    /** Whether the user provided `key`. */
+    has(key: string): boolean;
+    /**
+     * Stand-in for the value of `key`. Throws if the user did not provide it.
+     * @example
+     * const body = new URLSearchParams({
+     *   login: zoo.credentials.placeholder('username'),
+     *   password: zoo.credentials.placeholder('password'),
+     * });
+     * await fetch('https://site.example/login', { method: 'POST', body });
+     */
+    placeholder(key: string): string;
+  }
+
+  export interface ZooCaptcha {
+    /**
+     * reCAPTCHA v2 on `pageUrl`. Resolves with the `g-recaptcha-response` token to submit.
+     * Throws if the user declines.
+     */
+    recaptcha(options: { siteKey: string; pageUrl: string }): Promise<string>;
+    /**
+     * An image captcha. The image is fetched with this call's cookies, so captchas tied to the
+     * session work. Resolves with the text the user typed; throws if they decline.
+     */
+    image(imageUrl: string): Promise<string>;
+  }
+}

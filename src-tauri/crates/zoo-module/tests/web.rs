@@ -164,10 +164,10 @@ async fn module_host_internals_stay_hidden() {
     let value = eval(
         &host(),
         &[],
-        "return [typeof Deno, typeof globalThis.__zooVendor, Object.keys(globalThis).filter((k) => k.startsWith('op_'))];",
+        "return [typeof Deno, typeof __bootstrap, typeof globalThis['__core-js_shared__'], Object.keys(globalThis).filter((k) => k.startsWith('op_'))];",
     )
     .await;
-    assert_eq!(value, json!(["undefined", "undefined", []]));
+    assert_eq!(value, json!(["undefined", "undefined", "undefined", []]));
 }
 
 #[tokio::test]

@@ -1,6 +1,7 @@
 // Runs before the module, once per isolate.
 // deno_core's console prints to stdout, which carries the protocol: replace it with one that
-// writes to stderr. Then hide Deno.core so module code reaches the host only through `zoo`.
+// writes to stderr. Then hide deno_core's op table so module code reaches the host only through
+// the APIs in web.js and `zoo`.
 ((core) => {
   const print = core.print;
   const format = (args) =>
@@ -80,5 +81,9 @@
     }
   };
   Object.defineProperty(globalThis, "__zooRun", { value: run });
+  // deno_core exposes its op table both as Deno.core and as __bootstrap.core.
   delete globalThis.Deno;
+  delete globalThis.__bootstrap;
+  // core-js keeps its state in closures; the global is only for sharing between copies.
+  delete globalThis["__core-js_shared__"];
 })(Deno.core);

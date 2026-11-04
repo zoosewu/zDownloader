@@ -39,7 +39,7 @@
   - [x] 4a client（協定 + Supervisor）+ host 骨架（資源上限、崩潰隔離）— shell 接線移到 4c
   - [x] 4b Policy + fetch + Web API + DOMParser + zoo API（帳密佔位、wait、captcha 事件）
   - [ ] 4c zoo-core Resolver seam、任務 phase、重新解析
-  - [ ] 4d 開發 CLI（new/check/test、錄製重播）、範本、AGENTS.md
+  - [ ] 4d 開發 CLI（new/check/test、錄製重播）、AGENTS.md — SDK 型別、manifest schema、範本已完成
   - [ ] 4e Marketplace 與前端模組頁
   - [ ] 4f k2s 遷移、刪除舊模組系統
   - [ ] 4g 實機驗證與文件

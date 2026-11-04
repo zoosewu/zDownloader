@@ -555,169 +555,20 @@ chmod +x .git/hooks/pre-commit
 
 ---
 
-## 模組開發者體驗 (Feature 004 - Module System)
+## 網站模組 SDK（Phase 4）
 
-### TypeScript 型別定義維護規則
+模組作者（多半是 AI）看到的 API 只有 `src-tauri/crates/zoo-module/sdk/`：
 
-當實作或修改模組系統相關功能時，**必須**檢查並更新以下檔案以保持同步：
+- `zoo-module.d.ts`：`defineModule`、`Resolved`、`zoo` API。JSDoc 要寫到不用看其他文件就會用。
+- `globals.d.ts`：host 提供的全域 Web API，**只宣告實際存在的**（模板 tsconfig 用 `lib: ["ES2023"]`、`types: []`，不引入 lib.dom）。
+- `manifest.schema.json`：manifest 格式。Rust 端是 `zoo-module-client::manifest::Manifest::parse`，兩者規則必須一致。
+- `template/`：`zoo-module new` 的範本，`sdk/` 會被複製到範本的 `types/`。
 
-#### 檢查清單
+改了 host 的 Web API、zoo API 或 manifest 格式時，同步改 SDK。以下測試會在兩邊不一致時失敗：
 
-**每次修改 Context API、模組接口或資料結構時，執行以下檢查：**
+- `crates/zoo-module/tests/sdk.rs`：執行期全域物件與 `globals.d.ts` 完全相同；宣告的每個成員都存在；JSON Schema 與 `Manifest::parse` 對同一組範例的判定相同。
+- `src/__tests__/module-sdk.test.ts`：範本能通過型別檢查；不支援的 API（`document`、`WebSocket`、`require`、`Deno` 等）與錯誤的 `resolve` 回傳值會被標錯。
 
-1. **型別定義檔** (`modules/@types/zoo-downloader/index.d.ts`)
-   - [ ] Context 接口是否反映最新的 API？
-   - [ ] HttpClient, Logger, CaptchaClient 等接口是否完整？
-   - [ ] DownloadInfo, HttpResponse 等資料型別是否正確？
-   - [ ] 所有新增的欄位都有 JSDoc 註解？
-   - [ ] 所有範例程式碼是否可執行？
-   - [ ] 全域型別別名是否需要更新？
-
-2. **VS Code 程式碼片段** (`modules/.vscode/zoo-downloader.code-snippets`)
-   - [ ] 是否需要新增常用模式的 snippet？
-   - [ ] 現有 snippets 是否反映最新 API？
-   - [ ] Placeholder 變數是否正確？
-
-3. **模組模板** (`modules/_template/`)
-   - [ ] index.js 是否使用最新的型別定義？
-   - [ ] manifest.json 是否包含所有新增的權限？
-   - [ ] README.md 是否說明新功能？
-
-4. **範例模組** (`modules/k2s/`)
-   - [ ] 是否展示新 API 的最佳實踐？
-   - [ ] JSDoc 註解是否完整？
-   - [ ] 是否包含錯誤處理範例？
-
-5. **開發者文件** (`specs/004-site-module-integration/quickstart.md`)
-   - [ ] 是否更新 API 參考？
-   - [ ] 是否提供新功能的使用範例？
-   - [ ] 是否更新限制和注意事項？
-
-#### 自動化檢查
-
-**在提交前執行**：
-
-```bash
-# 檢查型別定義語法
-cd modules/@types/zoo-downloader
-tsc --noEmit index.d.ts
-
-# 驗證 snippets JSON 格式
-cat modules/.vscode/zoo-downloader.code-snippets | jq . > /dev/null
-
-# 驗證模板檔案
-cd modules/_template
-node -c index.js  # 檢查 JavaScript 語法
-jq . manifest.json > /dev/null  # 檢查 JSON 格式
-```
-
-#### 常見更新場景
-
-**場景 1：新增 Context API**
-
-```rust
-// 後端新增 API
-#[op2]
-async fn op_http_delete(url: String) -> Result<HttpResponse, Error> { ... }
-```
-
-**必須更新**：
-1. ✅ `modules/@types/zoo-downloader/index.d.ts` - 添加 `delete()` 方法
-2. ✅ `modules/.vscode/zoo-downloader.code-snippets` - 添加 `zoo-http-delete` snippet
-3. ✅ `modules/_template/index.js` - 在註解中提示可用
-4. ✅ `quickstart.md` - 在 API 參考中說明
-
-**場景 2：修改資料結構**
-
-```rust
-// 後端修改
-pub struct DownloadInfo {
-    pub download_url: String,
-    pub filename: String,
-    pub filesize: Option<u64>,
-    pub headers: HashMap<String, String>,
-    pub expiry_time: Option<DateTime<Utc>>,  // ← 新增欄位
-}
-```
-
-**必須更新**：
-1. ✅ `modules/@types/zoo-downloader/index.d.ts` - 添加 `expiryTime?: string`
-2. ✅ `modules/_template/index.js` - 在返回範例中添加
-3. ✅ `modules/k2s/index.js` - 展示如何使用（如果適用）
-
-**場景 3：新增權限類型**
-
-```rust
-// 後端新增權限
-pub struct ModulePermissions {
-    pub network: NetworkPermission,
-    pub credentials: Option<CredentialPermission>,
-    pub storage: Option<StoragePermission>,  // ← 新增
-}
-```
-
-**必須更新**：
-1. ✅ `modules/@types/zoo-downloader/index.d.ts` - 添加 `storage?` 到 manifest 型別
-2. ✅ `modules/_template/manifest.json` - 在註解中說明
-3. ✅ `quickstart.md` - 在權限章節說明
-
-#### 驗證流程
-
-**完成模組系統功能後，執行以下驗證**：
-
-1. **型別定義測試**
-   ```bash
-   # 建立測試檔案
-   cat > /tmp/test-module.js << 'EOF'
-   /// <reference types="./modules/@types/zoo-downloader" />
-
-   /** @type {import('zoo-downloader').SiteModule} */
-   export class TestModule {
-     canHandle(url) { return true; }
-     async extractDownloadInfo(url, context) {
-       // 測試所有新 API
-       await context.http.get(url);
-       context.log.info('test');
-       return { downloadUrl: '', filename: '', filesize: null, headers: {} };
-     }
-   }
-   EOF
-
-   # 用 VS Code 打開，檢查是否有型別錯誤
-   code /tmp/test-module.js
-   ```
-
-2. **Snippet 測試**
-   - 在 VS Code 中創建新 `.js` 檔案
-   - 輸入每個 snippet prefix（如 `zoo-module`）
-   - 確認生成的程式碼正確且可執行
-
-3. **文件測試**
-   - 讓不熟悉專案的人閱讀 quickstart.md
-   - 確認他們能成功建立一個基本模組
-
-#### 維護週期
-
-- **即時更新**：每次修改模組 API 時立即更新
-- **Phase 完成時檢查**：每個 Phase 完成後完整檢查一次
-- **Release 前審查**：正式發布前完整審查所有開發者文件
-
-### Code Snippets 設計原則
-
-1. **簡潔優先**：snippets 應該生成最少但可用的程式碼
-2. **提供佔位符**：使用 `${1:description}` 提供有意義的預設值
-3. **包含註解**：關鍵位置加入註解提示
-4. **遵循最佳實踐**：生成的程式碼應展示正確的錯誤處理和型別使用
-5. **保持更新**：API 變更時立即更新對應的 snippets
-
-### 型別定義撰寫原則
-
-1. **完整的 JSDoc**：每個接口、方法、屬性都要有說明
-2. **實用的範例**：在 `@example` 中提供真實可用的程式碼
-3. **清晰的型別**：避免過度使用 `any`，提供具體型別
-4. **一致的命名**：遵循 camelCase 慣例
-5. **版本註記**：重大變更時在註解中標記版本
-
-**重要**：這些檔案是模組開發者的主要參考，必須保持高品質和最新狀態。
+舊的 `modules/@types`、`modules/.vscode`、`modules/_template` 屬於舊模組系統，4f 刪除，不要再更新。
 
 <!-- MANUAL ADDITIONS END -->
