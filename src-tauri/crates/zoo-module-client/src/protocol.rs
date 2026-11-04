@@ -6,13 +6,23 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-/// An installed module's entry point (the bundled single-file ESM).
+/// An installed module: its entry point (the bundled single-file ESM) and what the user let it do.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModuleRef {
     /// `id@marketplace`; used in logs and errors.
     pub id: String,
     pub entry: PathBuf,
+    #[serde(default)]
+    pub grants: Grants,
+}
+
+/// Permissions the user consented to (from the manifest). Everything not granted is denied.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Grants {
+    /// Hosts `fetch` may reach; each entry also covers its subdomains.
+    pub allow_domains: Vec<String>,
 }
 
 /// Resource limits for one `resolve` call.
@@ -99,7 +109,11 @@ mod tests {
     fn request_wire_shape() {
         let req = Request::Resolve {
             id: 7,
-            module: ModuleRef { id: "k2s@official".into(), entry: "m/index.js".into() },
+            module: ModuleRef {
+                id: "k2s@official".into(),
+                entry: "m/index.js".into(),
+                grants: Grants { allow_domains: vec!["k2s.cc".into()] },
+            },
             url: "https://example.com/f".into(),
             limits: Limits::default(),
         };
@@ -108,7 +122,7 @@ mod tests {
             json!({
                 "type": "resolve",
                 "id": 7,
-                "module": { "id": "k2s@official", "entry": "m/index.js" },
+                "module": { "id": "k2s@official", "entry": "m/index.js", "grants": { "allowDomains": ["k2s.cc"] } },
                 "url": "https://example.com/f",
                 "limits": { "heapMb": 128, "timeoutMs": 30000 }
             })

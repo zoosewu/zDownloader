@@ -9,5 +9,5 @@ pub mod supervisor;
 #[cfg(windows)]
 mod job;
 
-pub use protocol::{Limits, ModuleError, ModuleRef, Resolved};
+pub use protocol::{Grants, Limits, ModuleError, ModuleRef, Resolved};
 pub use supervisor::Supervisor;

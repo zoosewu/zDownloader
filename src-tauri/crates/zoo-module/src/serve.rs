@@ -9,9 +9,9 @@ use std::thread;
 
 use zoo_module_client::protocol::{ModuleError, Reply, Request};
 
-use crate::runtime;
+use crate::runtime::{self, HostOptions};
 
-pub fn run() {
+pub fn run(options: HostOptions) {
     let (replies, outbox) = mpsc::channel::<Reply>();
     thread::spawn(move || {
         for reply in outbox {
@@ -32,7 +32,7 @@ pub fn run() {
             Ok(Request::Resolve { id, module, url, limits }) => {
                 let replies = replies.clone();
                 thread::spawn(move || {
-                    let outcome = catch_unwind(AssertUnwindSafe(|| runtime::resolve(&module, &url, limits)))
+                    let outcome = catch_unwind(AssertUnwindSafe(|| runtime::resolve(&module, &url, limits, options)))
                         .unwrap_or_else(|_| Err(ModuleError::Crashed { message: "module host panicked".into() }));
                     let _ = replies.send(match outcome {
                         Ok(resolved) => Reply::Resolved { id, resolved },

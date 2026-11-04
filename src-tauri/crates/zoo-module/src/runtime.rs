@@ -17,6 +17,19 @@ use deno_core::{
 use serde::Deserialize;
 use zoo_module_client::protocol::{Limits, ModuleError, ModuleRef, Resolved};
 
+use crate::net::{Net, Policy};
+use crate::ops;
+
+/// Host-wide settings from the `serve` command line.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HostOptions {
+    /// Test-only: let fetch reach loopback fixtures.
+    pub allow_loopback: bool,
+}
+
+// Evaluated in this order in every isolate.
+const VENDOR: &str = include_str!("gen/vendor.js");
+const WEB: &str = include_str!("web.js");
 const BOOTSTRAP: &str = include_str!("bootstrap.js");
 /// What `import { defineModule } from 'zoo-module'` gets: identity, there for the types.
 const SDK: &str = "export const defineModule = (module) => module;\n";
@@ -26,7 +39,7 @@ const MAIN_SPECIFIER: &str = "zoo:main";
 const SHAPE_HINT: &str = "export default defineModule({ async resolve(url, zoo) { ... } })";
 const RESULT_HINT: &str = "resolve must return { url, filename?, headers?, size? } with an absolute http(s) url";
 
-pub fn resolve(module: &ModuleRef, url: &str, limits: Limits) -> Result<Resolved, ModuleError> {
+pub fn resolve(module: &ModuleRef, url: &str, limits: Limits, options: HostOptions) -> Result<Resolved, ModuleError> {
     let entry = std::path::absolute(&module.entry)
         .ok()
         .and_then(|path| ModuleSpecifier::from_file_path(path).ok())
@@ -37,7 +50,11 @@ pub fn resolve(module: &ModuleRef, url: &str, limits: Limits) -> Result<Resolved
         .enable_all()
         .build()
         .map_err(|e| ModuleError::Crashed { message: format!("cannot start event loop: {e}") })?
-        .block_on(run(entry, code, url, limits))
+        .block_on(async {
+            let net = Net::new(Policy::new(&module.grants.allow_domains, options.allow_loopback))
+                .map_err(|message| ModuleError::Crashed { message })?;
+            run(entry, code, net, url, limits).await
+        })
 }
 
 /// Why a call was cut short; set by the heap callback or the watchdog.
@@ -45,13 +62,15 @@ const TRIP_NONE: u8 = 0;
 const TRIP_TIMEOUT: u8 = 1;
 const TRIP_MEMORY: u8 = 2;
 
-async fn run(entry: ModuleSpecifier, code: String, url: &str, limits: Limits) -> Result<Resolved, ModuleError> {
+async fn run(entry: ModuleSpecifier, code: String, net: Net, url: &str, limits: Limits) -> Result<Resolved, ModuleError> {
     let heap_bytes = limits.heap_mb as usize * 1024 * 1024;
     let mut runtime = JsRuntime::new(RuntimeOptions {
         module_loader: Some(Rc::new(Loader { entry: entry.clone(), code })),
         create_params: Some(v8::CreateParams::default().heap_limits(0, heap_bytes)),
+        extensions: vec![ops::zoo_host::init()],
         ..Default::default()
     });
+    runtime.op_state().borrow_mut().put(Rc::new(net));
     let tripped = Arc::new(AtomicU8::new(TRIP_NONE));
     let isolate = runtime.v8_isolate().thread_safe_handle();
     {
@@ -77,9 +96,11 @@ async fn run(entry: ModuleSpecifier, code: String, url: &str, limits: Limits) ->
 }
 
 async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, url: &str) -> Result<Resolved, ModuleError> {
-    runtime
-        .execute_script("zoo:bootstrap", BOOTSTRAP)
-        .map_err(|e| ModuleError::Crashed { message: format!("bootstrap failed: {e}") })?;
+    for (name, code) in [("zoo:vendor", VENDOR), ("zoo:web", WEB), ("zoo:bootstrap", BOOTSTRAP)] {
+        runtime
+            .execute_script(name, code)
+            .map_err(|e| ModuleError::Crashed { message: format!("{name} failed: {e}") })?;
+    }
 
     let main = ModuleSpecifier::parse(MAIN_SPECIFIER).expect("valid specifier");
     let wrapper = format!(

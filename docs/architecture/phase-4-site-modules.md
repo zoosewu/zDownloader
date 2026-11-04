@@ -1,6 +1,6 @@
 # Phase 4 設計規格：網站模組系統重建
 
-- 狀態：已確認（2026-10-31），實作中：4a 完成
+- 狀態：已確認（2026-10-31），實作中：4a 完成、4b Web 層完成
 - 依據：[ADR-0001 marketplace](../adr/0001-site-module-marketplace.md)、[ADR-0002 執行環境](../adr/0002-site-module-runtime.md)
 - 修正：review B 段全部、SEC-3..6、D-4、D-5、C-11（偵測競態）
 - 術語見 [GLOSSARY.md](../../GLOSSARY.md)
@@ -87,7 +87,7 @@ export default defineModule({
 | 行程隔離 | 模組只在 `zoo-module serve` 中執行；崩潰時 Supervisor 重啟並讓進行中的解析失敗（可重試） |
 | 記憶體 | 每次 resolve 一個獨立 isolate，heap 上限預設 128 MB，`near_heap_limit_callback` 觸發即終止該次解析；呼叫之間不共享狀態、不洩漏。Windows 另以 Job Object 限制整個 host 2 GB，且 app 結束時 host 一併結束 |
 | CPU | 每次 `resolve` 的執行時限（預設 30 秒，不含 `zoo.wait` 與等待 captcha）：同步迴圈由 watchdog 執行緒以 `terminate_execution` 中斷，等待 I/O 由 tokio timeout 中斷；host 本身卡住時 Supervisor 在時限加 2 秒後 kill 並重啟 |
-| 網路 | 只有 `fetch`，且只能連 manifest `permissions.network.allowDomains`；擋私有/保留位址（含 IPv4-mapped、CGNAT、link-local）；DNS 解析後再檢查、redirect 每一跳重新檢查；回應大小上限 |
+| 網路 | 只有 `fetch`，且只能連 manifest `permissions.network.allowDomains`（含子網域）；擋私有/保留位址（含 IPv4-mapped、NAT64、CGNAT、link-local），在自訂 DNS resolver 中檢查以防 rebinding；redirect 由 host 逐跳處理並重新檢查；不經系統 proxy；回應上限 16 MB；每次 resolve 一個 cookie jar；預設瀏覽器 User-Agent |
 | 帳密 | 只存在主程式的系統鑰匙圈；每次解析只把該模組宣告的 key 傳給 host；替換只發生在送往白名單網域的請求 |
 | 其他能力 | 沒有檔案系統、子行程、環境變數、`eval` 以外的動態載入；不再用 JS 層刪全域物件的假 sandbox |
 | 稽核 | 每次解析記錄請求的網域與 Policy 判定，保留最近 N 筆，可在模組詳情檢視 |
@@ -132,7 +132,7 @@ export default defineModule({
 | 子階段 | 內容 | 驗證 |
 |---|---|---|
 | 4a ✅ | client crate（協定 + Supervisor + Job Object）；`zoo-module serve`：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限、隱藏 `Deno.core`、console 改走 stderr | `crates/zoo-module/tests/host.rs`：無窮迴圈、OOM、並行隔離、模組形狀錯誤、回傳值驗證、host 崩潰/卡住/不存在 |
-| 4b | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
+| 4b（Web 層 ✅） | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
 | 4c | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
 | 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
@@ -147,7 +147,7 @@ export default defineModule({
 |---|---|---|---|
 | 1 | IPC 傳輸 | stdio JSON lines | 跨平台、無需處理 pipe 名稱與權限；host 的 log 走 stderr |
 | 2 | HTML 解析 | 在 host 內預載 `linkedom`（純 JS），提供 `DOMParser` | 行為接近瀏覽器、AI 熟悉；Rust 端解析再橋接 DOM 太複雜 |
-| 3 | Web API 實作 | `URL`、`TextEncoder`、`console`、`crypto` 沿用 deno 的 extension crate；`fetch` 自己實作 | `fetch` 必須逐跳經過 Policy，deno_fetch 的權限介面做不到每次 redirect 與帳密替換；其餘沿用可得到標準行為。需先確認版本與 deno_core 0.372 相容 |
+| 3 | Web API 實作 | **改為**：`URL`、`URLSearchParams`、`structuredClone`、`atob`/`btoa` 用 core-js，`DOMParser` 用 linkedom，兩者以 esbuild 打包成 `crates/zoo-module/src/gen/vendor.js`（`pnpm build:module-host-js`，產物入庫）；`fetch`、`Headers`、`Response`、`FormData`、`AbortController`、`TextEncoder`/`TextDecoder`、計時器、`crypto` 自己寫在 `web.js`，底層是 host op | 相容 deno_core 0.372 的 deno_web 0.253 連帶 deno_permissions、deno_features，且每次升級 deno_core 都要整組換版；自己的層沒有版本耦合。代價：不支援串流 body、Blob、WebSocket |
 | 4 | 模組形狀 | 宣告式 `urlPatterns` + 單一 `resolve(url, zoo)` | AI 要寫的東西最少；比對不需要執行 JS |
 | 5 | 模組語言 | 範本用 TypeScript，打包成 ESM 單檔；host 只吃打包後的 JS | 型別讓 AI 少犯錯；host 不必內建 TS 編譯 |
 | 6 | 帳密 | 佔位字串 + host 端替換 | JS 拿不到帳密值，仍能用標準 fetch |

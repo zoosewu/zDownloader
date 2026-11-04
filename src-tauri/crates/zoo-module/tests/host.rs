@@ -1,19 +1,12 @@
 //! The host through the app's interface: a real `zoo-module serve` process behind a Supervisor.
 
+mod common;
+
 use std::time::{Duration, Instant};
 
+use common::{host, limits, module};
 use tempfile::TempDir;
 use zoo_module_client::{Limits, ModuleError, ModuleRef, Supervisor};
-
-fn host() -> Supervisor {
-    Supervisor::new(env!("CARGO_BIN_EXE_zoo-module"), ["serve"])
-}
-
-fn module(dir: &TempDir, name: &str, code: &str) -> ModuleRef {
-    let entry = dir.path().join(format!("{name}.js"));
-    std::fs::write(&entry, code).unwrap();
-    ModuleRef { id: format!("{name}@test"), entry }
-}
 
 const OK: &str = r#"
 import { defineModule } from 'zoo-module';
@@ -23,10 +16,6 @@ export default defineModule({
   },
 });
 "#;
-
-fn limits(timeout_ms: u64) -> Limits {
-    Limits { timeout_ms, ..Limits::default() }
-}
 
 #[tokio::test]
 async fn resolves_with_module_result() {
@@ -139,7 +128,7 @@ async fn module_shape_errors_tell_how_to_fix() {
     let syntax = module(&dir, "syntax", "export default {");
     assert!(matches!(host.resolve(syntax, "https://a/", Limits::default()).await, Err(ModuleError::Load { .. })));
 
-    let missing = ModuleRef { id: "missing@test".into(), entry: dir.path().join("nope.js") };
+    let missing = ModuleRef { entry: dir.path().join("nope.js"), ..module(&dir, "missing", "") };
     assert!(matches!(host.resolve(missing, "https://a/", Limits::default()).await, Err(ModuleError::Load { .. })));
 }
 
@@ -210,7 +199,7 @@ fn hung_host() -> Supervisor {
 }
 
 fn dummy() -> ModuleRef {
-    ModuleRef { id: "dummy@test".into(), entry: "dummy.js".into() }
+    ModuleRef { id: "dummy@test".into(), entry: "dummy.js".into(), grants: Default::default() }
 }
 
 #[tokio::test]

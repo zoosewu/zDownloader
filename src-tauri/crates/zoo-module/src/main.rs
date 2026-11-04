@@ -3,19 +3,26 @@
 //! `zoo-module serve` is the host the app starts (see zoo-module-client's Supervisor).
 //! Design: docs/architecture/phase-4-site-modules.md
 
+mod net;
+mod ops;
 mod runtime;
 mod serve;
 
 use std::process::ExitCode;
 
+use runtime::HostOptions;
+
+const USAGE: &str = "usage: zoo-module serve [--allow-loopback]";
+
 fn main() -> ExitCode {
-    match std::env::args().nth(1).as_deref() {
-        Some("serve") => {
-            serve::run();
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
+        ["serve", flags @ ..] if flags.iter().all(|f| *f == "--allow-loopback") => {
+            serve::run(HostOptions { allow_loopback: !flags.is_empty() });
             ExitCode::SUCCESS
         }
         _ => {
-            eprintln!("usage: zoo-module serve");
+            eprintln!("{USAGE}");
             ExitCode::from(2)
         }
     }
