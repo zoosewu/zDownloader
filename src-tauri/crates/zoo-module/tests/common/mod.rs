@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use tempfile::TempDir;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
-use zoo_module_client::{Grants, Limits, ModuleRef, Supervisor};
+use zoo_module_client::{NoInteraction, Grants, Limits, ModuleRef, Supervisor};
 
 pub fn host() -> Supervisor {
     Supervisor::new(env!("CARGO_BIN_EXE_zoo-module"), ["serve"])
@@ -29,7 +29,7 @@ pub fn module_allowing(dir: &TempDir, name: &str, code: &str, domains: &[&str]) 
     ModuleRef {
         id: format!("{name}@test"),
         entry,
-        grants: Grants { allow_domains: domains.iter().map(|d| d.to_string()).collect() },
+        grants: Grants { allow_domains: domains.iter().map(|d| d.to_string()).collect(), ..Default::default() },
     }
 }
 
@@ -48,7 +48,7 @@ pub async fn eval(host: &Supervisor, domains: &[&str], body: &str) -> serde_json
          }} }};"
     );
     let resolved = host
-        .resolve(module_allowing(&dir, "eval", &code, domains), "https://input/", Limits::default())
+        .resolve(module_allowing(&dir, "eval", &code, domains), "https://input/", Limits::default(), &NoInteraction)
         .await
         .unwrap_or_else(|e| panic!("module failed: {e:?}"));
     serde_json::from_str(&resolved.filename.unwrap()).unwrap()

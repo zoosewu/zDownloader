@@ -3,6 +3,8 @@
 //! `zoo-module serve` is the host the app starts (see zoo-module-client's Supervisor).
 //! Design: docs/architecture/phase-4-site-modules.md
 
+mod budget;
+mod link;
 mod net;
 mod ops;
 mod runtime;

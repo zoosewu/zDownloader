@@ -23,6 +23,20 @@ pub struct ModuleRef {
 pub struct Grants {
     /// Hosts `fetch` may reach; each entry also covers its subdomains.
     pub allow_domains: Vec<String>,
+    /// Credential values by key (`[A-Za-z0-9_]+`). Module code only ever sees placeholders.
+    #[serde(default)]
+    pub credentials: BTreeMap<String, Secret>,
+}
+
+/// A credential value. Never printed.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Secret(pub String);
+
+impl std::fmt::Debug for Secret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Secret(***)")
+    }
 }
 
 /// Resource limits for one `resolve` call.
@@ -75,19 +89,23 @@ pub enum ModuleError {
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Request {
     Resolve { id: u64, module: ModuleRef, url: String, limits: Limits },
+    /// The user's answer to a `CallEvent::Captcha`; `None` if they declined.
+    Answer { id: u64, ticket: u64, solution: Option<String> },
 }
 
 impl Request {
     pub fn id(&self) -> u64 {
         match self {
-            Request::Resolve { id, .. } => *id,
+            Request::Resolve { id, .. } | Request::Answer { id, .. } => *id,
         }
     }
 }
 
+/// `id` is the call's id. A call gets any number of `Event`s, then one `Resolved` or `Failed`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Reply {
+    Event { id: u64, event: CallEvent },
     Resolved { id: u64, resolved: Resolved },
     Failed { id: u64, error: ModuleError },
 }
@@ -95,9 +113,28 @@ pub enum Reply {
 impl Reply {
     pub fn id(&self) -> u64 {
         match self {
-            Reply::Resolved { id, .. } | Reply::Failed { id, .. } => *id,
+            Reply::Event { id, .. } | Reply::Resolved { id, .. } | Reply::Failed { id, .. } => *id,
         }
     }
+}
+
+/// Something the user should see while a call runs. Neither counts against the time limit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum CallEvent {
+    /// `zoo.wait`: the site makes free users wait.
+    Waiting { ms: u64, reason: Option<String> },
+    /// The module needs a captcha solved; answer with `Request::Answer` and this ticket.
+    Captcha { ticket: u64, challenge: Captcha },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum Captcha {
+    /// Solve in a webview showing `page_url`; the solution is the g-recaptcha-response token.
+    Recaptcha { site_key: String, page_url: String },
+    /// Show the image (already fetched through the module's session); the solution is the text.
+    Image { mime: String, base64: String },
 }
 
 #[cfg(test)]
@@ -112,7 +149,10 @@ mod tests {
             module: ModuleRef {
                 id: "k2s@official".into(),
                 entry: "m/index.js".into(),
-                grants: Grants { allow_domains: vec!["k2s.cc".into()] },
+                grants: Grants {
+                    allow_domains: vec!["k2s.cc".into()],
+                    credentials: BTreeMap::from([("password".into(), Secret("hunter2".into()))]),
+                },
             },
             url: "https://example.com/f".into(),
             limits: Limits::default(),
@@ -122,7 +162,7 @@ mod tests {
             json!({
                 "type": "resolve",
                 "id": 7,
-                "module": { "id": "k2s@official", "entry": "m/index.js", "grants": { "allowDomains": ["k2s.cc"] } },
+                "module": { "id": "k2s@official", "entry": "m/index.js", "grants": { "allowDomains": ["k2s.cc"], "credentials": { "password": "hunter2" } } },
                 "url": "https://example.com/f",
                 "limits": { "heapMb": 128, "timeoutMs": 30000 }
             })
@@ -155,6 +195,30 @@ mod tests {
             serde_json::to_value(&replies[1]).unwrap(),
             json!({ "type": "failed", "id": 2, "error": { "kind": "timeout", "limitMs": 5 } })
         );
+    }
+
+    #[test]
+    fn secrets_never_print() {
+        let grants = Grants { allow_domains: vec![], credentials: BTreeMap::from([("p".into(), Secret("hunter2".into()))]) };
+        assert!(!format!("{grants:?}").contains("hunter2"));
+    }
+
+    #[test]
+    fn event_wire_shape() {
+        let reply = Reply::Event {
+            id: 4,
+            event: CallEvent::Captcha {
+                ticket: 1,
+                challenge: Captcha::Recaptcha { site_key: "k".into(), page_url: "https://p".into() },
+            },
+        };
+        assert_eq!(
+            serde_json::to_value(&reply).unwrap(),
+            json!({ "type": "event", "id": 4, "event": { "kind": "captcha", "ticket": 1,
+                    "challenge": { "type": "recaptcha", "siteKey": "k", "pageUrl": "https://p" } } })
+        );
+        let answer = Request::Answer { id: 4, ticket: 1, solution: None };
+        assert_eq!(serde_json::to_value(&answer).unwrap(), json!({ "type": "answer", "id": 4, "ticket": 1, "solution": null }));
     }
 
     #[test]

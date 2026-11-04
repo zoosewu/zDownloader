@@ -1,6 +1,6 @@
 # Phase 4 設計規格：網站模組系統重建
 
-- 狀態：已確認（2026-10-31），實作中：4a 完成、4b Web 層完成
+- 狀態：已確認（2026-10-31），實作中：4a、4b 完成
 - 依據：[ADR-0001 marketplace](../adr/0001-site-module-marketplace.md)、[ADR-0002 執行環境](../adr/0002-site-module-runtime.md)
 - 修正：review B 段全部、SEC-3..6、D-4、D-5、C-11（偵測競態）
 - 術語見 [GLOSSARY.md](../../GLOSSARY.md)
@@ -80,6 +80,20 @@ export default defineModule({
   - `zoo.log.*`、`zoo.fail(message, { hint })`。
 - manifest 新增 `apiVersion: 1`；舊格式（k2s 現行）不相容，由 4f 遷移。
 
+### zoo API 的實作細節（4b）
+
+- **帳密佔位字串**：`zoocred-<每次呼叫的隨機值>-<key>-`，只含 URL、表單、JSON 編碼都不會改變的字元；key 限 `[A-Za-z0-9_]`。
+  - host 依位置換成真值：URL 中做 percent-encoding、`application/x-www-form-urlencoded` body 做表單編碼、JSON body 做 JSON 跳脫、header 與其他 body 原樣。
+  - 回應的 body、header、URL 中出現的真值會被換回佔位字串（長度 ≥ 6 的值才換，避免誤傷一般內容）。
+  - `resolve` 回傳的 `url`、`headers` 中的佔位字串也會換成真值，交給下載核心使用。
+  - 尚不支援：在 JS 中對佔位字串做運算（例如 `btoa(user + ':' + pass)` 組 Basic auth）。需要時再加專用 API。
+- **Session 延續**：`resolve` 沒有自己設定 `Cookie` header 時，host 會把這次呼叫的 cookie jar 中屬於下載網址的 cookie 加進 `Resolved.headers`。
+- **等待與 captcha**：
+  - host 送出 `Event`（`waiting` / `captcha`），app 以 `Answer` 回覆 captcha。
+  - 時間預算在等待期間暫停：host 端由 `Budget` 處理，Supervisor 端則把期限往後延。
+  - 上限：單次 `zoo.wait` 600 秒，captcha 等待使用者 900 秒（逾時視為拒絕）。
+  - 圖片 captcha 由 host 透過 Policy 與該次呼叫的 cookie 抓取，再以 base64 交給 app。
+
 ## 安全與資源
 
 | 項目 | 做法 |
@@ -132,7 +146,7 @@ export default defineModule({
 | 子階段 | 內容 | 驗證 |
 |---|---|---|
 | 4a ✅ | client crate（協定 + Supervisor + Job Object）；`zoo-module serve`：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限、隱藏 `Deno.core`、console 改走 stderr | `crates/zoo-module/tests/host.rs`：無窮迴圈、OOM、並行隔離、模組形狀錯誤、回傳值驗證、host 崩潰/卡住/不存在 |
-| 4b（Web 層 ✅） | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
+| 4b ✅ | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
 | 4c | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
 | 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |

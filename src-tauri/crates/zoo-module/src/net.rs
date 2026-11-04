@@ -2,12 +2,16 @@
 //! http(s) only, host on the module's allowlist, and (after DNS, so rebinding cannot dodge it)
 //! a public address. Redirects are followed here, hop by hop, never by reqwest.
 
+use std::collections::BTreeMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
 use deno_core::url::Url;
+use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
+use reqwest::cookie::{CookieStore, Jar};
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
+use zoo_module_client::protocol::{Resolved, Secret};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Method, StatusCode};
 
@@ -163,18 +167,114 @@ pub struct FetchResponse {
     pub body: Vec<u8>,
 }
 
+/// Credential values the module may use but never see. Module code gets placeholders
+/// (`zoocred-<nonce>-<key>-`, unchanged by URL, form and JSON encoding); requests get the
+/// value, encoded for where the placeholder sits; responses get the value replaced back.
+pub struct Credentials {
+    nonce: String,
+    values: BTreeMap<String, String>,
+}
+
+/// Shorter values are too likely to occur in ordinary pages to scrub safely.
+const MIN_SCRUB_LEN: usize = 6;
+/// RFC 3986 unreserved characters stay; everything else is percent-encoded.
+const COMPONENT: &AsciiSet = &NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
+
+impl Credentials {
+    pub fn new(granted: &BTreeMap<String, Secret>) -> Self {
+        let mut nonce = [0u8; 6];
+        getrandom::fill(&mut nonce).expect("OS randomness");
+        let values = granted
+            .iter()
+            .filter(|(key, _)| {
+                let ok = !key.is_empty() && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_');
+                if !ok {
+                    eprintln!("ignoring credential with invalid key {key:?} (allowed: A-Z a-z 0-9 _)");
+                }
+                ok
+            })
+            .map(|(key, secret)| (key.clone(), secret.0.clone()))
+            .collect();
+        Self { nonce: nonce.iter().map(|b| format!("{b:02x}")).collect(), values }
+    }
+
+    pub fn placeholder(&self, key: &str) -> Option<String> {
+        self.values.contains_key(key).then(|| format!("zoocred-{}-{key}-", self.nonce))
+    }
+
+    fn fill(&self, text: &str, encode: fn(&str) -> String) -> String {
+        self.values.iter().fold(text.to_string(), |text, (key, value)| {
+            text.replace(&format!("zoocred-{}-{key}-", self.nonce), &encode(value))
+        })
+    }
+
+    fn fill_bytes(&self, bytes: &[u8], encode: fn(&str) -> String) -> Vec<u8> {
+        self.values.iter().fold(bytes.to_vec(), |bytes, (key, value)| {
+            replace_bytes(&bytes, format!("zoocred-{}-{key}-", self.nonce).as_bytes(), encode(value).as_bytes())
+        })
+    }
+
+    fn scrub(&self, bytes: &[u8]) -> Vec<u8> {
+        self.values.iter().filter(|(_, value)| value.len() >= MIN_SCRUB_LEN).fold(bytes.to_vec(), |bytes, (key, value)| {
+            replace_bytes(&bytes, value.as_bytes(), format!("zoocred-{}-{key}-", self.nonce).as_bytes())
+        })
+    }
+
+    fn scrub_text(&self, text: &str) -> String {
+        String::from_utf8_lossy(&self.scrub(text.as_bytes())).into_owned()
+    }
+}
+
+fn raw(value: &str) -> String {
+    value.to_string()
+}
+
+fn component(value: &str) -> String {
+    utf8_percent_encode(value, COMPONENT).to_string()
+}
+
+fn form(value: &str) -> String {
+    deno_core::url::form_urlencoded::byte_serialize(value.as_bytes()).collect()
+}
+
+fn json(value: &str) -> String {
+    let quoted = serde_json::to_string(value).expect("strings serialize");
+    quoted[1..quoted.len() - 1].to_string()
+}
+
+fn replace_bytes(haystack: &[u8], needle: &[u8], with: &[u8]) -> Vec<u8> {
+    if needle.is_empty() || haystack.len() < needle.len() {
+        return haystack.to_vec();
+    }
+    let mut out = Vec::with_capacity(haystack.len());
+    let mut i = 0;
+    while i < haystack.len() {
+        if haystack[i..].starts_with(needle) {
+            out.extend_from_slice(with);
+            i += needle.len();
+        } else {
+            out.push(haystack[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
 /// One per `resolve` call: its own cookie jar, like a private browser session.
 pub struct Net {
     client: reqwest::Client,
     policy: Arc<Policy>,
+    jar: Arc<Jar>,
+    pub credentials: Credentials,
 }
 
 impl Net {
-    pub fn new(policy: Policy) -> Result<Self, String> {
+    pub fn new(policy: Policy, credentials: Credentials) -> Result<Self, String> {
         let policy = Arc::new(policy);
+        let jar = Arc::new(Jar::default());
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
-            .cookie_store(true)
+            .cookie_provider(jar.clone())
             // A proxy would resolve names itself, out of the Policy's sight.
             .no_proxy()
             .dns_resolver(Arc::new(PolicyResolver(policy.clone())))
@@ -182,20 +282,47 @@ impl Net {
             .user_agent(USER_AGENT)
             .build()
             .map_err(|e| format!("cannot build HTTP client: {e}"))?;
-        Ok(Self { client, policy })
+        Ok(Self { client, policy, jar, credentials })
+    }
+
+    /// Fills credential placeholders in the result and carries the session's cookies over to
+    /// the download, unless the module set its own Cookie header.
+    pub fn finish(&self, resolved: &mut Resolved) {
+        resolved.url = self.credentials.fill(&resolved.url, component);
+        for value in resolved.headers.values_mut() {
+            *value = self.credentials.fill(value, raw);
+        }
+        if resolved.headers.keys().any(|k| k.eq_ignore_ascii_case("cookie")) {
+            return;
+        }
+        let cookies = Url::parse(&resolved.url).ok().and_then(|url| self.jar.cookies(&url));
+        if let Some(cookies) = cookies.and_then(|v| v.to_str().ok().map(String::from)) {
+            resolved.headers.insert("Cookie".into(), cookies);
+        }
     }
 
     pub async fn fetch(&self, request: FetchRequest) -> Result<FetchResponse, String> {
-        let mut url = Url::parse(&request.url).map_err(|e| format!("fetch: invalid url {:?}: {e}", request.url))?;
+        let credentials = &self.credentials;
+        let target = credentials.fill(&request.url, component);
+        let mut url = Url::parse(&target).map_err(|e| format!("fetch: invalid url {:?}: {e}", request.url))?;
         let mut method =
             Method::from_bytes(request.method.as_bytes()).map_err(|_| format!("fetch: bad method {}", request.method))?;
         let mut headers = HeaderMap::new();
         for (name, value) in &request.headers {
             let name = HeaderName::from_bytes(name.as_bytes()).map_err(|_| format!("fetch: bad header name {name:?}"))?;
-            let value = HeaderValue::from_str(value).map_err(|_| format!("fetch: bad value for header {name}"))?;
+            let value = HeaderValue::from_str(&credentials.fill(value, raw))
+                .map_err(|_| format!("fetch: bad value for header {name}"))?;
             headers.append(name, value);
         }
-        let mut body = request.body;
+        let content_type = headers.get("content-type").and_then(|v| v.to_str().ok()).unwrap_or("").to_ascii_lowercase();
+        let encode: fn(&str) -> String = if content_type.starts_with("application/x-www-form-urlencoded") {
+            form
+        } else if content_type.contains("json") {
+            json
+        } else {
+            raw
+        };
+        let mut body = request.body.map(|body| credentials.fill_bytes(&body, encode));
         let mut redirected = false;
 
         for _ in 0..=MAX_REDIRECTS {
@@ -231,18 +358,23 @@ impl Net {
                     continue;
                 }
             }
-            return read(response, &url, redirected).await;
+            return read(response, &url, redirected, credentials).await;
         }
         Err(format!("fetch {url}: more than {MAX_REDIRECTS} redirects"))
     }
 }
 
-async fn read(mut response: reqwest::Response, url: &Url, redirected: bool) -> Result<FetchResponse, String> {
+async fn read(
+    mut response: reqwest::Response,
+    url: &Url,
+    redirected: bool,
+    credentials: &Credentials,
+) -> Result<FetchResponse, String> {
     let status = response.status();
     let headers = response
         .headers()
         .iter()
-        .map(|(k, v)| (k.as_str().to_string(), String::from_utf8_lossy(v.as_bytes()).into_owned()))
+        .map(|(k, v)| (k.as_str().to_string(), credentials.scrub_text(&String::from_utf8_lossy(v.as_bytes()))))
         .collect();
     let mut body = Vec::new();
     while let Some(chunk) = response.chunk().await.map_err(|e| describe(url, &e))? {
@@ -254,10 +386,10 @@ async fn read(mut response: reqwest::Response, url: &Url, redirected: bool) -> R
     Ok(FetchResponse {
         status: status.as_u16(),
         status_text: status.canonical_reason().unwrap_or("").to_string(),
-        url: url.to_string(),
+        url: credentials.scrub_text(url.as_str()),
         redirected,
         headers,
-        body,
+        body: credentials.scrub(&body),
     })
 }
 

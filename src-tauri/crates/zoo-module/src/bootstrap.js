@@ -18,12 +18,44 @@
   }
   globalThis.console = { ...log, log: log.info };
 
+  const { op_zoo_credential, op_zoo_wait, op_zoo_captcha } = core.ops;
+  const fail = (message, { hint } = {}) => {
+    const error = new Error(message);
+    if (hint !== undefined) error.hint = String(hint);
+    return error;
+  };
+  const solved = (solution) => {
+    if (solution === null) throw fail("captcha was not solved", { hint: "the user declined or did not answer in time" });
+    return solution;
+  };
+
   const zoo = Object.freeze({
     log: Object.freeze({ ...log }),
-    fail(message, { hint } = {}) {
-      const error = new Error(message);
-      if (hint !== undefined) error.hint = String(hint);
-      return error;
+    fail,
+    credentials: Object.freeze({
+      has: (key) => op_zoo_credential(String(key)) !== null,
+      // An opaque stand-in for the value: put it in a fetch url, header or body and the host
+      // sends the real value. Module code never sees credential values.
+      placeholder(key) {
+        const placeholder = op_zoo_credential(String(key));
+        if (placeholder === null) {
+          throw fail(`credential '${key}' is not available`, {
+            hint: "declare it in manifest.json permissions.credentials; check zoo.credentials.has(key) first",
+          });
+        }
+        return placeholder;
+      },
+    }),
+    captcha: Object.freeze({
+      recaptcha: async ({ siteKey, pageUrl }) =>
+        solved(await op_zoo_captcha({ kind: "recaptcha", siteKey: String(siteKey), pageUrl: String(pageUrl) })),
+      image: async (imageUrl) => solved(await op_zoo_captcha({ kind: "image", url: String(imageUrl) })),
+    }),
+    // A site countdown. Shown to the user; does not count against the time limit.
+    wait: async (seconds, reason) => {
+      const ms = Math.round(Number(seconds) * 1000);
+      if (!(ms >= 0)) throw new TypeError("zoo.wait: seconds must be a non-negative number");
+      await op_zoo_wait(ms, reason === undefined || reason === null ? "" : String(reason));
     },
   });
 

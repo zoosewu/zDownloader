@@ -37,7 +37,7 @@
 - ~~Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）~~ 併入 Phase 2
 - [ ] Phase 4 網站模組系統重建 — 分支 `rebuild/phase-4`，規格 `docs/architecture/phase-4-site-modules.md`（已確認），依 ADR-0001、ADR-0002
   - [x] 4a client（協定 + Supervisor）+ host 骨架（資源上限、崩潰隔離）— shell 接線移到 4c
-  - [ ] 4b Policy + fetch + Web API + DOMParser + zoo API
+  - [x] 4b Policy + fetch + Web API + DOMParser + zoo API（帳密佔位、wait、captcha 事件）
   - [ ] 4c zoo-core Resolver seam、任務 phase、重新解析
   - [ ] 4d 開發 CLI（new/check/test、錄製重播）、範本、AGENTS.md
   - [ ] 4e Marketplace 與前端模組頁

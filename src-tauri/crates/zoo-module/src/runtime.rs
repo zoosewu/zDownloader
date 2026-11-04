@@ -5,8 +5,7 @@
 
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{mpsc, Arc};
-use std::thread;
+use std::sync::Arc;
 use std::time::Duration;
 
 use deno_core::error::{CoreError, ModuleLoaderError};
@@ -17,7 +16,9 @@ use deno_core::{
 use serde::Deserialize;
 use zoo_module_client::protocol::{Limits, ModuleError, ModuleRef, Resolved};
 
-use crate::net::{Net, Policy};
+use crate::budget::{Budget, TRIP_MEMORY, TRIP_NONE, TRIP_TIMEOUT};
+use crate::link::CallLink;
+use crate::net::{Credentials, Net, Policy};
 use crate::ops;
 
 /// Host-wide settings from the `serve` command line.
@@ -39,7 +40,13 @@ const MAIN_SPECIFIER: &str = "zoo:main";
 const SHAPE_HINT: &str = "export default defineModule({ async resolve(url, zoo) { ... } })";
 const RESULT_HINT: &str = "resolve must return { url, filename?, headers?, size? } with an absolute http(s) url";
 
-pub fn resolve(module: &ModuleRef, url: &str, limits: Limits, options: HostOptions) -> Result<Resolved, ModuleError> {
+pub fn resolve(
+    module: &ModuleRef,
+    url: &str,
+    limits: Limits,
+    options: HostOptions,
+    link: CallLink,
+) -> Result<Resolved, ModuleError> {
     let entry = std::path::absolute(&module.entry)
         .ok()
         .and_then(|path| ModuleSpecifier::from_file_path(path).ok())
@@ -51,18 +58,21 @@ pub fn resolve(module: &ModuleRef, url: &str, limits: Limits, options: HostOptio
         .build()
         .map_err(|e| ModuleError::Crashed { message: format!("cannot start event loop: {e}") })?
         .block_on(async {
-            let net = Net::new(Policy::new(&module.grants.allow_domains, options.allow_loopback))
+            let policy = Policy::new(&module.grants.allow_domains, options.allow_loopback);
+            let net = Net::new(policy, Credentials::new(&module.grants.credentials))
                 .map_err(|message| ModuleError::Crashed { message })?;
-            run(entry, code, net, url, limits).await
+            run(entry, code, Rc::new(net), link, url, limits).await
         })
 }
 
-/// Why a call was cut short; set by the heap callback or the watchdog.
-const TRIP_NONE: u8 = 0;
-const TRIP_TIMEOUT: u8 = 1;
-const TRIP_MEMORY: u8 = 2;
-
-async fn run(entry: ModuleSpecifier, code: String, net: Net, url: &str, limits: Limits) -> Result<Resolved, ModuleError> {
+async fn run(
+    entry: ModuleSpecifier,
+    code: String,
+    net: Rc<Net>,
+    link: CallLink,
+    url: &str,
+    limits: Limits,
+) -> Result<Resolved, ModuleError> {
     let heap_bytes = limits.heap_mb as usize * 1024 * 1024;
     let mut runtime = JsRuntime::new(RuntimeOptions {
         module_loader: Some(Rc::new(Loader { entry: entry.clone(), code })),
@@ -70,7 +80,8 @@ async fn run(entry: ModuleSpecifier, code: String, net: Net, url: &str, limits: 
         extensions: vec![ops::zoo_host::init()],
         ..Default::default()
     });
-    runtime.op_state().borrow_mut().put(Rc::new(net));
+    runtime.op_state().borrow_mut().put(net.clone());
+    runtime.op_state().borrow_mut().put(Rc::new(link));
     let tripped = Arc::new(AtomicU8::new(TRIP_NONE));
     let isolate = runtime.v8_isolate().thread_safe_handle();
     {
@@ -82,16 +93,22 @@ async fn run(entry: ModuleSpecifier, code: String, net: Net, url: &str, limits: 
             current * 2
         });
     }
-    let budget = Duration::from_millis(limits.timeout_ms);
-    // Synchronous JS (a busy loop) blocks this thread, so only another thread can stop it.
-    let _watchdog = Watchdog::start(isolate, budget, tripped.clone());
-    // Waiting on host work (no JS running) is cut off here.
-    let outcome = tokio::time::timeout(budget, execute(&mut runtime, &entry, url)).await;
+    let budget = Budget::start(Duration::from_millis(limits.timeout_ms), isolate, tripped.clone());
+    runtime.op_state().borrow_mut().put(budget.clone());
+    // The watchdog stops synchronous JS; this stops waiting on host work.
+    let outcome = tokio::select! {
+        result = execute(&mut runtime, &entry, url) => Some(result),
+        _ = budget.expired() => None,
+    };
+    budget.finish();
 
     match (tripped.load(Ordering::SeqCst), outcome) {
         (TRIP_MEMORY, _) => Err(ModuleError::OutOfMemory { limit_mb: limits.heap_mb }),
-        (TRIP_TIMEOUT, _) | (_, Err(_)) => Err(ModuleError::Timeout { limit_ms: limits.timeout_ms }),
-        (_, Ok(result)) => result,
+        (TRIP_TIMEOUT, _) | (_, None) => Err(ModuleError::Timeout { limit_ms: limits.timeout_ms }),
+        (_, Some(result)) => result.map(|mut resolved| {
+            net.finish(&mut resolved);
+            resolved
+        }),
     }
 }
 
@@ -217,21 +234,5 @@ impl ModuleLoader for Loader {
             specifier,
             None,
         )))
-    }
-}
-
-/// Terminates the isolate when the budget runs out. Dropping it disarms it.
-struct Watchdog(#[allow(dead_code)] mpsc::Sender<()>);
-
-impl Watchdog {
-    fn start(isolate: v8::IsolateHandle, budget: Duration, tripped: Arc<AtomicU8>) -> Self {
-        let (disarm, armed) = mpsc::channel::<()>();
-        thread::spawn(move || {
-            if armed.recv_timeout(budget) == Err(mpsc::RecvTimeoutError::Timeout) {
-                let _ = tripped.compare_exchange(TRIP_NONE, TRIP_TIMEOUT, Ordering::SeqCst, Ordering::SeqCst);
-                isolate.terminate_execution();
-            }
-        });
-        Watchdog(disarm)
     }
 }
