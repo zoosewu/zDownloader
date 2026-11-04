@@ -176,6 +176,11 @@
       "retrying": "等待重試",
       "pending": "未開始",
       "unknownSize": "伺服器未提供檔案大小，無法顯示分段。"
+    },
+    "phase": {
+      "resolving": "解析中",
+      "waiting": "倒數中",
+      "awaitingUser": "等待驗證"
     }
   },
   "settings": {

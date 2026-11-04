@@ -27,6 +27,9 @@ pub enum CoreError {
     NotFound,
     #[error("{0}")]
     Invalid(String),
+    /// A site module could not turn the URL into a download.
+    #[error("{message}")]
+    Resolve { message: String, hint: Option<String>, retryable: bool },
 }
 
 impl CoreError {
@@ -35,6 +38,7 @@ impl CoreError {
         match self {
             CoreError::Http(code) => matches!(code, 408 | 425 | 429 | 500..=599),
             CoreError::Network(_) | CoreError::NoConnection(_) => true,
+            CoreError::Resolve { retryable, .. } => *retryable,
             _ => false,
         }
     }

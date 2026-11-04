@@ -8338,6 +8338,7 @@ dependencies = [
  "uuid",
  "warp",
  "zoo-core",
+ "zoo-module-client",
 ]
 
 [[package]]
@@ -8345,6 +8346,7 @@ name = "zoo-module"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "chrono",
  "deno_core",
  "deno_error",
  "getrandom 0.3.4",
@@ -8357,6 +8359,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "tokio",
+ "zoo-core",
  "zoo-module-client",
 ]
 
@@ -8364,12 +8367,14 @@ dependencies = [
 name = "zoo-module-client"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "log",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
  "tokio",
  "windows-sys 0.61.2",
+ "zoo-core",
 ]
 
 [[package]]

@@ -5,6 +5,9 @@
 //! until it reports back, so a task is never transferred by two jobs at once even if the
 //! user pauses and resumes quickly.
 //!
+//! A job resolves the task's URL (see `resolve`) and then transfers; it reports phases and a
+//! module-suggested file name back to the actor as it goes.
+//!
 //! Commands change the visible state immediately (pause shows Paused at once); the job's
 //! final report only fills in what the command could not know (completion, failure).
 
@@ -13,8 +16,9 @@ use crate::error::CoreError;
 use crate::naming;
 use crate::part_file::PartFile;
 use crate::rate::RateLimiter;
+use crate::resolve::{self, Resolver};
 use crate::store::JsonStore;
-use crate::task::{AddRequest, Config, Event, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};
+use crate::task::{AddRequest, Config, Event, Phase, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};
 use crate::transfer::{self, Ctx, Progress, TransferSpec};
 use chrono::Utc;
 use std::collections::HashMap;
@@ -55,33 +59,46 @@ enum Cmd {
 impl DownloadManager {
     /// Load tasks from `store_dir/tasks.json` and start the actor on the current Tokio runtime.
     /// Tasks that were queued or running when the app last stopped are queued again.
+    /// Every URL is downloaded as is; see `start_with` for site-module resolution.
     pub fn start(cfg: Config, store_dir: &Path, conn: Arc<dyn ConnectionSource>) -> Result<Self, CoreError> {
+        Self::start_with(cfg, store_dir, conn, Arc::new(resolve::Direct))
+    }
+
+    /// Like `start`, with `resolver` turning each task's URL into its download.
+    pub fn start_with(
+        cfg: Config,
+        store_dir: &Path,
+        conn: Arc<dyn ConnectionSource>,
+        resolver: Arc<dyn Resolver>,
+    ) -> Result<Self, CoreError> {
         let store = JsonStore::new(store_dir.join("tasks.json"));
         let mut tasks: Vec<Task> = store.load()?.unwrap_or_default();
         let rev = tasks.iter().map(|t| t.rev).max().unwrap_or(0);
         for task in &mut tasks {
             task.speed = 0;
+            task.phase = None;
             if matches!(task.state, TaskState::Running | TaskState::Queued) {
                 task.state = TaskState::Queued;
             }
         }
 
         let (tx, cmd_rx) = mpsc::unbounded_channel();
-        let (done_tx, done_rx) = mpsc::unbounded_channel();
+        let (job_tx, job_rx) = mpsc::unbounded_channel();
         let (events, _) = broadcast::channel(EVENT_BUFFER);
         let actor = Actor {
             rate: Arc::new(RateLimiter::new(cfg.speed_limit)),
             cfg,
             conn,
+            resolver,
             tasks,
             jobs: HashMap::new(),
             store,
             events: events.clone(),
-            done_tx,
+            job_tx,
             shutting_down: false,
             rev,
         };
-        tokio::spawn(actor.run(cmd_rx, done_rx));
+        tokio::spawn(actor.run(cmd_rx, job_rx));
         Ok(Self { tx, events })
     }
 
@@ -158,6 +175,14 @@ enum Stop {
     Shutdown,
 }
 
+/// What a running job tells the actor.
+enum JobMsg {
+    Phase(TaskId, Phase),
+    /// Resolution suggested a file name and the task had none of its own.
+    Renamed(TaskId, String),
+    Done(TaskId, Result<PathBuf, CoreError>),
+}
+
 struct Job {
     cancel: CancellationToken,
     progress: Arc<Progress>,
@@ -169,24 +194,21 @@ struct Job {
 struct Actor {
     cfg: Config,
     conn: Arc<dyn ConnectionSource>,
+    resolver: Arc<dyn Resolver>,
     rate: Arc<RateLimiter>,
     /// In insertion order, which is also the queue order.
     tasks: Vec<Task>,
     jobs: HashMap<TaskId, Job>,
     store: JsonStore<Vec<Task>>,
     events: broadcast::Sender<Event>,
-    done_tx: mpsc::UnboundedSender<(TaskId, Result<PathBuf, CoreError>)>,
+    job_tx: mpsc::UnboundedSender<JobMsg>,
     shutting_down: bool,
     /// Last revision handed out; see `Task::rev`.
     rev: u64,
 }
 
 impl Actor {
-    async fn run(
-        mut self,
-        mut cmd_rx: mpsc::UnboundedReceiver<Cmd>,
-        mut done_rx: mpsc::UnboundedReceiver<(TaskId, Result<PathBuf, CoreError>)>,
-    ) {
+    async fn run(mut self, mut cmd_rx: mpsc::UnboundedReceiver<Cmd>, mut job_rx: mpsc::UnboundedReceiver<JobMsg>) {
         self.wake_due();
         self.pump();
         self.save();
@@ -197,15 +219,18 @@ impl Actor {
             tokio::select! {
                 cmd = cmd_rx.recv() => match cmd {
                     Some(Cmd::Shutdown(reply)) => {
-                        self.shutdown(&mut done_rx).await;
+                        self.shutdown(&mut job_rx).await;
                         let _ = reply.send(());
                         return;
                     }
                     Some(cmd) => self.handle(cmd),
                     // Every handle dropped: stop like a shutdown.
-                    None => return self.shutdown(&mut done_rx).await,
+                    None => return self.shutdown(&mut job_rx).await,
                 },
-                Some((id, result)) = done_rx.recv() => self.finished(id, result),
+                Some(msg) = job_rx.recv() => match msg {
+                    JobMsg::Done(id, result) => self.finished(id, result),
+                    msg => self.job_update(msg),
+                },
                 _ = tick.tick() => self.progress_tick(),
                 _ = sleep_for(wake) => self.wake_due(),
             }
@@ -279,10 +304,12 @@ impl Actor {
         let task = Task {
             id: TaskId::new(),
             name: naming::filename_for(req.filename.as_deref(), &req.url),
+            custom_name: req.filename.is_some(),
             url: req.url,
             dir: req.dir,
             final_path: None,
             state,
+            phase: None,
             error: None,
             downloaded: 0,
             total: None,
@@ -312,6 +339,7 @@ impl Actor {
         }
         self.set(id, |t| {
             t.state = TaskState::Paused;
+            t.phase = None;
             t.next_retry_at = None;
             t.speed = 0;
         })
@@ -357,6 +385,7 @@ impl Actor {
         }
         self.set(id, |t| {
             t.state = TaskState::Cancelled;
+            t.phase = None;
             t.downloaded = 0;
             t.speed = 0;
             t.next_retry_at = None;
@@ -429,8 +458,12 @@ impl Actor {
 
     fn start_job(&mut self, id: TaskId) {
         let task = self.tasks.iter().find(|t| t.id == id).expect("queued task exists");
+        // Nothing fetched yet and no name from the user: resolution may name the file.
+        let may_rename = !task.custom_name && task.downloaded == 0;
         let spec = TransferSpec {
+            origin: task.url.clone(),
             url: task.url.clone(),
+            headers: Vec::new(),
             dir: task.dir.clone(),
             name: task.name.clone(),
             part_path: part_path_of(task),
@@ -454,10 +487,10 @@ impl Actor {
                 speed: SpeedMeter::default(),
             },
         );
-        let done = self.done_tx.clone();
+        let (msgs, resolver) = (self.job_tx.clone(), self.resolver.clone());
         tokio::spawn(async move {
-            let result = transfer::run(&spec, &ctx).await;
-            let _ = done.send((id, result));
+            let result = run_job(id, spec, &ctx, resolver.as_ref(), may_rename, &msgs).await;
+            let _ = msgs.send(JobMsg::Done(id, result));
         });
         let _ = self.set(id, |t| {
             t.state = TaskState::Running;
@@ -466,8 +499,28 @@ impl Actor {
         });
     }
 
+    fn job_update(&mut self, msg: JobMsg) {
+        match msg {
+            // A stopping job's phase is no longer what the user sees.
+            JobMsg::Phase(id, phase) if self.jobs.get(&id).is_some_and(|j| j.stop.is_none()) => {
+                let _ = self.set(id, |t| t.phase = Some(phase));
+            }
+            JobMsg::Renamed(id, name) => {
+                let dir = self.tasks.iter().find(|t| t.id == id).map(|t| t.dir.clone());
+                if let (Some(job), Some(dir)) = (self.jobs.get_mut(&id), dir) {
+                    job.part_path = naming::part_path(&dir, &name, &id.to_string());
+                }
+                let _ = self.set(id, |t| t.name = name);
+            }
+            _ => {}
+        }
+    }
+
     fn finished(&mut self, id: TaskId, result: Result<PathBuf, CoreError>) {
         let Some(job) = self.jobs.remove(&id) else { return };
+        if let Some(task) = self.tasks.iter_mut().find(|t| t.id == id) {
+            task.phase = None; // announced with the state change below
+        }
         let still_listed = self.tasks.iter().any(|t| t.id == id);
 
         match (&result, job.stop) {
@@ -578,15 +631,18 @@ impl Actor {
         }
     }
 
-    async fn shutdown(&mut self, done_rx: &mut mpsc::UnboundedReceiver<(TaskId, Result<PathBuf, CoreError>)>) {
+    async fn shutdown(&mut self, job_rx: &mut mpsc::UnboundedReceiver<JobMsg>) {
         self.shutting_down = true;
         for job in self.jobs.values_mut() {
             job.stop.get_or_insert(Stop::Shutdown);
             job.cancel.cancel();
         }
         while !self.jobs.is_empty() {
-            let Some((id, result)) = done_rx.recv().await else { break };
-            self.finished_on_shutdown(id, result);
+            match job_rx.recv().await {
+                Some(JobMsg::Done(id, result)) => self.finished_on_shutdown(id, result),
+                Some(msg) => self.job_update(msg),
+                None => break,
+            }
         }
         self.save();
     }
@@ -640,6 +696,46 @@ impl Actor {
     fn save(&self) {
         if let Err(e) = self.store.save(&self.tasks) {
             log::error!("failed to save {}: {e}", self.store.path().display());
+        }
+    }
+}
+
+/// Resolve, then transfer. A resolved link the server refuses as expired or forbidden is
+/// resolved again once: share sites hand out short-lived links.
+async fn run_job(
+    id: TaskId,
+    mut spec: TransferSpec,
+    ctx: &Ctx,
+    resolver: &dyn Resolver,
+    may_rename: bool,
+    msgs: &mpsc::UnboundedSender<JobMsg>,
+) -> Result<PathBuf, CoreError> {
+    let mut resolved_again = false;
+    loop {
+        let report: resolve::PhaseReport = {
+            let msgs = msgs.clone();
+            Box::new(move |phase| {
+                let _ = msgs.send(JobMsg::Phase(id, phase));
+            })
+        };
+        let source = tokio::select! {
+            _ = ctx.cancel.cancelled() => return Err(CoreError::Cancelled),
+            source = resolver.resolve(&spec.origin, report) => source?,
+        };
+        if let Some(suggested) = source.filename.as_deref().filter(|_| may_rename && !resolved_again) {
+            let name = naming::filename_for(Some(suggested), &spec.origin);
+            if name != spec.name {
+                spec.part_path = naming::part_path(&spec.dir, &name, &id.to_string());
+                spec.name = name.clone();
+                let _ = msgs.send(JobMsg::Renamed(id, name));
+            }
+        }
+        spec.url = source.url;
+        spec.headers = source.headers;
+        let _ = msgs.send(JobMsg::Phase(id, Phase::Transferring));
+        match transfer::run(&spec, ctx).await {
+            Err(CoreError::Http(401 | 403 | 410)) if source.expires && !resolved_again => resolved_again = true,
+            other => return other,
         }
     }
 }

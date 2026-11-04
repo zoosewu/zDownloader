@@ -13,11 +13,14 @@ use deno_core::v8;
 pub const TRIP_NONE: u8 = 0;
 pub const TRIP_TIMEOUT: u8 = 1;
 pub const TRIP_MEMORY: u8 = 2;
+pub const TRIP_CANCELLED: u8 = 3;
 
 pub struct Budget {
     state: Mutex<State>,
     wake: Condvar,
     expired: tokio::sync::Notify,
+    isolate: v8::IsolateHandle,
+    tripped: Arc<AtomicU8>,
 }
 
 struct State {
@@ -35,13 +38,15 @@ impl Budget {
             state: Mutex::new(State { used: Duration::ZERO, running_since: Some(Instant::now()), paused: 0, finished: false }),
             wake: Condvar::new(),
             expired: tokio::sync::Notify::new(),
+            isolate,
+            tripped,
         });
         let watched = budget.clone();
-        thread::spawn(move || watched.watch(limit, isolate, tripped));
+        thread::spawn(move || watched.watch(limit));
         budget
     }
 
-    fn watch(&self, limit: Duration, isolate: v8::IsolateHandle, tripped: Arc<AtomicU8>) {
+    fn watch(&self, limit: Duration) {
         let mut state = self.state.lock().unwrap();
         loop {
             if state.finished {
@@ -52,9 +57,7 @@ impl Budget {
                 Some(since) => {
                     let used = state.used + since.elapsed();
                     if used >= limit {
-                        let _ = tripped.compare_exchange(TRIP_NONE, TRIP_TIMEOUT, Ordering::SeqCst, Ordering::SeqCst);
-                        isolate.terminate_execution();
-                        self.expired.notify_one();
+                        self.stop(TRIP_TIMEOUT);
                         return;
                     }
                     state = self.wake.wait_timeout(state, limit - used).unwrap().0;
@@ -76,7 +79,19 @@ impl Budget {
         Paused(self.clone())
     }
 
-    /// Completes once the budget has run out.
+    /// Ends the call now, as if the budget had run out.
+    pub fn cancel(&self) {
+        self.stop(TRIP_CANCELLED);
+        self.finish();
+    }
+
+    fn stop(&self, why: u8) {
+        let _ = self.tripped.compare_exchange(TRIP_NONE, why, Ordering::SeqCst, Ordering::SeqCst);
+        self.isolate.terminate_execution();
+        self.expired.notify_one();
+    }
+
+    /// Completes once the budget has run out or the call was cancelled.
     pub async fn expired(&self) {
         self.expired.notified().await;
     }

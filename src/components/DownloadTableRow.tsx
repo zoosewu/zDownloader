@@ -137,7 +137,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         </TableCell>
 
         <TableCell sx={getCellWidthStyle('status')}>
-          <Tooltip title={task.error ? `${displayData.statusLabel}: ${errorText(task)}` : ''} arrow>
+          <Tooltip title={statusTooltip(task, displayData.statusLabel)} arrow>
             <Chip
               label={displayData.statusLabel}
               color={STATE_COLOR[task.state]}
@@ -183,9 +183,18 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
 
 DownloadTableRow.displayName = 'DownloadTableRow';
 
+function statusTooltip(task: Task, label: string): string {
+  if (task.error) return `${label}: ${errorText(task)}`;
+  if (task.state === 'running' && task.phase?.kind === 'waiting' && task.phase.reason) return task.phase.reason;
+  return '';
+}
+
 export function errorText(task: Task): string {
   const error = task.error;
   if (!error) return '';
+  if (error.kind === 'resolve') {
+    return error.detail.hint ? `${error.detail.message} (${error.detail.hint})` : error.detail.message;
+  }
   return 'detail' in error ? `${error.kind}: ${error.detail}` : error.kind;
 }
 

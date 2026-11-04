@@ -6,6 +6,8 @@
 
 pub mod manifest;
 pub mod protocol;
+#[cfg(feature = "core")]
+pub mod resolver;
 pub mod supervisor;
 #[cfg(windows)]
 mod job;

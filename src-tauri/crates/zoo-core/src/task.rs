@@ -70,10 +70,16 @@ pub struct Task {
     pub url: String,
     /// Sanitized file name the download will be saved as (before conflict renaming).
     pub name: String,
+    /// The user chose `name`; a site module's suggested name does not replace it.
+    #[serde(default)]
+    pub custom_name: bool,
     pub dir: PathBuf,
     /// Where the finished file actually landed (may differ from `dir/name` after renaming).
     pub final_path: Option<PathBuf>,
     pub state: TaskState,
+    /// What a running task is doing; `None` otherwise.
+    #[serde(default)]
+    pub phase: Option<Phase>,
     pub error: Option<CoreError>,
     pub downloaded: u64,
     pub total: Option<u64>,
@@ -90,6 +96,20 @@ pub struct Task {
     /// Increases with every change; of two copies of a task, the higher `rev` is newer.
     #[serde(default)]
     pub rev: u64,
+}
+
+/// Steps of a running task. Resolution happens before every transfer; only site modules
+/// report `Resolving`, `Waiting` and `AwaitingUser`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum Phase {
+    /// A site module is turning the page URL into the download (`module` is `id@marketplace`).
+    Resolving { module: Option<String> },
+    /// The site makes the user wait, e.g. a free-download countdown.
+    Waiting { until: DateTime<Utc>, reason: Option<String> },
+    /// A captcha needs the user.
+    AwaitingUser,
+    Transferring,
 }
 
 /// Which bytes of a task are done and which are being fetched; byte ranges are `[start, end)`.

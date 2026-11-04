@@ -4,17 +4,17 @@
 
 use std::io::{BufRead, Write};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 use std::thread;
 
 use zoo_module_client::protocol::{ModuleError, Reply, Request};
 
-use crate::link::{self, Answers, CallLink};
+use crate::link::{CallLink, Calls};
 use crate::runtime::{self, HostOptions};
 
 pub fn run(options: HostOptions) {
     let (replies, outbox) = mpsc::channel::<Reply>();
-    let answers: Answers = Arc::default();
+    let calls = Calls::default();
     thread::spawn(move || {
         for reply in outbox {
             let mut out = std::io::stdout().lock();
@@ -33,7 +33,7 @@ pub fn run(options: HostOptions) {
         match serde_json::from_str::<Request>(&line) {
             Ok(Request::Resolve { id, module, url, limits }) => {
                 let replies = replies.clone();
-                let link = CallLink::new(id, replies.clone(), answers.clone());
+                let link = CallLink::new(id, replies.clone(), calls.clone());
                 thread::spawn(move || {
                     let outcome = catch_unwind(AssertUnwindSafe(|| runtime::resolve(&module, &url, limits, options, link)))
                         .unwrap_or_else(|_| Err(ModuleError::Crashed { message: "module host panicked".into() }));
@@ -43,7 +43,8 @@ pub fn run(options: HostOptions) {
                     });
                 });
             }
-            Ok(Request::Answer { id, ticket, solution }) => link::answer(&answers, id, ticket, solution),
+            Ok(Request::Answer { id, ticket, solution }) => calls.answer(id, ticket, solution),
+            Ok(Request::Cancel { id }) => calls.cancel(id),
             Err(e) => eprintln!("ignoring unreadable request: {e}"),
         }
     }

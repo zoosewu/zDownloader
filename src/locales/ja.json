@@ -176,6 +176,11 @@
       "retrying": "再試行待ち",
       "pending": "未開始",
       "unknownSize": "サーバーがファイルサイズを返さなかったため、セグメントを表示できません。"
+    },
+    "phase": {
+      "resolving": "解析中",
+      "waiting": "待機中",
+      "awaitingUser": "確認待ち"
     }
   },
   "settings": {

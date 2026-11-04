@@ -83,6 +83,9 @@ pub enum ModuleError {
     /// The host process died, could not start, or stopped answering.
     #[error("module host failed: {message}")]
     Crashed { message: String },
+    /// The app cancelled the call.
+    #[error("cancelled")]
+    Cancelled,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,12 +94,14 @@ pub enum Request {
     Resolve { id: u64, module: ModuleRef, url: String, limits: Limits },
     /// The user's answer to a `CallEvent::Captcha`; `None` if they declined.
     Answer { id: u64, ticket: u64, solution: Option<String> },
+    /// The app no longer wants the result: stop the call now.
+    Cancel { id: u64 },
 }
 
 impl Request {
     pub fn id(&self) -> u64 {
         match self {
-            Request::Resolve { id, .. } | Request::Answer { id, .. } => *id,
+            Request::Resolve { id, .. } | Request::Answer { id, .. } | Request::Cancel { id } => *id,
         }
     }
 }

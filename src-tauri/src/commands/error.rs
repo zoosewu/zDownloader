@@ -33,6 +33,7 @@ impl From<CoreError> for CommandError {
             CoreError::Cancelled => "cancelled",
             CoreError::NotFound => "notFound",
             CoreError::Invalid(_) => "invalid",
+            CoreError::Resolve { .. } => "resolve",
         };
         Self::new(code, e.to_string())
     }

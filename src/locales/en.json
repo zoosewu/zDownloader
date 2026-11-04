@@ -176,6 +176,11 @@
       "retrying": "Waiting to retry",
       "pending": "Not started",
       "unknownSize": "The server did not report a file size, so segments cannot be shown."
+    },
+    "phase": {
+      "resolving": "Resolving",
+      "waiting": "Countdown",
+      "awaitingUser": "Needs you"
     }
   },
   "settings": {

@@ -11,6 +11,12 @@ serde_json = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["process", "io-util", "sync", "time", "rt", "macros"] }
 log = "0.4"
+zoo-core = { path = "../zoo-core", optional = true }
+chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
+
+[features]
+# The zoo-core Resolver adapter (ModuleResolver). Off in the host binary.
+core = ["dep:zoo-core", "dep:chrono"]
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

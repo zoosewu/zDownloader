@@ -65,7 +65,13 @@ export function formatTaskForTable(task: Task, t: (key: string) => string): Tabl
     progress: percent ?? 0,
     progressFormatted: percent !== null ? `${percent.toFixed(1)}%` : formatBytes(task.downloaded),
     speedFormatted: task.state === 'running' && task.speed > 0 ? formatSpeed(task.speed) : '--',
-    statusLabel: t(`downloads.state.${task.state}`),
+    statusLabel: statusLabel(task, t),
     remainingTimeFormatted: formatRemainingTime(calculateRemainingTime(task)),
   };
+}
+
+/** A running task shows what it is doing while it is not yet transferring. */
+export function statusLabel(task: Task, t: (key: string) => string): string {
+  const phase = task.state === 'running' ? task.phase : null;
+  return phase && phase.kind !== 'transferring' ? t(`downloads.phase.${phase.kind}`) : t(`downloads.state.${task.state}`);
 }

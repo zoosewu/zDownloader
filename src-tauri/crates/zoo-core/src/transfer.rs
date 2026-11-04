@@ -27,8 +27,15 @@ use std::time::{Duration, Instant};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
+#[derive(Debug, Clone)]
 pub struct TransferSpec {
+    /// The task's own URL. Identifies the resource for resuming, so a part file survives
+    /// the direct link changing between resolutions.
+    pub origin: String,
+    /// What to fetch: the resolved direct link.
     pub url: String,
+    /// Sent with every request (from resolution: Referer, Cookie, ...).
+    pub headers: Vec<(String, String)>,
     /// Directory and file name of the finished file (renamed on conflict).
     pub dir: PathBuf,
     pub name: String,
@@ -134,7 +141,7 @@ pub struct Ctx {
 
 /// Run the transfer to completion. Returns the final file path.
 pub async fn run(spec: &TransferSpec, ctx: &Ctx) -> Result<PathBuf, CoreError> {
-    let probe = with_retry(spec.retry, &ctx.cancel, || probe(&spec.url, ctx)).await?;
+    let probe = with_retry(spec.retry, &ctx.cancel, || probe(spec, ctx)).await?;
     match probe {
         Probe::Ranged(validator) => match ranged(spec, ctx, validator).await {
             Err(SegmentError::RangeIgnored) => stream(spec, ctx, None).await,
@@ -151,16 +158,17 @@ enum Probe {
     Whole(Response),
 }
 
-async fn probe(url: &str, ctx: &Ctx) -> Result<Probe, CoreError> {
-    let (lease, response) = send(ctx, url, Some("bytes=0-0".into())).await?;
+async fn probe(spec: &TransferSpec, ctx: &Ctx) -> Result<Probe, CoreError> {
+    let (lease, response) = send(ctx, spec, Some("bytes=0-0".into())).await?;
     let header = |name| response.headers().get(name).and_then(|v| v.to_str().ok()).map(str::to_string);
-    let validator = |size| Validator { url: url.to_string(), size, etag: header(ETAG), last_modified: header(LAST_MODIFIED) };
+    let validator =
+        |size| Validator { url: spec.origin.clone(), size, etag: header(ETAG), last_modified: header(LAST_MODIFIED) };
 
     match response.status() {
         StatusCode::PARTIAL_CONTENT => match header(CONTENT_RANGE).as_deref().and_then(parse_content_range) {
             Some(ContentRange { total: Some(total), .. }) => Ok(Probe::Ranged(validator(Some(total)))),
             // Ranges work but the size is unknown: cannot plan segments.
-            _ => Ok(Probe::Whole(send(ctx, url, None).await?.1)),
+            _ => Ok(Probe::Whole(send(ctx, spec, None).await?.1)),
         },
         StatusCode::OK => Ok(Probe::Whole(response)),
         StatusCode::RANGE_NOT_SATISFIABLE if header(CONTENT_RANGE).is_some_and(|v| v.ends_with("/0")) => {
@@ -173,10 +181,14 @@ async fn probe(url: &str, ctx: &Ctx) -> Result<Probe, CoreError> {
     }
 }
 
-/// Send a GET through the connection source, scoring the lease by time to first byte.
-async fn send(ctx: &Ctx, url: &str, range: Option<String>) -> Result<(Lease, Response), CoreError> {
+/// Send a GET for the spec's source through the connection source, scoring the lease by
+/// time to first byte.
+async fn send(ctx: &Ctx, spec: &TransferSpec, range: Option<String>) -> Result<(Lease, Response), CoreError> {
     let lease = ctx.conn.acquire()?;
-    let mut request = lease.client.get(url);
+    let mut request = lease.client.get(&spec.url);
+    for (name, value) in &spec.headers {
+        request = request.header(name.as_str(), value.as_str());
+    }
     if let Some(range) = range {
         request = request.header(RANGE, range);
     }
@@ -254,11 +266,11 @@ async fn run_workers(spec: &TransferSpec, ctx: &Ctx, part: &Arc<PartFile>) -> Re
     let queue = Arc::new(Mutex::new(queue));
 
     let mut set = JoinSet::new();
+    let spec = Arc::new(spec.clone());
     for id in 0..workers {
-        let (queue, part, ctx) = (queue.clone(), part.clone(), ctx.clone());
-        let (url, retry) = (spec.url.clone(), spec.retry);
+        let (queue, part, ctx, spec) = (queue.clone(), part.clone(), ctx.clone(), spec.clone());
         set.spawn(async move {
-            let result = worker(id, &url, retry, &queue, &part, &ctx).await;
+            let result = worker(id, &spec, &queue, &part, &ctx).await;
             ctx.progress.set_active(id, None);
             result
         });
@@ -287,18 +299,17 @@ fn mark(ctx: &Ctx, worker: usize, range: &Range<u64>, retrying: bool) {
 
 async fn worker(
     id: usize,
-    url: &str,
-    retry: RetryPolicy,
+    spec: &TransferSpec,
     queue: &Mutex<VecDeque<Range<u64>>>,
     part: &PartFile,
     ctx: &Ctx,
 ) -> Result<(), SegmentError> {
     loop {
         let Some(mut range) = queue.lock().unwrap().pop_front() else { return Ok(()) };
-        let mut attempt = 0;
+        let (retry, mut attempt) = (spec.retry, 0);
         loop {
             mark(ctx, id, &range, false);
-            let (result, reached) = fetch_range(url, range.clone(), part, ctx).await;
+            let (result, reached) = fetch_range(spec, range.clone(), part, ctx).await;
             match result {
                 Ok(()) => break,
                 Err(SegmentError::Core(e)) if e.is_retryable() => {
@@ -318,10 +329,10 @@ async fn worker(
 }
 
 /// Fetch `range` into the part file. Also returns how far it got, for resuming the segment.
-async fn fetch_range(url: &str, range: Range<u64>, part: &PartFile, ctx: &Ctx) -> (Result<(), SegmentError>, u64) {
+async fn fetch_range(spec: &TransferSpec, range: Range<u64>, part: &PartFile, ctx: &Ctx) -> (Result<(), SegmentError>, u64) {
     let mut offset = range.start;
     let result = async {
-        let (lease, response) = send(ctx, url, Some(format!("bytes={}-{}", range.start, range.end - 1))).await?;
+        let (lease, response) = send(ctx, spec, Some(format!("bytes={}-{}", range.start, range.end - 1))).await?;
         match response.status() {
             StatusCode::PARTIAL_CONTENT => {}
             StatusCode::OK => return Err(SegmentError::RangeIgnored),
@@ -372,13 +383,13 @@ async fn stream(spec: &TransferSpec, ctx: &Ctx, mut first: Option<Response>) -> 
         let result = async {
             let response = match first.take() {
                 Some(r) => r,
-                None => send(ctx, &spec.url, None).await?.1,
+                None => send(ctx, spec, None).await?.1,
             };
             if response.status() != StatusCode::OK {
                 return Err(CoreError::Http(response.status().as_u16()));
             }
             let size = response.content_length();
-            let validator = Validator { url: spec.url.clone(), size, etag: None, last_modified: None };
+            let validator = Validator { url: spec.origin.clone(), size, etag: None, last_modified: None };
             PartFile::discard(&spec.part_path)?;
             let part = PartFile::create(spec.part_path.clone(), validator)?;
             ctx.progress.reset(0, size);

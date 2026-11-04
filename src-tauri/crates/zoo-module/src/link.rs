@@ -1,25 +1,66 @@
 //! A running call's line to the app: events out, captcha answers back.
 
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{mpsc, Arc, Mutex};
 
 use tokio::sync::oneshot;
 use zoo_module_client::protocol::{CallEvent, Captcha, Reply};
 
-/// Answers the app has yet to give, by (call id, ticket). Shared by every call in the host.
-pub type Answers = Arc<Mutex<HashMap<(u64, u64), oneshot::Sender<Option<String>>>>>;
+use crate::budget::Budget;
+
+/// Where a captcha answer goes, by (call id, ticket).
+type AnswerSlots = HashMap<(u64, u64), oneshot::Sender<Option<String>>>;
+
+/// What the host tracks for calls in flight, shared by every call.
+#[derive(Clone, Default)]
+pub struct Calls {
+    /// Answers the app has yet to give, by (call id, ticket).
+    answers: Arc<Mutex<AnswerSlots>>,
+    /// Running calls' budgets, by call id, so the app can cancel them.
+    budgets: Arc<Mutex<HashMap<u64, Arc<Budget>>>>,
+    /// Cancelled before their isolate existed.
+    early_cancels: Arc<Mutex<HashSet<u64>>>,
+}
+
+impl Calls {
+    /// Delivers an answer from the app to the call waiting for it.
+    pub fn answer(&self, id: u64, ticket: u64, solution: Option<String>) {
+        if let Some(waiter) = self.answers.lock().unwrap().remove(&(id, ticket)) {
+            let _ = waiter.send(solution);
+        }
+    }
+
+    pub fn cancel(&self, id: u64) {
+        match self.budgets.lock().unwrap().remove(&id) {
+            Some(budget) => budget.cancel(),
+            None => {
+                self.early_cancels.lock().unwrap().insert(id);
+            }
+        }
+        self.answers.lock().unwrap().retain(|(call, _), _| *call != id);
+    }
+}
 
 pub struct CallLink {
     id: u64,
     replies: mpsc::Sender<Reply>,
-    answers: Answers,
+    calls: Calls,
     next_ticket: Cell<u64>,
 }
 
 impl CallLink {
-    pub fn new(id: u64, replies: mpsc::Sender<Reply>, answers: Answers) -> Self {
-        Self { id, replies, answers, next_ticket: Cell::new(1) }
+    pub fn new(id: u64, replies: mpsc::Sender<Reply>, calls: Calls) -> Self {
+        Self { id, replies, calls, next_ticket: Cell::new(1) }
+    }
+
+    /// Makes the call cancellable through `Calls::cancel`.
+    pub fn attach(&self, budget: Arc<Budget>) {
+        if self.calls.early_cancels.lock().unwrap().remove(&self.id) {
+            budget.cancel();
+        } else {
+            self.calls.budgets.lock().unwrap().insert(self.id, budget);
+        }
     }
 
     pub fn event(&self, event: CallEvent) {
@@ -32,7 +73,7 @@ impl CallLink {
         let ticket = self.next_ticket.get();
         self.next_ticket.set(ticket + 1);
         let (tx, rx) = oneshot::channel();
-        self.answers.lock().unwrap().insert((self.id, ticket), tx);
+        self.calls.answers.lock().unwrap().insert((self.id, ticket), tx);
         self.event(CallEvent::Captcha { ticket, challenge });
         rx
     }
@@ -40,13 +81,7 @@ impl CallLink {
 
 impl Drop for CallLink {
     fn drop(&mut self) {
-        self.answers.lock().unwrap().retain(|(id, _), _| *id != self.id);
-    }
-}
-
-/// Delivers an answer from the app to the call waiting for it.
-pub fn answer(answers: &Answers, id: u64, ticket: u64, solution: Option<String>) {
-    if let Some(waiter) = answers.lock().unwrap().remove(&(id, ticket)) {
-        let _ = waiter.send(solution);
+        self.calls.answers.lock().unwrap().retain(|(id, _), _| *id != self.id);
+        self.calls.budgets.lock().unwrap().remove(&self.id);
     }
 }

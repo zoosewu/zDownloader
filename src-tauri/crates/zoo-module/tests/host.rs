@@ -233,3 +233,20 @@ async fn missing_host_program_is_reported() {
         Err(ModuleError::Crashed { .. })
     ));
 }
+
+#[tokio::test]
+async fn dropping_a_call_stops_it_in_the_host() {
+    let site = common::Server::start(|_| common::Resp::ok("x")).await;
+    let dir = TempDir::new().unwrap();
+    let m = common::module_allowing(
+        &dir,
+        "slow",
+        &format!("export default {{ async resolve(url, zoo) {{ await zoo.wait(1); await fetch('{}'); return {{ url }}; }} }};", site.url("/after")),
+        &["127.0.0.1"],
+    );
+    let host = common::loopback_host();
+    let call = host.resolve(m, "https://a/", Limits::default(), &NoInteraction);
+    assert!(tokio::time::timeout(Duration::from_millis(300), call).await.is_err());
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    assert!(site.requests().is_empty(), "the dropped call went on");
+}

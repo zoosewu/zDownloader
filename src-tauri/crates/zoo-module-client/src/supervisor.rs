@@ -68,7 +68,9 @@ impl Supervisor {
         interaction: &dyn Interaction,
     ) -> Result<Resolved, ModuleError> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let (generation, mut replies) = self.send(Request::Resolve { id, module, url: url.into(), limits }).await?;
+        let (generation, lines, mut replies) = self.send(Request::Resolve { id, module, url: url.into(), limits }).await?;
+        // If the caller gives up (drops this future), the host stops the call.
+        let mut cancel = CancelOnDrop { id, lines: lines.clone(), armed: true };
         // Moves later by however long the site's countdown and the user take.
         let mut deadline = Instant::now() + Duration::from_millis(limits.timeout_ms) + RESPONSE_GRACE;
         loop {
@@ -81,8 +83,14 @@ impl Supervisor {
                 }
             };
             match reply {
-                Reply::Resolved { resolved, .. } => return Ok(resolved),
-                Reply::Failed { error, .. } => return Err(error),
+                Reply::Resolved { resolved, .. } => {
+                    cancel.armed = false;
+                    return Ok(resolved);
+                }
+                Reply::Failed { error, .. } => {
+                    cancel.armed = false;
+                    return Err(error);
+                }
                 Reply::Event { event: CallEvent::Waiting { ms, reason }, .. } => {
                     deadline += Duration::from_millis(ms);
                     interaction.waiting(ms, reason.as_deref());
@@ -91,7 +99,9 @@ impl Supervisor {
                     let asked = Instant::now();
                     let solution = interaction.solve_captcha(challenge).await;
                     deadline += asked.elapsed();
-                    self.write(generation, &Request::Answer { id, ticket, solution }).await?;
+                    if lines.send(to_line(&Request::Answer { id, ticket, solution })).is_err() {
+                        return Err(crashed("module host exited"));
+                    }
                 }
             }
         }
@@ -102,36 +112,25 @@ impl Supervisor {
         self.spawns.load(Ordering::Relaxed)
     }
 
-    async fn send(&self, request: Request) -> Result<(u64, mpsc::UnboundedReceiver<Reply>), ModuleError> {
-        let line = to_line(&request);
+    /// Registers the call on a live host and sends its first request. Returns the host's
+    /// generation, its line writer (later requests for this call go to the same host), and
+    /// the call's replies.
+    async fn send(&self, request: Request) -> Result<(u64, Lines, mpsc::UnboundedReceiver<Reply>), ModuleError> {
         let mut slot = self.host.lock().await;
         // A host found dead (or dying between the check and registration) is replaced once.
         for _ in 0..2 {
             if let Some(host) = slot.as_mut() {
                 if let Some(replies) = host.register(request.id()) {
-                    if let Err(e) = host.stdin.write_all(line.as_bytes()).await {
+                    if host.lines.send(to_line(&request)).is_err() {
                         *slot = None;
-                        return Err(crashed(format!("cannot write to module host: {e}")));
+                        return Err(crashed("cannot write to module host"));
                     }
-                    return Ok((host.generation, replies));
+                    return Ok((host.generation, host.lines.clone(), replies));
                 }
             }
             *slot = Some(self.spawn()?);
         }
         Err(crashed("module host exited during startup"))
-    }
-
-    /// Write to the host the call started on; a replacement host knows nothing of the call.
-    async fn write(&self, generation: u64, request: &Request) -> Result<(), ModuleError> {
-        let mut slot = self.host.lock().await;
-        let Some(host) = slot.as_mut().filter(|host| host.generation == generation) else {
-            return Err(crashed("module host exited"));
-        };
-        if let Err(e) = host.stdin.write_all(to_line(request).as_bytes()).await {
-            *slot = None;
-            return Err(crashed(format!("cannot write to module host: {e}")));
-        }
-        Ok(())
     }
 
     fn spawn(&self) -> Result<Host, ModuleError> {
@@ -156,11 +155,13 @@ impl Supervisor {
         });
 
         let pending = Arc::new(Mutex::new(Pending { open: true, waiters: HashMap::new() }));
+        let (lines, outbox) = mpsc::unbounded_channel();
+        tokio::spawn(write_lines(child.stdin.take().expect("piped"), outbox));
         tokio::spawn(read_replies(child.stdout.take().expect("piped"), pending.clone()));
         tokio::spawn(forward_stderr(child.stderr.take().expect("piped")));
         Ok(Host {
             generation: self.spawns.fetch_add(1, Ordering::Relaxed) + 1,
-            stdin: child.stdin.take().expect("piped"),
+            lines,
             pending,
             _child: child,
             #[cfg(windows)]
@@ -177,9 +178,27 @@ impl Supervisor {
     }
 }
 
+/// Request lines to one host's stdin, written in order by `write_lines`.
+type Lines = mpsc::UnboundedSender<String>;
+
+/// Sends `Cancel` for the call unless it finished.
+struct CancelOnDrop {
+    id: u64,
+    lines: Lines,
+    armed: bool,
+}
+
+impl Drop for CancelOnDrop {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = self.lines.send(to_line(&Request::Cancel { id: self.id }));
+        }
+    }
+}
+
 struct Host {
     generation: u64,
-    stdin: ChildStdin,
+    lines: Lines,
     pending: Arc<Mutex<Pending>>,
     // Dropping these kills the process.
     _child: Child,
@@ -227,6 +246,14 @@ async fn read_replies(stdout: ChildStdout, pending: Arc<Mutex<Pending>>) {
     pending.open = false;
     // Dropping the senders fails every call still waiting on this host.
     pending.waiters.clear();
+}
+
+async fn write_lines(mut stdin: ChildStdin, mut outbox: mpsc::UnboundedReceiver<String>) {
+    while let Some(line) = outbox.recv().await {
+        if stdin.write_all(line.as_bytes()).await.is_err() {
+            return; // The host is gone; its stdout closing fails the waiting calls.
+        }
+    }
 }
 
 async fn forward_stderr(stderr: ChildStderr) {

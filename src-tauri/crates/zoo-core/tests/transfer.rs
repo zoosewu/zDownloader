@@ -16,7 +16,9 @@ const KB: u64 = 1024;
 
 fn spec(dir: &Path, url: String, connections: usize) -> TransferSpec {
     TransferSpec {
+        origin: url.clone(),
         url,
+        headers: Vec::new(),
         dir: dir.to_path_buf(),
         name: "out.bin".into(),
         part_path: dir.join("out.bin.test.part"),

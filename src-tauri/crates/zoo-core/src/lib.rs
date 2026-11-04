@@ -11,10 +11,12 @@ pub mod naming;
 pub mod part_file;
 pub mod proxy_pool;
 pub mod rate;
+pub mod resolve;
 pub mod store;
 pub mod task;
 pub mod transfer;
 
 pub use error::CoreError;
 pub use manager::DownloadManager;
-pub use task::{ActiveRange, AddRequest, AutoRetry, Config, Event, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};
+pub use resolve::{Resolver, Source};
+pub use task::{ActiveRange, AddRequest, AutoRetry, Config, Event, Phase, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};

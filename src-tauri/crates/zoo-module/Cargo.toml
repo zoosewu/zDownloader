@@ -20,6 +20,9 @@ base64 = "0.22"
 percent-encoding = "2"
 
 [dev-dependencies]
+zoo-module-client = { path = "../zoo-module-client", features = ["core"] }
+zoo-core = { path = "../zoo-core" }
+chrono = "0.4"
 tempfile = "3"
 jsonschema = { version = "0.60", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

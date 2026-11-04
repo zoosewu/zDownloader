@@ -106,6 +106,46 @@ impl Manifest {
     }
 }
 
+/// Whether `url` matches a `urlPatterns` entry. Scheme, host and the rest are compared apart:
+/// `*` matches any run of characters but never crosses from the host into the path, so
+/// `https://*.k2s.cc/*` cannot match `https://evil.com/x.k2s.cc/`. Host and scheme ignore
+/// case; the fragment is ignored.
+pub fn url_matches(pattern: &str, url: &str) -> bool {
+    let split = |s: &str| -> Option<(String, String, String)> {
+        let (scheme, rest) = s.split_once("://")?;
+        let (host, path) = rest.find('/').map_or((rest, "/"), |i| (&rest[..i], &rest[i..]));
+        Some((scheme.to_ascii_lowercase(), host.to_ascii_lowercase(), path.to_string()))
+    };
+    let url = url.split('#').next().unwrap_or(url);
+    match (split(pattern), split(url)) {
+        (Some((ps, ph, pp)), Some((us, uh, up))) => ps == us && glob(&ph, &uh) && glob(&pp, &up),
+        _ => false,
+    }
+}
+
+/// `*` matches any run of characters; everything else literally.
+fn glob(pattern: &str, text: &str) -> bool {
+    let (p, t): (Vec<char>, Vec<char>) = (pattern.chars().collect(), text.chars().collect());
+    let (mut pi, mut ti) = (0, 0);
+    let mut backtrack: Option<(usize, usize)> = None;
+    while ti < t.len() {
+        if pi < p.len() && p[pi] == '*' {
+            backtrack = Some((pi, ti));
+            pi += 1;
+        } else if pi < p.len() && p[pi] == t[ti] {
+            pi += 1;
+            ti += 1;
+        } else if let Some((star, matched)) = backtrack {
+            pi = star + 1;
+            ti = matched + 1;
+            backtrack = Some((star, matched + 1));
+        } else {
+            return false;
+        }
+    }
+    p[pi..].iter().all(|&c| c == '*')
+}
+
 fn check(ok: bool, message: impl FnOnce() -> String) -> Result<(), String> {
     if ok {
         Ok(())
@@ -156,6 +196,27 @@ mod tests {
             "credentials": [{ "key": "password", "label": "Password", "secret": true, "optional": true }]
         }
     }"#;
+
+    #[test]
+    fn url_patterns() {
+        let cases = [
+            ("https://k2s.cc/file/*", "https://k2s.cc/file/abc/name.zip", true),
+            ("https://k2s.cc/file/*", "HTTPS://K2S.CC/file/abc", true),
+            ("https://k2s.cc/file/*", "https://k2s.cc/file/abc#frag", true),
+            ("https://k2s.cc/file/*", "http://k2s.cc/file/abc", false),
+            ("https://k2s.cc/file/*", "https://k2s.cc/folder/abc", false),
+            ("https://*.k2s.cc/file/*", "https://www.k2s.cc/file/abc", true),
+            ("https://*.k2s.cc/file/*", "https://k2s.cc/file/abc", false),
+            ("https://*.k2s.cc/*", "https://evil.com/x.k2s.cc/file", false),
+            ("https://k2s.cc/*", "https://k2s.cc.evil.com/x", false),
+            ("https://site.com/f/*/d*", "https://site.com/f/1/download", true),
+            ("https://site.com/f/*", "https://site.com/f/", true),
+            ("https://site.com/f/*?x=1", "https://site.com/f/a?x=1", true),
+        ];
+        for (pattern, url, expected) in cases {
+            assert_eq!(url_matches(pattern, url), expected, "{pattern} vs {url}");
+        }
+    }
 
     #[test]
     fn parses_every_field() {

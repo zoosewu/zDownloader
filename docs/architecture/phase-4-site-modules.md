@@ -1,6 +1,6 @@
 # Phase 4 設計規格：網站模組系統重建
 
-- 狀態：已確認（2026-10-31），實作中：4a、4b 完成
+- 狀態：已確認（2026-10-31），實作中：4a、4b、4c 完成，4d 的 SDK 部分完成
 - 依據：[ADR-0001 marketplace](../adr/0001-site-module-marketplace.md)、[ADR-0002 執行環境](../adr/0002-site-module-runtime.md)
 - 修正：review B 段全部、SEC-3..6、D-4、D-5、C-11（偵測競態）
 - 術語見 [GLOSSARY.md](../../GLOSSARY.md)
@@ -113,6 +113,20 @@ export default defineModule({
 - **每次開始傳輸前都重新解析**（分享站的直連多半會過期）；傳輸遇到 401/403/410 時自動重新解析一次。
 - `.part` 續傳的比對改以**原始網址**加上大小與 ETag 為準，不受解析後網址變動影響。
 - `Resolved.headers`（例如 cookie、referer）帶進每個傳輸請求。
+- 實作（4c）：
+  - zoo-core 的 `resolve::Resolver` 有兩個 adapter：`Direct`，以及 `zoo-module-client` 的 `resolver::ModuleResolver`（`core` feature）。後者依 `urlPatterns` 選第一個符合的模組，沒有符合的就直接下載。
+  - `urlPatterns` 的 `*` 不會跨過 host 與 path 的分界。
+  - 只有模組產生的連結（`Source.expires`）遇到 401/403/410 才會重新解析，且只重試一次。
+  - 模組建議的檔名只在使用者沒指定檔名、而且還沒下載任何位元組時採用。
+  - 暫停或取消時，Supervisor 送出 `Cancel`，host 立刻中斷該次解析。
+  - 模組錯誤以 `CoreError::Resolve { message, hint, retryable }` 呈現：
+    - 可重試：Script、Timeout、Crashed；
+    - 不可重試：Load、OutOfMemory。
+- 打包：
+  - `pnpm build:module-host` 以 release 模式建置 host，放到 `src-tauri/binaries/zoo-module-<triple>`。
+  - `tauri build --config src-tauri/tauri.bundle.json` 加上 externalBin。這個設定不放在主設定，否則平常的 `cargo build` 會因為缺少這個檔案而失敗。
+  - shell 在 app 執行檔旁尋找 `zoo-module(.exe)`。開發時用 `cargo build -p zoo-module` 產生在同一個 target 目錄。
+  - captcha 的 UI 延到 4e，在那之前 captcha 一律視為使用者拒絕。
 
 ## 開發工具（`zoo-module` CLI）
 
@@ -151,7 +165,7 @@ export default defineModule({
 |---|---|---|
 | 4a ✅ | client crate（協定 + Supervisor + Job Object）；`zoo-module serve`：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限、隱藏 `Deno.core`、console 改走 stderr | `crates/zoo-module/tests/host.rs`：無窮迴圈、OOM、並行隔離、模組形狀錯誤、回傳值驗證、host 崩潰/卡住/不存在 |
 | 4b ✅ | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
-| 4c | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
+| 4c ✅ | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
 | 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
 | 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |

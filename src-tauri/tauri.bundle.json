@@ -1,0 +1,8 @@
+{
+  "build": {
+    "beforeBuildCommand": "pnpm build:module-host && pnpm build"
+  },
+  "bundle": {
+    "externalBin": ["binaries/zoo-module"]
+  }
+}

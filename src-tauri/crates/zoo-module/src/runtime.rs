@@ -16,7 +16,7 @@ use deno_core::{
 use serde::Deserialize;
 use zoo_module_client::protocol::{Limits, ModuleError, ModuleRef, Resolved};
 
-use crate::budget::{Budget, TRIP_MEMORY, TRIP_NONE, TRIP_TIMEOUT};
+use crate::budget::{Budget, TRIP_CANCELLED, TRIP_MEMORY, TRIP_NONE, TRIP_TIMEOUT};
 use crate::link::CallLink;
 use crate::net::{Credentials, Net, Policy};
 use crate::ops;
@@ -81,7 +81,6 @@ async fn run(
         ..Default::default()
     });
     runtime.op_state().borrow_mut().put(net.clone());
-    runtime.op_state().borrow_mut().put(Rc::new(link));
     let tripped = Arc::new(AtomicU8::new(TRIP_NONE));
     let isolate = runtime.v8_isolate().thread_safe_handle();
     {
@@ -95,6 +94,8 @@ async fn run(
     }
     let budget = Budget::start(Duration::from_millis(limits.timeout_ms), isolate, tripped.clone());
     runtime.op_state().borrow_mut().put(budget.clone());
+    link.attach(budget.clone());
+    runtime.op_state().borrow_mut().put(Rc::new(link));
     // The watchdog stops synchronous JS; this stops waiting on host work.
     let outcome = tokio::select! {
         result = execute(&mut runtime, &entry, url) => Some(result),
@@ -103,6 +104,7 @@ async fn run(
     budget.finish();
 
     match (tripped.load(Ordering::SeqCst), outcome) {
+        (TRIP_CANCELLED, _) => Err(ModuleError::Cancelled),
         (TRIP_MEMORY, _) => Err(ModuleError::OutOfMemory { limit_mb: limits.heap_mb }),
         (TRIP_TIMEOUT, _) | (_, None) => Err(ModuleError::Timeout { limit_ms: limits.timeout_ms }),
         (_, Some(result)) => result.map(|mut resolved| {

@@ -24,6 +24,8 @@ pub struct Request {
     pub path: String,
     pub range: Option<String>,
     pub proxied: bool,
+    /// Lowercased names.
+    pub headers: HashMap<String, String>,
 }
 
 #[derive(Default)]
@@ -112,7 +114,7 @@ async fn handle(stream: TcpStream, state: Arc<Mutex<State>>) -> std::io::Result<
 
     let etag = {
         let mut st = state.lock().unwrap();
-        st.requests.push(Request { path: path.to_string(), range: range.clone(), proxied });
+        st.requests.push(Request { path: path.to_string(), range: range.clone(), proxied, headers: headers.clone() });
         st.etag.clone()
     };
     let mut stream = reader.into_inner();
