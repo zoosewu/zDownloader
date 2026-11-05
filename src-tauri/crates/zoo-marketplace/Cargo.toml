@@ -1,0 +1,24 @@
+[package]
+name = "zoo-marketplace"
+version = "0.1.0"
+edition = "2021"
+description = "Site-module marketplaces: sources, catalogs, install, update, consent. No Tauri."
+publish = false
+
+[dependencies]
+zoo-core = { path = "../zoo-core" }
+zoo-module-client = { path = "../zoo-module-client", features = ["core"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["process", "fs"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "http2"] }
+url = "2.5"
+sha2 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+log = "0.4"
+ts-rs = { version = "12", features = ["chrono-impl"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "process", "fs"] }

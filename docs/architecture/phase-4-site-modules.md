@@ -168,13 +168,52 @@ export default defineModule({
 
 ## Marketplace（ADR-0001）
 
-- **來源**：GitHub `owner/repo`、git URL、catalog 的 HTTPS URL、本機資料夾（開發用，檔案變更自動重新載入）。
-- **catalog**（`zoo-marketplace.json`）：`name`、`owner`、`modules[]`（`id`、`version`、`source`、`description`、`urlPatterns`、權限摘要、`sha256`）。
-- **安裝**：下載 `dist/index.js` 與 manifest 到 `<app_data>/modules/<marketplace>/<id>/`，驗證 sha256，顯示權限摘要請使用者同意。
-- **更新**：手動檢查並提供「一律檢查更新」選項；權限擴大時須重新同意。
-- **識別**：`id@marketplace`；同一網址有多個模組符合時，以使用者設定的優先順序決定（預設先安裝者優先）。
-- **信任等級**：`official`（app 內附）與 `community`；簽章留待之後。
-- **UI**：設定頁的「模組」分頁改為：已安裝（啟用/停用/更新/移除/權限/稽核）、來源（新增/移除）、瀏覽（各來源的目錄）。
+4e 細部規格（2026-11-05 確認）。分三段：4e1 核心（`crates/zoo-marketplace`，不依賴 Tauri）、4e2 shell 接線與 captcha、4e3 前端。
+
+- **來源**（使用者輸入一個字串，依格式判斷）：
+  - GitHub `owner/repo`：讀 `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/zoo-marketplace.json`，等同 HTTPS 來源；
+  - HTTPS 網址：指向 catalog 檔；
+  - git URL：呼叫系統的 `git clone --depth 1`，更新時重新 fetch，並記下 commit；沒有安裝 git 時回報清楚的錯誤；
+  - 本機資料夾：內含 `zoo-marketplace.json`，或者本身就是一個模組（只有 `manifest.json`，視為名為 `dev-<id>` 的單一模組來源）。檔案就地讀取，不複製。
+  - 遠端來源只接受 HTTPS；`localhost` 與 `127.0.0.1` 例外，可以用 http。
+- **catalog**（`zoo-marketplace.json`）：
+  - `{ name, owner, modules: [{ id, version, source, description, sha256 }] }`；
+  - `name` 是 marketplace 的識別，只能用小寫字母、數字和 `-`；
+  - `source` 是模組資料夾相對於 catalog 的路徑，不能是絕對路徑，也不能有 `..`；
+  - `sha256` 是 entry（打包後 JS）的 SHA-256，用小寫 hex。遠端來源必填，本機來源可省略。
+  - `urlPatterns` 和權限一律以模組自己的 `manifest.json` 為準，catalog 不重複列出。
+- **安裝**分兩步：
+  - `plan_install(id@mp)`：下載 manifest 與 entry，用 `Manifest::parse` 驗證，比對 sha256，回傳權限摘要；如果權限比目前同意的多，標記 `needsConsent`；
+  - `install(plan)`：使用者同意後才寫入 `<data>/modules/<mp>/<id>/`。
+  - 更新也走同一個流程。新版本在同意之前不會生效。
+- **權限**：
+  - host 拿到的 `Grants` 一律來自已同意的權限，不是 manifest。所以本機來源的 manifest 擴大權限時，新權限在重新同意前不會生效。
+  - 帳密存在系統金鑰圈（`SecretStore` seam：shell 用 keyring，測試用記憶體），帳號名稱是 `<id>@<mp>/<key>`。
+- **管理**：
+  - 啟用與停用；
+  - 優先順序：清單順序就是比對順序，預設先安裝的在前；
+  - 移除：一併刪除檔案與帳密；
+  - 移除來源：一併移除它提供的模組。
+- **更新檢查**：手動檢查，另有「啟動時檢查」設定（4e2）。一律不自動安裝。
+- **離線**：已安裝的模組只讀本機檔案，不需要網路。
+- **信任等級**：
+  - `official`：app 內附的本機來源，不能移除，k2s 在 4f 放入；
+  - `community`：使用者新增的來源。
+- **本機來源熱重載**：shell 監看資料夾變化，呼叫 `reload_local()` 重新讀 manifest。entry 每次呼叫都重新載入，所以程式碼改動立刻生效。
+- **captcha（4e2、4e3）**：
+  - 圖片 captcha 在對話框裡顯示圖片，讓你輸入文字。
+  - reCAPTCHA 會開一個 WebView 視窗載入真實頁面，注入的腳本在你解完題後把 token 帶到特殊網址，由 `on_navigation` 攔截。不開放 Tauri IPC 給外部網頁。實機驗證排在 4g。
+- **UI（4e3）**：設定頁的「模組」分頁分成三部分：
+  - 已安裝：啟用、停用、更新、移除、權限、帳密、順序；
+  - 來源：新增、移除、重新整理；
+  - 瀏覽：各來源 catalog 裡的模組。
+- 實作（4e1）：
+  - `zoo-marketplace::Marketplace` 是唯一的介面，狀態存在 `<data>/marketplace.json`，git checkout 放在 `<data>/git/`。
+  - 遠端 redirect 也只允許 https（loopback 除外）。
+  - 大小上限：catalog 1 MB、manifest 64 KB、entry 16 MB。
+- **這次不做**：
+  - 稽核紀錄：host 目前不記錄每個請求；
+  - 簽章：照決定 #7。
 
 ## 移除
 
@@ -189,7 +228,7 @@ export default defineModule({
 | 4c ✅ | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
 | 4d ✅ | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md；`Resolved.maxConnections`；SDK 說明以 `headers` 覆寫 User-Agent（偽裝成其他下載軟體，例如百度網盤） | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4.5 ✅ | 下載核心補強：更新網址（比對大小並抽樣比對位元組；不符時詢問，預設從頭下載）、直接連結自訂 header 與預設 User-Agent | zoo-core 整合測試：換成鏡像後續傳、內容不同時拒絕續傳、header 送達 |
-| 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
+| 4e | 4e1 `zoo-marketplace`：來源（GitHub、HTTPS、git、本機）、catalog、安裝/更新/移除、權限同意、優先順序、帳密；4e2 shell 接線、captcha 互動、熱重載、內附官方來源；4e3 前端模組頁、captcha 對話框、4.5 的 UI | 整合測試：HTTP fixture catalog 安裝、sha256 不符拒絕、權限擴大要求重新同意、離線可用、git 來源、本機來源重新載入 |
 | 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |
 | 4g | 實機驗證與文件 | 驗證清單 |
 

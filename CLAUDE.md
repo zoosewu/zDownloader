@@ -30,7 +30,7 @@ tests/
 ## Commands
 
 ```bash
-cd src-tauri && cargo test --workspace   # zoo-core + shell（含 bindings 一致性、enum 契約）
+cd src-tauri && cargo test --workspace   # zoo-core、模組 host、marketplace、shell（含 bindings 一致性、enum 契約）
 UPDATE_BINDINGS=1 cargo test bindings     # Rust DTO 變更後重新產生 src/backend/bindings
 pnpm test:run                       # 前端測試（vitest，含命令名稱一致性）
 pnpm exec tsc --noEmit              # 型別檢查

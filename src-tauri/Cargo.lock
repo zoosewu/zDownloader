@@ -8456,6 +8456,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "zoo-marketplace"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "log",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "ts-rs",
+ "url",
+ "zoo-core",
+ "zoo-module-client",
+]
+
+[[package]]
 name = "zoo-module"
 version = "0.1.0"
 dependencies = [

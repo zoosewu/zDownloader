@@ -17,7 +17,7 @@ name = "zoo_downloader_lib"
 crate-type = ["staticlib", "rlib"]
 
 [workspace]
-members = ["crates/zoo-core", "crates/zoo-module-client", "crates/zoo-module"]
+members = ["crates/zoo-core", "crates/zoo-module-client", "crates/zoo-module", "crates/zoo-marketplace"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
