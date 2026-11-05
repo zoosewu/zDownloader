@@ -60,6 +60,7 @@ impl Resolver for ModuleResolver {
                 url: resolved.url,
                 headers: resolved.headers.into_iter().collect(),
                 filename: resolved.filename,
+                max_connections: resolved.max_connections.map(|n| n as usize),
                 expires: true,
             })
         })

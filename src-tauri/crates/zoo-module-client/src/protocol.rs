@@ -65,6 +65,9 @@ pub struct Resolved {
     pub headers: BTreeMap<String, String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<u64>,
+    /// The most parallel connections the site tolerates for this download.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_connections: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
@@ -184,6 +187,7 @@ mod tests {
                     filename: Some("x.zip".into()),
                     headers: BTreeMap::from([("Referer".into(), "https://a".into())]),
                     size: Some(10),
+                    max_connections: Some(2),
                 },
             },
             Reply::Failed { id: 2, error: ModuleError::Timeout { limit_ms: 5 } },

@@ -109,6 +109,18 @@ async fn fetch_follows_redirects_keeps_cookies_and_posts_forms() {
     assert!(form.headers["user-agent"].starts_with("Mozilla/5.0"), "browser-like default user agent");
 }
 
+#[tokio::test]
+async fn a_module_can_set_its_own_user_agent() {
+    let server = Server::start(|req| Resp::ok(req.headers.get("user-agent").cloned().unwrap_or_default())).await;
+    let value = eval(
+        &loopback_host(),
+        &["127.0.0.1"],
+        &format!("return (await fetch('{}', {{ headers: {{ 'User-Agent': 'pan.baidu.com' }} }})).text();", server.url("/ua")),
+    )
+    .await;
+    assert_eq!(value, json!("pan.baidu.com"));
+}
+
 /// Runs `fetch(url)` in a module allowed `domains` and returns the error message (or "ok").
 async fn fetch_error(host: &zoo_module_client::Supervisor, domains: &[&str], url: &str) -> String {
     eval(host, domains, &format!("try {{ await fetch({url:?}); return 'ok'; }} catch (e) {{ return `${{e.name}}: ${{e.message}}`; }}"))

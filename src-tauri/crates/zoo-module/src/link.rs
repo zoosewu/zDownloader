@@ -8,6 +8,7 @@ use tokio::sync::oneshot;
 use zoo_module_client::protocol::{CallEvent, Captcha, Reply};
 
 use crate::budget::Budget;
+use crate::hooks::Hooks;
 
 /// Where a captcha answer goes, by (call id, ticket).
 type AnswerSlots = HashMap<(u64, u64), oneshot::Sender<Option<String>>>;
@@ -54,28 +55,40 @@ impl CallLink {
         Self { id, replies, calls, next_ticket: Cell::new(1) }
     }
 
-    /// Makes the call cancellable through `Calls::cancel`.
-    pub fn attach(&self, budget: Arc<Budget>) {
-        if self.calls.early_cancels.lock().unwrap().remove(&self.id) {
-            budget.cancel();
-        } else {
-            self.calls.budgets.lock().unwrap().insert(self.id, budget);
-        }
-    }
-
-    pub fn event(&self, event: CallEvent) {
+    fn event(&self, event: CallEvent) {
         let _ = self.replies.send(Reply::Event { id: self.id, event });
+    }
+}
+
+/// Events go to the app; logs to stderr, which the app's Supervisor logs.
+impl Hooks for CallLink {
+    fn waiting(&self, ms: u64, reason: Option<String>) -> bool {
+        self.event(CallEvent::Waiting { ms, reason });
+        true
     }
 
     /// Sends the challenge; the receiver yields the user's solution (None if declined, or if
     /// the app went away).
-    pub fn ask(&self, challenge: Captcha) -> oneshot::Receiver<Option<String>> {
+    fn ask(&self, challenge: Captcha) -> oneshot::Receiver<Option<String>> {
         let ticket = self.next_ticket.get();
         self.next_ticket.set(ticket + 1);
         let (tx, rx) = oneshot::channel();
         self.calls.answers.lock().unwrap().insert((self.id, ticket), tx);
         self.event(CallEvent::Captcha { ticket, challenge });
         rx
+    }
+
+    fn log(&self, level: &str, message: &str) {
+        eprintln!("[call {}] [{level}] {message}", self.id);
+    }
+
+    /// Makes the call cancellable through `Calls::cancel`.
+    fn attach(&self, budget: Arc<Budget>) {
+        if self.calls.early_cancels.lock().unwrap().remove(&self.id) {
+            budget.cancel();
+        } else {
+            self.calls.budgets.lock().unwrap().insert(self.id, budget);
+        }
     }
 }
 

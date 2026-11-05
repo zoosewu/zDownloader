@@ -711,6 +711,7 @@ async fn run_job(
     msgs: &mpsc::UnboundedSender<JobMsg>,
 ) -> Result<PathBuf, CoreError> {
     let mut resolved_again = false;
+    let connections = spec.connections;
     loop {
         let report: resolve::PhaseReport = {
             let msgs = msgs.clone();
@@ -732,6 +733,7 @@ async fn run_job(
         }
         spec.url = source.url;
         spec.headers = source.headers;
+        spec.connections = source.max_connections.map_or(connections, |max| connections.min(max.max(1)));
         let _ = msgs.send(JobMsg::Phase(id, Phase::Transferring));
         match transfer::run(&spec, ctx).await {
             Err(CoreError::Http(401 | 403 | 410)) if source.expires && !resolved_again => resolved_again = true,

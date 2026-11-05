@@ -1,0 +1,7 @@
+[
+  {
+    "name": "basic",
+    "url": "https://example.com/file/abc123",
+    "expect": { "url": "https://example.com/*" }
+  }
+]

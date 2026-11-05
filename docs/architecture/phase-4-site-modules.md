@@ -1,6 +1,6 @@
 # Phase 4 設計規格：網站模組系統重建
 
-- 狀態：已確認（2026-10-31），實作中：4a、4b、4c 完成，4d 的 SDK 部分完成
+- 狀態：已確認（2026-10-31），實作中：4a～4d 完成
 - 依據：[ADR-0001 marketplace](../adr/0001-site-module-marketplace.md)、[ADR-0002 執行環境](../adr/0002-site-module-runtime.md)
 - 修正：review B 段全部、SEC-3..6、D-4、D-5、C-11（偵測競態）
 - 術語見 [GLOSSARY.md](../../GLOSSARY.md)
@@ -136,13 +136,20 @@ export default defineModule({
 | `zoo-module check [dir]` | manifest schema、apiVersion、權限、打包結果的靜態檢查 |
 | `zoo-module test [dir] [url]` | 執行 `resolve`，輸出每個請求與 Policy 判定、zoo 呼叫、結果或錯誤與修正提示；`--json` 給 AI 讀 |
 | `zoo-module test --record` / 預設重播 | 首次實連並錄製到 `tests/cassettes/`，之後離線重播 |
-| `zoo-module test --inspect` | 開 Inspector 埠，可從 VS Code 下中斷點 |
+| `zoo-module test --inspect` | 開 Inspector 埠，可從 VS Code 下中斷點（未做，優先序最低） |
 
 - **SDK**（`crates/zoo-module/sdk/`，已完成）：`zoo-module.d.ts`、`globals.d.ts`、`manifest.schema.json`。
   - 型別是手寫的。執行期是否一致由 `tests/sdk.rs` 檢查：全域物件完全相同、宣告的成員都存在、schema 與 `Manifest::parse` 判定相同。
   - 範本以 `lib: ["ES2023"]`、`types: []` 檢查型別，用到不支援的 API 會被標錯。
   - `resolve` 回傳多餘欄位時，型別錯誤會指出欄位名稱與合法欄位。
 - 不做自訂 LSP 與 MCP server（2026-11-04 決定）：編輯器靠 TypeScript 與 JSON Schema 提供補全與檢查。
+- CLI 實作（4d）：
+  - `runtime::run_call` 由兩個 seam 驅動：`hooks::Hooks`（倒數、captcha、log、取消）與 `net::Transport`（live / record / replay）。serve 與 CLI 共用同一個 runtime。
+  - 錄製檔以 HTTP hop 為單位，redirect 的每一跳各一筆；帳密以 `{{credential:key}}` 儲存。
+  - 重播時仍經過 Policy 檢查，倒數直接略過，captcha 使用錄製時的答案。
+  - `check` 的檢查項目：manifest、bundle 能否載入及形狀、程式碼用到但未宣告的帳密 key、測試案例與錄製檔。
+  - `.credentials.json` 存放測試用帳號；範本的 `.gitignore` 已排除它。
+  - `test` 的預期值：`url` 與 `filename` 用 `*` 萬用字元比對，`error` 比對錯誤訊息是否包含指定文字。
 - CLI 與 app 隨附的 host 是同一個執行檔；另外以 GitHub Release 單獨發佈給模組作者。
 
 ## Marketplace（ADR-0001）
@@ -166,7 +173,7 @@ export default defineModule({
 | 4a ✅ | client crate（協定 + Supervisor + Job Object）；`zoo-module serve`：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限、隱藏 `Deno.core`、console 改走 stderr | `crates/zoo-module/tests/host.rs`：無窮迴圈、OOM、並行隔離、模組形狀錯誤、回傳值驗證、host 崩潰/卡住/不存在 |
 | 4b ✅ | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
 | 4c ✅ | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
-| 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md；`Resolved.maxConnections`；SDK 說明以 `headers` 覆寫 User-Agent（偽裝成其他下載軟體，例如百度網盤） | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
+| 4d ✅ | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md；`Resolved.maxConnections`；SDK 說明以 `headers` 覆寫 User-Agent（偽裝成其他下載軟體，例如百度網盤） | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4.5 | 下載核心補強：更新網址（比對大小並抽樣比對位元組；不符時詢問，預設從頭下載）、直接連結自訂 header 與預設 User-Agent | zoo-core 整合測試：換成鏡像後續傳、內容不同時拒絕續傳、header 送達 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
 | 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |

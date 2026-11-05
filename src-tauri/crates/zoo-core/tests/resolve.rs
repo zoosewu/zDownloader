@@ -67,7 +67,7 @@ impl Resolver for Scripted {
 }
 
 fn expiring(url: String) -> Source {
-    Source { url, headers: vec![("X-Token".into(), "t".into())], filename: None, expires: true }
+    Source { url, headers: vec![("X-Token".into(), "t".into())], filename: None, max_connections: None, expires: true }
 }
 
 fn start(cfg: Config, store: &Path, resolver: Arc<dyn Resolver>) -> DownloadManager {
@@ -227,4 +227,40 @@ async fn pausing_during_resolution_abandons_it() {
     m.resume(id).await.unwrap();
     wait_until(&m, id, |t| t.state == TaskState::Completed).await;
     assert_eq!(resolver.calls(), 2);
+}
+
+#[tokio::test]
+async fn the_site_connection_limit_is_respected() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let url = fx.url(&format!("/file/{}?delay_ms=5", 1024 * KB));
+    let resolver = Scripted::new(move |_| Ok(Source { max_connections: Some(1), ..expiring(url.clone()) }));
+    let mut cfg = config();
+    cfg.connections_per_task = 4;
+    let m = start(cfg, dir.path(), resolver);
+    let id = m.add(req(dir.path(), None)).await.unwrap().id;
+
+    let mut most = 0;
+    loop {
+        let task = m.list().await.unwrap().into_iter().find(|t| t.id == id).unwrap();
+        if task.state == TaskState::Completed {
+            break;
+        }
+        most = most.max(m.segments(id).await.unwrap().active.len());
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(most, 1, "one connection at a time");
+}
+
+#[tokio::test]
+async fn resolved_headers_can_replace_the_user_agent() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let url = fx.url("/file/1000");
+    let headers = vec![("User-Agent".to_string(), "netdisk;7.42.0.5;PC".to_string())];
+    let m = start(config(), dir.path(), Scripted::new(move |_| Ok(Source { headers: headers.clone(), ..expiring(url.clone()) })));
+    let id = m.add(req(dir.path(), None)).await.unwrap().id;
+    wait_until(&m, id, |t| t.state == TaskState::Completed).await;
+    let agents: Vec<_> = fx.requests().iter().map(|r| r.headers.get("user-agent").cloned()).collect();
+    assert!(agents.iter().all(|ua| ua.as_deref() == Some("netdisk;7.42.0.5;PC")), "{agents:?}");
 }

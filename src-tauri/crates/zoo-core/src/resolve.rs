@@ -18,6 +18,8 @@ pub struct Source {
     pub headers: Vec<(String, String)>,
     /// Suggested file name; used only if the user did not choose one.
     pub filename: Option<String>,
+    /// Upper bound on parallel connections (some sites throttle or ban more).
+    pub max_connections: Option<usize>,
     /// Whether the link was produced by resolution (and so may expire); a direct link
     /// is never re-resolved.
     pub expires: bool,
@@ -25,7 +27,7 @@ pub struct Source {
 
 impl Source {
     pub fn direct(url: &str) -> Self {
-        Self { url: url.to_string(), headers: Vec::new(), filename: None, expires: false }
+        Self { url: url.to_string(), headers: Vec::new(), filename: None, max_connections: None, expires: false }
     }
 }
 

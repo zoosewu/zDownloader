@@ -34,12 +34,21 @@ declare module "zoo-module" {
     /** File name to save as. Defaults to the name the server or URL gives. */
     filename?: string;
     /**
-     * Headers for the download request (e.g. `Referer`). May contain credential placeholders.
+     * Headers for every download request (e.g. `Referer`). May contain credential placeholders.
      * If you set no `Cookie`, the cookies this call collected for `url` are sent.
+     * Setting `User-Agent` replaces the app's own, for sites that only serve their own client:
+     * @example
+     * // Baidu Netdisk only serves pcs links to its client.
+     * return { url: dlink, headers: { 'User-Agent': 'netdisk;7.42.0.5;PC;PC-Windows;10.0.22631;WindowsBaiduYunGuanJia' } };
      */
     headers?: Record<string, string>;
     /** Size in bytes, if the site tells you before downloading. */
     size?: number;
+    /**
+     * The most parallel connections the site tolerates. Downloads split a file across several
+     * connections (8 by default); sites that throttle or ban that need a lower number.
+     */
+    maxConnections?: number;
   }
 
   export interface SiteModule {
@@ -52,7 +61,7 @@ declare module "zoo-module" {
 
   /** `R` with any field `Resolved` does not have turned into an error message (the host rejects them). */
   type OnlyResolvedFields<R> = {
-    [K in keyof R]: K extends keyof Resolved ? R[K] : `'${K & string}' is not a Resolved field (url, filename, headers, size)`;
+    [K in keyof R]: K extends keyof Resolved ? R[K] : `'${K & string}' is not a Resolved field (url, filename, headers, size, maxConnections)`;
   };
 
   /** Marks the default export as a site module and type-checks it. Returns `module` unchanged. */

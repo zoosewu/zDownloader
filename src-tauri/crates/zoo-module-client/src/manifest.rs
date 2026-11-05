@@ -123,8 +123,8 @@ pub fn url_matches(pattern: &str, url: &str) -> bool {
     }
 }
 
-/// `*` matches any run of characters; everything else literally.
-fn glob(pattern: &str, text: &str) -> bool {
+/// `*` matches any run of characters; everything else literally (also used by test expectations).
+pub fn glob(pattern: &str, text: &str) -> bool {
     let (p, t): (Vec<char>, Vec<char>) = (pattern.chars().collect(), text.chars().collect());
     let (mut pi, mut ti) = (0, 0);
     let mut backtrack: Option<(usize, usize)> = None;

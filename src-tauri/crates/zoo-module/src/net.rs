@@ -2,8 +2,10 @@
 //! http(s) only, host on the module's allowlist, and (after DNS, so rebinding cannot dodge it)
 //! a public address. Redirects are followed here, hop by hop, never by reqwest.
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,6 +14,9 @@ use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use reqwest::cookie::{CookieStore, Jar};
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use zoo_module_client::protocol::{Resolved, Secret};
+
+use crate::cassette::{Cassette, Exchange};
+use crate::hooks::{FetchOutcome, Step, Trace};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Method, StatusCode};
 
@@ -223,6 +228,42 @@ impl Credentials {
     fn scrub_text(&self, text: &str) -> String {
         String::from_utf8_lossy(&self.scrub(text.as_bytes())).into_owned()
     }
+
+    /// This call's placeholders as `{{credential:<key>}}`, stable across calls (for cassettes).
+    fn normalize(&self, text: &str) -> String {
+        self.values.keys().fold(text.to_string(), |text, key| {
+            text.replace(&format!("zoocred-{}-{key}-", self.nonce), &format!("{{{{credential:{key}}}}}"))
+        })
+    }
+
+    /// The reverse of `normalize`, with this call's placeholders.
+    fn denormalize(&self, text: &str) -> String {
+        self.values.keys().fold(text.to_string(), |text, key| {
+            text.replace(&format!("{{{{credential:{key}}}}}"), &format!("zoocred-{}-{key}-", self.nonce))
+        })
+    }
+}
+
+/// Where requests go.
+pub enum Transport {
+    Live,
+    /// Live, keeping every exchange for a cassette.
+    Record(RefCell<Vec<Exchange>>),
+    /// From a cassette; an exchange is used once. Nothing reaches the network.
+    Replay(RefCell<Vec<Option<Exchange>>>),
+}
+
+impl Transport {
+    pub fn replay(cassette: &Cassette) -> Self {
+        Transport::Replay(RefCell::new(cassette.exchanges.iter().cloned().map(Some).collect()))
+    }
+}
+
+/// One HTTP hop's answer, credentials still in place.
+struct Hop {
+    status: u16,
+    headers: Vec<(String, String)>,
+    body: Vec<u8>,
 }
 
 fn raw(value: &str) -> String {
@@ -266,10 +307,17 @@ pub struct Net {
     policy: Arc<Policy>,
     jar: Arc<Jar>,
     pub credentials: Credentials,
+    transport: Transport,
+    trace: Option<Rc<Trace>>,
 }
 
 impl Net {
-    pub fn new(policy: Policy, credentials: Credentials) -> Result<Self, String> {
+    pub fn new(
+        policy: Policy,
+        credentials: Credentials,
+        transport: Transport,
+        trace: Option<Rc<Trace>>,
+    ) -> Result<Self, String> {
         let policy = Arc::new(policy);
         let jar = Arc::new(Jar::default());
         let client = reqwest::Client::builder()
@@ -282,7 +330,115 @@ impl Net {
             .user_agent(USER_AGENT)
             .build()
             .map_err(|e| format!("cannot build HTTP client: {e}"))?;
-        Ok(Self { client, policy, jar, credentials })
+        Ok(Self { client, policy, jar, credentials, transport, trace })
+    }
+
+    /// Exchanges recorded so far (`Transport::Record`), ready for a cassette.
+    pub fn recorded(&self) -> Vec<Exchange> {
+        match &self.transport {
+            Transport::Record(exchanges) => exchanges.borrow().clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    fn trace(&self, method: &Method, url: &str, outcome: FetchOutcome, replayed: bool) {
+        if let Some(trace) = &self.trace {
+            trace.push(Step::Fetch { method: method.to_string(), url: url.to_string(), outcome, replayed });
+        }
+    }
+
+    /// Send one request (no redirect following). `shown` is the URL as the module may see it
+    /// (placeholders, not values): what traces and cassettes record.
+    async fn hop(
+        &self,
+        method: &Method,
+        url: &Url,
+        shown: &str,
+        headers: &HeaderMap,
+        body: Option<&Vec<u8>>,
+    ) -> Result<Hop, String> {
+        let shown = self.credentials.normalize(shown);
+        if let Transport::Replay(exchanges) = &self.transport {
+            let mut exchanges = exchanges.borrow_mut();
+            let found = exchanges
+                .iter_mut()
+                .find(|e| e.as_ref().is_some_and(|e| e.method == method.as_str() && e.url == shown))
+                .and_then(Option::take);
+            let Some(exchange) = found else {
+                let message = format!(
+                    "fetch {method} {shown} is not in the cassette; the module now makes a request it did not make \
+                     when recording (run zoo-module test --record to record again)"
+                );
+                self.trace(method, &shown, FetchOutcome::Failed(message.clone()), true);
+                return Err(message);
+            };
+            let headers: Vec<(String, String)> =
+                exchange.headers.iter().map(|(k, v)| (k.clone(), self.credentials.denormalize(v))).collect();
+            for (_, cookie) in headers.iter().filter(|(k, _)| k.eq_ignore_ascii_case("set-cookie")) {
+                self.jar.add_cookie_str(cookie, url);
+            }
+            let body = match &exchange.body {
+                Some(text) => self.credentials.denormalize(text).into_bytes(),
+                None => exchange.body_bytes(),
+            };
+            self.trace(method, &shown, FetchOutcome::Status(exchange.status), true);
+            return Ok(Hop { status: exchange.status, headers, body });
+        }
+
+        let mut builder = self.client.request(method.clone(), url.clone()).headers(headers.clone());
+        if let Some(body) = body {
+            builder = builder.body(body.clone());
+        }
+        let mut response = match builder.send().await {
+            Ok(response) => response,
+            Err(e) => {
+                let message = describe(url, &e);
+                self.trace(method, &shown, FetchOutcome::Failed(message.clone()), false);
+                return Err(message);
+            }
+        };
+        let status = response.status().as_u16();
+        let headers: Vec<(String, String)> = response
+            .headers()
+            .iter()
+            .map(|(k, v)| (k.as_str().to_string(), String::from_utf8_lossy(v.as_bytes()).into_owned()))
+            .collect();
+        let mut body = Vec::new();
+        loop {
+            match response.chunk().await {
+                Ok(Some(chunk)) if body.len() + chunk.len() > MAX_BODY => {
+                    let message = format!("fetch {url}: response larger than {} MB", MAX_BODY / 1024 / 1024);
+                    self.trace(method, &shown, FetchOutcome::Failed(message.clone()), false);
+                    return Err(message);
+                }
+                Ok(Some(chunk)) => body.extend_from_slice(&chunk),
+                Ok(None) => break,
+                Err(e) => {
+                    let message = describe(url, &e);
+                    self.trace(method, &shown, FetchOutcome::Failed(message.clone()), false);
+                    return Err(message);
+                }
+            }
+        }
+        self.trace(method, &shown, FetchOutcome::Status(status), false);
+        if let Transport::Record(exchanges) = &self.transport {
+            let credentials = &self.credentials;
+            let mut exchange = Exchange {
+                method: method.to_string(),
+                url: shown.clone(),
+                status,
+                headers: headers.iter().map(|(k, v)| (k.clone(), credentials.normalize(&credentials.scrub_text(v)))).collect(),
+                body: None,
+                body_base64: None,
+            };
+            let scrubbed = credentials.scrub(&body);
+            match std::str::from_utf8(&scrubbed) {
+                Ok(text) => exchange.set_body(credentials.normalize(text).as_bytes()),
+                Err(_) => exchange.set_body(&scrubbed),
+            }
+            exchanges.borrow_mut().push(exchange);
+        }
+        Ok(Hop { status, headers, body })
     }
 
     /// Fills credential placeholders in the result and carries the session's cookies over to
@@ -324,16 +480,18 @@ impl Net {
         };
         let mut body = request.body.map(|body| credentials.fill_bytes(&body, encode));
         let mut redirected = false;
+        // The URL as the module wrote it (placeholders, not values), for traces and cassettes.
+        let mut shown = request.url.clone();
 
         for _ in 0..=MAX_REDIRECTS {
-            self.policy.check_url(&url)?;
-            let mut builder = self.client.request(method.clone(), url.clone()).headers(headers.clone());
-            if let Some(body) = &body {
-                builder = builder.body(body.clone());
+            if let Err(blocked) = self.policy.check_url(&url) {
+                self.trace(&method, &credentials.normalize(&shown), FetchOutcome::Blocked(blocked.clone()), false);
+                return Err(blocked);
             }
-            let response = builder.send().await.map_err(|e| describe(&url, &e))?;
-            let status = response.status();
-            let location = response.headers().get(reqwest::header::LOCATION).and_then(|v| v.to_str().ok());
+            let hop = self.hop(&method, &url, &shown, &headers, body.as_ref()).await?;
+            let status = StatusCode::from_u16(hop.status).map_err(|_| format!("fetch {url}: bad status {}", hop.status))?;
+            let location =
+                hop.headers.iter().find(|(k, _)| k.eq_ignore_ascii_case("location")).map(|(_, v)| v.as_str());
 
             if status.is_redirection() && request.redirect != Redirect::Manual {
                 if let Some(location) = location {
@@ -353,44 +511,24 @@ impl Net {
                     if next.origin() != url.origin() {
                         headers.remove(reqwest::header::AUTHORIZATION);
                     }
+                    shown = credentials.scrub_text(next.as_str());
                     url = next;
                     redirected = true;
                     continue;
                 }
             }
-            return read(response, &url, redirected, credentials).await;
+            // Module code sees placeholders wherever a credential value comes back.
+            return Ok(FetchResponse {
+                status: hop.status,
+                status_text: status.canonical_reason().unwrap_or("").to_string(),
+                url: credentials.scrub_text(url.as_str()),
+                redirected,
+                headers: hop.headers.iter().map(|(k, v)| (k.clone(), credentials.scrub_text(v))).collect(),
+                body: credentials.scrub(&hop.body),
+            });
         }
         Err(format!("fetch {url}: more than {MAX_REDIRECTS} redirects"))
     }
-}
-
-async fn read(
-    mut response: reqwest::Response,
-    url: &Url,
-    redirected: bool,
-    credentials: &Credentials,
-) -> Result<FetchResponse, String> {
-    let status = response.status();
-    let headers = response
-        .headers()
-        .iter()
-        .map(|(k, v)| (k.as_str().to_string(), credentials.scrub_text(&String::from_utf8_lossy(v.as_bytes()))))
-        .collect();
-    let mut body = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(|e| describe(url, &e))? {
-        if body.len() + chunk.len() > MAX_BODY {
-            return Err(format!("fetch {url}: response larger than {} MB", MAX_BODY / 1024 / 1024));
-        }
-        body.extend_from_slice(&chunk);
-    }
-    Ok(FetchResponse {
-        status: status.as_u16(),
-        status_text: status.canonical_reason().unwrap_or("").to_string(),
-        url: credentials.scrub_text(url.as_str()),
-        redirected,
-        headers,
-        body: credentials.scrub(&body),
-    })
 }
 
 /// reqwest hides the useful part (our resolver's refusal, the OS error) in the source chain.

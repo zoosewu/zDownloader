@@ -1,9 +1,9 @@
 // Runs before the module, once per isolate.
 // deno_core's console prints to stdout, which carries the protocol: replace it with one that
-// writes to stderr. Then hide deno_core's op table so module code reaches the host only through
-// the APIs in web.js and `zoo`.
+// goes to the host (stderr under serve, the trace under zoo-module test). Then hide deno_core's
+// op table so module code reaches the host only through the APIs in web.js and `zoo`.
 ((core) => {
-  const print = core.print;
+  const { op_zoo_log } = core.ops;
   const format = (args) =>
     args.map((arg) => {
       if (typeof arg === "string") return arg;
@@ -15,7 +15,7 @@
     }).join(" ");
   const log = {};
   for (const level of ["debug", "info", "warn", "error"]) {
-    log[level] = (...args) => print(`[${level}] ${format(args)}\n`, true);
+    log[level] = (...args) => op_zoo_log(level, format(args));
   }
   globalThis.console = { ...log, log: log.info };
 
@@ -61,11 +61,13 @@
   });
 
   // Called by the generated entry module with the module's default export.
-  // Settles with a JSON string: {"ok": result} | {"err": {message, hint, stack}} | {"invalid": why}.
+  // Settles with a JSON string: {"ok": result} | {"err": {message, hint, stack}} | {"invalid": why},
+  // or {"checked": true} when `url` is null (load and shape check only).
   const run = async (module, url) => {
     if (module === null || typeof module !== "object" || typeof module.resolve !== "function") {
       return JSON.stringify({ invalid: "the default export has no resolve function" });
     }
+    if (url === null) return JSON.stringify({ checked: true });
     try {
       const result = await module.resolve(url, zoo);
       return JSON.stringify({ ok: result ?? null });

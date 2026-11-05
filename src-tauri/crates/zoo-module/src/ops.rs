@@ -12,10 +12,10 @@ use deno_error::JsErrorBox;
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha384, Sha512};
-use zoo_module_client::protocol::{CallEvent, Captcha};
+use zoo_module_client::protocol::Captcha;
 
 use crate::budget::Budget;
-use crate::link::CallLink;
+use crate::hooks::Hooks;
 use crate::net::{FetchRequest, Net, Redirect};
 
 /// Longest single `zoo.wait`.
@@ -25,7 +25,7 @@ const MAX_CAPTCHA_WAIT: Duration = Duration::from_secs(900);
 
 deno_core::extension!(
     zoo_host,
-    ops = [op_zoo_fetch, op_zoo_random, op_zoo_digest, op_zoo_credential, op_zoo_wait, op_zoo_captcha]
+    ops = [op_zoo_fetch, op_zoo_random, op_zoo_digest, op_zoo_credential, op_zoo_wait, op_zoo_captcha, op_zoo_log]
 );
 
 #[derive(Deserialize)]
@@ -103,13 +103,14 @@ async fn op_zoo_wait(state: Rc<RefCell<OpState>>, ms: f64, #[string] reason: Str
     if wait > MAX_WAIT {
         return Err(JsErrorBox::range_error(format!("zoo.wait: at most {} seconds", MAX_WAIT.as_secs())));
     }
-    let (budget, link) = {
+    let (budget, hooks) = {
         let state = state.borrow();
-        (state.borrow::<Arc<Budget>>().clone(), state.borrow::<Rc<CallLink>>().clone())
+        (state.borrow::<Arc<Budget>>().clone(), state.borrow::<Rc<dyn Hooks>>().clone())
     };
-    link.event(CallEvent::Waiting { ms, reason });
-    let _paused = budget.pause();
-    tokio::time::sleep(wait).await;
+    if hooks.waiting(ms, reason) {
+        let _paused = budget.pause();
+        tokio::time::sleep(wait).await;
+    }
     Ok(())
 }
 
@@ -124,9 +125,9 @@ enum CaptchaArgs {
 #[op2(async)]
 #[string]
 async fn op_zoo_captcha(state: Rc<RefCell<OpState>>, #[serde] args: CaptchaArgs) -> Result<Option<String>, JsErrorBox> {
-    let (budget, link, net) = {
+    let (budget, hooks, net) = {
         let state = state.borrow();
-        (state.borrow::<Arc<Budget>>().clone(), state.borrow::<Rc<CallLink>>().clone(), state.borrow::<Rc<Net>>().clone())
+        (state.borrow::<Arc<Budget>>().clone(), state.borrow::<Rc<dyn Hooks>>().clone(), state.borrow::<Rc<Net>>().clone())
     };
     let challenge = match args {
         CaptchaArgs::Recaptcha { site_key, page_url } => Captcha::Recaptcha { site_key, page_url },
@@ -145,10 +146,16 @@ async fn op_zoo_captcha(state: Rc<RefCell<OpState>>, #[serde] args: CaptchaArgs)
             Captcha::Image { mime, base64: base64::engine::general_purpose::STANDARD.encode(&image.body) }
         }
     };
-    let answer = link.ask(challenge);
+    let answer = hooks.ask(challenge);
     let _paused = budget.pause();
     match tokio::time::timeout(MAX_CAPTCHA_WAIT, answer).await {
         Ok(solution) => Ok(solution.unwrap_or(None)),
         Err(_) => Ok(None),
     }
+}
+
+/// `console.*` and `zoo.log.*`.
+#[op2(fast)]
+fn op_zoo_log(state: &mut OpState, #[string] level: &str, #[string] message: &str) {
+    state.borrow::<Rc<dyn Hooks>>().log(level, message);
 }

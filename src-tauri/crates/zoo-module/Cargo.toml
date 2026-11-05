@@ -18,6 +18,7 @@ sha2 = "0.10"
 getrandom = "0.3"
 base64 = "0.22"
 percent-encoding = "2"
+clap = { version = "4.6", features = ["derive"] }
 
 [dev-dependencies]
 zoo-module-client = { path = "../zoo-module-client", features = ["core"] }

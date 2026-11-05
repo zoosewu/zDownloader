@@ -3,6 +3,7 @@
 //! A fresh isolate per call means nothing leaks between calls and a module that blows a limit
 //! takes down only its own isolate.
 
+use std::path::Path;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
@@ -17,8 +18,9 @@ use serde::Deserialize;
 use zoo_module_client::protocol::{Limits, ModuleError, ModuleRef, Resolved};
 
 use crate::budget::{Budget, TRIP_CANCELLED, TRIP_MEMORY, TRIP_NONE, TRIP_TIMEOUT};
+use crate::hooks::Hooks;
 use crate::link::CallLink;
-use crate::net::{Credentials, Net, Policy};
+use crate::net::{Credentials, Net, Policy, Transport};
 use crate::ops;
 
 /// Host-wide settings from the `serve` command line.
@@ -38,8 +40,18 @@ const SDK_SPECIFIER: &str = "zoo:sdk";
 const MAIN_SPECIFIER: &str = "zoo:main";
 
 const SHAPE_HINT: &str = "export default defineModule({ async resolve(url, zoo) { ... } })";
-const RESULT_HINT: &str = "resolve must return { url, filename?, headers?, size? } with an absolute http(s) url";
+const RESULT_HINT: &str =
+    "resolve must return { url, filename?, headers?, size?, maxConnections? } with an absolute http(s) url";
 
+/// What a call does with the module.
+#[derive(Debug, Clone, Copy)]
+pub enum Work<'a> {
+    Resolve(&'a str),
+    /// Load it and check its shape without calling `resolve` (`zoo-module check`).
+    Load,
+}
+
+/// A `resolve` call for the app (`serve`).
 pub fn resolve(
     module: &ModuleRef,
     url: &str,
@@ -47,32 +59,43 @@ pub fn resolve(
     options: HostOptions,
     link: CallLink,
 ) -> Result<Resolved, ModuleError> {
-    let entry = std::path::absolute(&module.entry)
+    let policy = Policy::new(&module.grants.allow_domains, options.allow_loopback);
+    let net = Net::new(policy, Credentials::new(&module.grants.credentials), Transport::Live, None)
+        .map_err(|message| ModuleError::Crashed { message })?;
+    run_call(&module.entry, Work::Resolve(url), limits, Rc::new(net), Rc::new(link))
+        .map(|resolved| resolved.expect("a resolve call yields a result"))
+}
+
+/// Runs `work` on the module at `entry` in a fresh isolate on this thread. `Some` result for
+/// `Work::Resolve`, `None` for `Work::Load`.
+pub fn run_call(
+    entry: &Path,
+    work: Work,
+    limits: Limits,
+    net: Rc<Net>,
+    hooks: Rc<dyn Hooks>,
+) -> Result<Option<Resolved>, ModuleError> {
+    let specifier = std::path::absolute(entry)
         .ok()
         .and_then(|path| ModuleSpecifier::from_file_path(path).ok())
-        .ok_or_else(|| load_error(format!("bad module path {}", module.entry.display())))?;
-    let code = std::fs::read_to_string(&module.entry)
-        .map_err(|e| load_error(format!("cannot read {}: {e}", module.entry.display())))?;
+        .ok_or_else(|| load_error(format!("bad module path {}", entry.display())))?;
+    let code =
+        std::fs::read_to_string(entry).map_err(|e| load_error(format!("cannot read {}: {e}", entry.display())))?;
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .map_err(|e| ModuleError::Crashed { message: format!("cannot start event loop: {e}") })?
-        .block_on(async {
-            let policy = Policy::new(&module.grants.allow_domains, options.allow_loopback);
-            let net = Net::new(policy, Credentials::new(&module.grants.credentials))
-                .map_err(|message| ModuleError::Crashed { message })?;
-            run(entry, code, Rc::new(net), link, url, limits).await
-        })
+        .block_on(run(specifier, code, net, hooks, work, limits))
 }
 
 async fn run(
     entry: ModuleSpecifier,
     code: String,
     net: Rc<Net>,
-    link: CallLink,
-    url: &str,
+    hooks: Rc<dyn Hooks>,
+    work: Work<'_>,
     limits: Limits,
-) -> Result<Resolved, ModuleError> {
+) -> Result<Option<Resolved>, ModuleError> {
     let heap_bytes = limits.heap_mb as usize * 1024 * 1024;
     let mut runtime = JsRuntime::new(RuntimeOptions {
         module_loader: Some(Rc::new(Loader { entry: entry.clone(), code })),
@@ -94,11 +117,11 @@ async fn run(
     }
     let budget = Budget::start(Duration::from_millis(limits.timeout_ms), isolate, tripped.clone());
     runtime.op_state().borrow_mut().put(budget.clone());
-    link.attach(budget.clone());
-    runtime.op_state().borrow_mut().put(Rc::new(link));
+    hooks.attach(budget.clone());
+    runtime.op_state().borrow_mut().put(hooks);
     // The watchdog stops synchronous JS; this stops waiting on host work.
     let outcome = tokio::select! {
-        result = execute(&mut runtime, &entry, url) => Some(result),
+        result = execute(&mut runtime, &entry, work) => Some(result),
         _ = budget.expired() => None,
     };
     budget.finish();
@@ -107,14 +130,16 @@ async fn run(
         (TRIP_CANCELLED, _) => Err(ModuleError::Cancelled),
         (TRIP_MEMORY, _) => Err(ModuleError::OutOfMemory { limit_mb: limits.heap_mb }),
         (TRIP_TIMEOUT, _) | (_, None) => Err(ModuleError::Timeout { limit_ms: limits.timeout_ms }),
-        (_, Some(result)) => result.map(|mut resolved| {
-            net.finish(&mut resolved);
-            resolved
+        (_, Some(result)) => result.map(|resolved| {
+            resolved.map(|mut resolved| {
+                net.finish(&mut resolved);
+                resolved
+            })
         }),
     }
 }
 
-async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, url: &str) -> Result<Resolved, ModuleError> {
+async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, work: Work<'_>) -> Result<Option<Resolved>, ModuleError> {
     for (name, code) in [("zoo:vendor", VENDOR), ("zoo:web", WEB), ("zoo:bootstrap", BOOTSTRAP)] {
         runtime
             .execute_script(name, code)
@@ -125,7 +150,10 @@ async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, url: &str) ->
     let wrapper = format!(
         "import module from {};\nglobalThis.__zooResult = __zooRun(module, {});\n",
         serde_json::to_string(entry.as_str()).expect("string"),
-        serde_json::to_string(url).expect("string"),
+        match work {
+            Work::Resolve(url) => serde_json::to_string(url).expect("string"),
+            Work::Load => "null".into(),
+        },
     );
     let id = runtime.load_main_es_module_from_code(&main, wrapper).await.map_err(module_load_error)?;
     let evaluated = runtime.mod_evaluate(id);
@@ -162,11 +190,13 @@ enum Outcome {
     Ok(serde_json::Value),
     Err { message: String, hint: Option<String>, stack: Option<String> },
     Invalid(String),
+    Checked(serde::de::IgnoredAny),
 }
 
-fn outcome(json: &str) -> Result<Resolved, ModuleError> {
+fn outcome(json: &str) -> Result<Option<Resolved>, ModuleError> {
     match serde_json::from_str::<Outcome>(json) {
-        Ok(Outcome::Ok(value)) => validate(value),
+        Ok(Outcome::Ok(value)) => validate(value).map(Some),
+        Ok(Outcome::Checked(_)) => Ok(None),
         Ok(Outcome::Err { message, hint, stack }) => Err(ModuleError::Script { message, hint, stack }),
         Ok(Outcome::Invalid(why)) => Err(ModuleError::Load { message: why, hint: Some(SHAPE_HINT.into()) }),
         Err(e) => Err(ModuleError::Crashed { message: format!("unreadable module outcome: {e}") }),
@@ -177,6 +207,9 @@ fn validate(value: serde_json::Value) -> Result<Resolved, ModuleError> {
     let invalid = |message: String| ModuleError::Script { message, hint: Some(RESULT_HINT.into()), stack: None };
     let resolved: Resolved =
         serde_json::from_value(value).map_err(|e| invalid(format!("resolve returned an invalid result: {e}")))?;
+    if resolved.max_connections == Some(0) {
+        return Err(invalid("resolve returned maxConnections 0; use at least 1, or leave it out".into()));
+    }
     match deno_core::url::Url::parse(&resolved.url) {
         Ok(url) if matches!(url.scheme(), "http" | "https") => Ok(resolved),
         _ => Err(invalid(format!("resolve returned a url that is not absolute http(s): {:?}", resolved.url))),

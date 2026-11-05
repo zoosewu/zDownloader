@@ -564,7 +564,7 @@ chmod +x .git/hooks/pre-commit
 - `zoo-module.d.ts`：`defineModule`、`Resolved`、`zoo` API。JSDoc 要寫到不用看其他文件就會用。
 - `globals.d.ts`：host 提供的全域 Web API，**只宣告實際存在的**（模板 tsconfig 用 `lib: ["ES2023"]`、`types: []`，不引入 lib.dom）。
 - `manifest.schema.json`：manifest 格式。Rust 端是 `zoo-module-client::manifest::Manifest::parse`，兩者規則必須一致。
-- `template/`：`zoo-module new` 的範本，`sdk/` 會被複製到範本的 `types/`。
+- `template/`：`zoo-module new` 的範本（含給 AI 的 `AGENTS.md`），`sdk/` 會被複製到範本的 `types/`。改 API 時同步更新 `AGENTS.md` 的規則與範例。
 
 改了 host 的 Web API、zoo API 或 manifest 格式時，同步改 SDK。以下測試會在兩邊不一致時失敗：
 
