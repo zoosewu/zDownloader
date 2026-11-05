@@ -166,7 +166,8 @@ export default defineModule({
 | 4a ✅ | client crate（協定 + Supervisor + Job Object）；`zoo-module serve`：載入 ESM 單檔、呼叫 `resolve`、heap 上限、執行時限、隱藏 `Deno.core`、console 改走 stderr | `crates/zoo-module/tests/host.rs`：無窮迴圈、OOM、並行隔離、模組形狀錯誤、回傳值驗證、host 崩潰/卡住/不存在 |
 | 4b ✅ | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
 | 4c ✅ | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
-| 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
+| 4d | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md；`Resolved.maxConnections`；SDK 說明以 `headers` 覆寫 User-Agent（偽裝成其他下載軟體，例如百度網盤） | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
+| 4.5 | 下載核心補強：更新網址（比對大小並抽樣比對位元組；不符時詢問，預設從頭下載）、直接連結自訂 header 與預設 User-Agent | zoo-core 整合測試：換成鏡像後續傳、內容不同時拒絕續傳、header 送達 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
 | 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |
 | 4g | 實機驗證與文件 | 驗證清單 |
