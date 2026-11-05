@@ -10,4 +10,8 @@ proxyFallbackDirect: boolean, proxyVerificationIntervalHours: number, enableClip
 /**
  * User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
  */
-userAgent: string | null, };
+userAgent: string | null, 
+/**
+ * Look for module updates when the app starts (never installs them).
+ */
+checkModuleUpdates: boolean, };

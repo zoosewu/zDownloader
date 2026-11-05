@@ -4,6 +4,7 @@
 use serde::Serialize;
 use ts_rs::TS;
 use zoo_core::CoreError;
+use zoo_marketplace::MarketError;
 
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -35,6 +36,21 @@ impl From<CoreError> for CommandError {
             CoreError::Invalid(_) => "invalid",
             CoreError::Resolve { .. } => "resolve",
             CoreError::SourceChanged(_) => "sourceChanged",
+        };
+        Self::new(code, e.to_string())
+    }
+}
+
+impl From<MarketError> for CommandError {
+    fn from(e: MarketError) -> Self {
+        let code = match &e {
+            MarketError::Invalid(_) => "invalid",
+            MarketError::NotFound(_) => "notFound",
+            MarketError::Network(_) => "network",
+            MarketError::Git(_) => "git",
+            MarketError::Io(_) => "io",
+            MarketError::Integrity(_) => "integrity",
+            MarketError::Secrets(_) => "secrets",
         };
         Self::new(code, e.to_string())
     }

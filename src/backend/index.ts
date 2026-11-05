@@ -8,6 +8,11 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '../utils/tauri';
 import type { AppSettings } from './bindings/AppSettings';
+import type { CaptchaEvent } from './bindings/CaptchaEvent';
+import type { CaptchaRequest } from './bindings/CaptchaRequest';
+import type { InstalledInfo } from './bindings/InstalledInfo';
+import type { PlanSummary } from './bindings/PlanSummary';
+import type { SourceInfo } from './bindings/SourceInfo';
 import type { BatchResult } from './bindings/BatchResult';
 import type { Event as DownloadEvent } from './bindings/Event';
 import type { ImportResult } from './bindings/ImportResult';
@@ -20,6 +25,16 @@ import type { TaskUpdate } from './bindings/TaskUpdate';
 
 export type { AppSettings } from './bindings/AppSettings';
 export type { BatchResult } from './bindings/BatchResult';
+export type { CaptchaChallenge } from './bindings/CaptchaChallenge';
+export type { CaptchaEvent } from './bindings/CaptchaEvent';
+export type { CaptchaRequest } from './bindings/CaptchaRequest';
+export type { CatalogModule } from './bindings/CatalogModule';
+export type { CredentialStatus } from './bindings/CredentialStatus';
+export type { InstalledInfo } from './bindings/InstalledInfo';
+export type { PermissionSummary } from './bindings/PermissionSummary';
+export type { PlanSummary } from './bindings/PlanSummary';
+export type { SourceInfo } from './bindings/SourceInfo';
+export type { Trust } from './bindings/Trust';
 export type { CoreError } from './bindings/CoreError';
 export type { Event as DownloadEvent } from './bindings/Event';
 export type { ImportResult } from './bindings/ImportResult';
@@ -116,7 +131,36 @@ export const backend = {
     clear: () => call<null>('proxies_clear'),
     resetFailed: () => call<null>('proxies_reset_failed'),
   },
+  modules: {
+    list: () => call<InstalledInfo[]>('modules_list'),
+    sources: () => call<SourceInfo[]>('modules_sources'),
+    /** `owner/repo`, an https:// catalog URL, a git URL or a folder path. */
+    addSource: (location: string) => call<SourceInfo>('modules_add_source', { location }),
+    removeSource: (name: string) => call<null>('modules_remove_source', { name }),
+    /** Fetch every catalog again and look for updates. */
+    refresh: () => call<SourceInfo[]>('modules_refresh'),
+    /** Download and verify (install or update); show the summary, then `install` or `cancelInstall`. */
+    planInstall: (key: string) => call<PlanSummary>('modules_plan_install', { key }),
+    install: (key: string) => call<InstalledInfo>('modules_install', { key }),
+    cancelInstall: (key: string) => call<null>('modules_cancel_install', { key }),
+    remove: (key: string) => call<null>('modules_remove', { key }),
+    setEnabled: (key: string, enabled: boolean) => call<null>('modules_set_enabled', { key, enabled }),
+    /** Move to `index` in the priority order. */
+    move: (key: string, index: number) => call<null>('modules_move', { key, index }),
+    /** `null` deletes a stored value. */
+    setCredentials: (key: string, values: Record<string, string | null>) =>
+      call<InstalledInfo>('modules_set_credentials', { key, values }),
+  },
+  captcha: {
+    pending: () => call<CaptchaRequest[]>('captcha_pending'),
+    /** `null` declines. */
+    answer: (id: string, answer: string | null) => call<null>('captcha_answer', { id, answer }),
+    /** reCAPTCHA: open the site's page in its own window; solving it answers. */
+    openWindow: (id: string) => call<null>('captcha_open_window', { id }),
+  },
   events: {
+    onModulesChanged: (handler: () => void) => subscribe<null>('modules-changed', () => handler()),
+    onCaptchaEvent: (handler: (event: CaptchaEvent) => void) => subscribe('captcha-event', handler),
     onDownloadEvent: (handler: (event: DownloadEvent) => void) => subscribe('download-event', handler),
     /** The backend dropped events; refetch the full list. */
     onResync: (handler: () => void) => subscribe<null>('downloads-resync', () => handler()),

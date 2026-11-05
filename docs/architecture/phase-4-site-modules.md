@@ -211,6 +211,28 @@ export default defineModule({
   - `zoo-marketplace::Marketplace` 是唯一的介面，狀態存在 `<data>/marketplace.json`，git checkout 放在 `<data>/git/`。
   - 遠端 redirect 也只允許 https（loopback 除外）。
   - 大小上限：catalog 1 MB、manifest 64 KB、entry 16 MB。
+- 實作（4e2）：
+  - shell 的 `site_modules::SiteModules` 持有三樣東西：`Marketplace`、`ModuleResolver`、`Captchas`。
+    - `Marketplace` 的資料放在 `<app_data>/site-modules/`。
+    - `ModuleResolver` 交給 `Downloads::start` 使用。
+    - `Captchas` 實作 `Interaction`。
+  - 每個會改變狀態的 `modules_*` command 都會立刻 `sync()` 到 resolver，並送出 `modules-changed` 事件。
+  - 安裝流程：
+    - `modules_plan_install` 下載並驗證，把 plan 暫存在 shell；
+    - `modules_install` 在使用者同意後安裝；
+    - `modules_cancel_install` 捨棄暫存的 plan。
+  - captcha：
+    - 模組要求 captcha 時送出 `captcha-event`（`opened`），前端用 `captcha_answer` 回答；
+    - 任務暫停或取消時，等待中的 captcha 自動送出 `closed`；
+    - reCAPTCHA 用 `captcha_open_window` 開視窗：
+      - capability 只給 `main` 視窗，外部網頁沒有 IPC；
+      - token 藉由導向到 `zoo-captcha.invalid` 取得；
+      - 使用者關掉視窗就視為拒絕。
+  - 帳密存在 keyring，service 是 `zoo-downloader.site-modules`。
+  - 官方 marketplace 放在 `src-tauri/marketplace/`，以 bundle resources 隨附；debug 建置找不到時改讀原始碼目錄。
+  - 本機模組每 2 秒重新讀一次 manifest。只讀 manifest，成本很低，所以不用檔案監看。
+  - 設定 `checkModuleUpdates` 預設開啟：只在啟動時檢查更新，不會自動安裝。
+  - 舊的 `get_pending_captchas` 等 command 與舊模組系統一起在 4f 刪除。
 - **這次不做**：
   - 稽核紀錄：host 目前不記錄每個請求；
   - 簽章：照決定 #7。

@@ -1,5 +1,4 @@
-//! Shell side of the download core: owns the `DownloadManager`, proxy pool and site-module
-//! resolver, applies settings to them, and relays core events to the frontend and to system
+//! Shell side of the download core: owns the `DownloadManager` and proxy pool, applies settings to them, and relays core events to the frontend and to system
 //! notifications.
 
 use crate::models::settings::AppSettings;
@@ -12,8 +11,7 @@ use tokio::sync::broadcast::error::RecvError;
 use zoo_core::connection::{ConnectionSource, Direct};
 use zoo_core::proxy_pool::ProxyPool;
 use zoo_core::{CoreError, DownloadManager, Event, TaskId, TaskState};
-use zoo_module_client::resolver::ModuleResolver;
-use zoo_module_client::{NoInteraction, Supervisor};
+use zoo_core::Resolver;
 
 /// Frontend event carrying a `zoo_core::Event`.
 pub const DOWNLOAD_EVENT: &str = "download-event";
@@ -28,12 +26,10 @@ pub struct Downloads {
 
 impl Downloads {
     /// Load tasks and proxies from `data_dir` and start the manager on the current runtime.
-    pub fn start(data_dir: &Path, settings: &AppSettings) -> Result<Self, CoreError> {
+    /// `modules` resolves share pages (see `site_modules`).
+    pub fn start(data_dir: &Path, settings: &AppSettings, modules: Arc<dyn Resolver>) -> Result<Self, CoreError> {
         let pool = Arc::new(ProxyPool::open(data_dir.join("proxies.json"))?);
         let direct = Arc::new(Direct::new()?);
-        // No modules are installed until the marketplace (4e) fills this; captchas are declined
-        // until it brings the captcha UI.
-        let modules = Arc::new(ModuleResolver::new(Arc::new(module_host()), Arc::new(NoInteraction)));
         let manager = DownloadManager::start_with(settings.engine_config(), data_dir, direct.clone(), modules)?;
         let downloads = Self { manager, pool, direct };
         downloads.apply(settings);
@@ -56,20 +52,6 @@ impl Downloads {
         self.manager.shutdown().await;
         self.pool.persist();
     }
-}
-
-/// The site-module host (`zoo-module serve`), started on first use. It ships next to the app
-/// executable: Tauri's externalBin in a bundle, the workspace target directory in development.
-fn module_host() -> Supervisor {
-    let name = if cfg!(windows) { "zoo-module.exe" } else { "zoo-module" };
-    let path = std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(|dir| dir.join(name)))
-        .unwrap_or_else(|| name.into());
-    if !path.exists() {
-        log::warn!("site-module host not found at {}; build it with `cargo build -p zoo-module`", path.display());
-    }
-    Supervisor::new(path, ["serve"])
 }
 
 /// Relay every core event to the frontend; notify on completion and on final failure.

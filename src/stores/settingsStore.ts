@@ -23,6 +23,7 @@ const defaultSettings: AppSettings = {
   maxRetryCount: 3,
   retryIntervalSecs: 5,
   userAgent: null,
+  checkModuleUpdates: true,
 };
 
 // Settings atom

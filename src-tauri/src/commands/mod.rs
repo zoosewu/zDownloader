@@ -6,3 +6,4 @@ pub mod error;
 pub mod module_management;
 pub mod proxy;
 pub mod settings;
+pub mod site_modules;

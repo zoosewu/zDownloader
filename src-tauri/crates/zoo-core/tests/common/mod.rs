@@ -90,7 +90,10 @@ pub fn alt_byte_at(i: u64) -> u8 {
 async fn handle(stream: TcpStream, state: Arc<Mutex<State>>) -> std::io::Result<()> {
     let mut reader = BufReader::new(stream);
     let mut line = String::new();
-    reader.read_line(&mut line).await?;
+    // A connection closed before its request line (a cancelled request) is not a request.
+    if reader.read_line(&mut line).await? == 0 || line.trim().is_empty() {
+        return Ok(());
+    }
     let target = line.split_whitespace().nth(1).unwrap_or("/").to_string();
     let mut headers = HashMap::new();
     loop {

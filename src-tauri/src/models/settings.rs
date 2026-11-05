@@ -39,6 +39,11 @@ pub struct AppSettings {
     /// User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
     #[serde(default)]
     pub user_agent: Option<String>,
+
+    // Site modules
+    /// Look for module updates when the app starts (never installs them).
+    #[serde(default = "default_true")]
+    pub check_module_updates: bool,
 }
 
 fn default_true() -> bool {
@@ -81,6 +86,7 @@ impl Default for AppSettings {
             max_retry_count: 3,
             retry_interval_secs: 5,
             user_agent: None,
+            check_module_updates: true,
         }
     }
 }

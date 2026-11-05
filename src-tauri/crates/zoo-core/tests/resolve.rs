@@ -189,7 +189,7 @@ async fn resume_survives_a_new_link() {
     assert_eq!(resolver.calls(), 2);
     assert_eq!(std::fs::read(task.final_path.unwrap()).unwrap(), expected(size));
     let after: Vec<_> = fx.requests()[before..].iter().filter(|r| r.range.as_deref() != Some("bytes=0-0")).cloned().collect();
-    assert!(after.iter().all(|r| !r.range.as_deref().unwrap_or("bytes=0-").starts_with("bytes=0-")), "resumed, not restarted");
+    assert!(after.iter().all(|r| !r.range.as_deref().unwrap_or("bytes=0-").starts_with("bytes=0-")), "resumed, not restarted: {:?} after {} bytes", after.iter().map(|r| r.range.clone()).collect::<Vec<_>>(), paused.downloaded);
     assert!(paused.downloaded > 0);
 }
 

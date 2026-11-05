@@ -4,6 +4,7 @@ mod downloads;
 mod http_bridge;
 mod models;
 pub mod modules;
+mod site_modules;
 pub mod native_messaging;
 mod storage;
 mod utils;
@@ -23,6 +24,11 @@ use commands::downloads::{
 use commands::module_management::{
     delete_module_credentials, get_all_modules, get_module_audit_logs, get_module_credentials_status,
     get_module_detail, reload_module, save_module_credentials, scan_modules, unload_module,
+};
+use commands::site_modules::{
+    captcha_answer, captcha_open_window, captcha_pending, modules_add_source, modules_cancel_install, modules_install,
+    modules_list, modules_move, modules_plan_install, modules_refresh, modules_remove, modules_remove_source,
+    modules_set_credentials, modules_set_enabled, modules_sources,
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
 use commands::settings::{
@@ -117,14 +123,34 @@ pub fn run() {
             unload_module,
             scan_modules,
             get_module_audit_logs,
+            modules_list,
+            modules_sources,
+            modules_add_source,
+            modules_remove_source,
+            modules_refresh,
+            modules_plan_install,
+            modules_install,
+            modules_cancel_install,
+            modules_remove,
+            modules_set_enabled,
+            modules_move,
+            modules_set_credentials,
+            captcha_pending,
+            captcha_answer,
+            captcha_open_window,
         ])
         .setup(move |app| {
             log::info!("Zoo Downloader v{} starting", env!("CARGO_PKG_VERSION"));
 
             let data_dir = storage::paths::get_app_data_dir();
             remove_legacy_temp_dir();
+            let modules = site_modules::SiteModules::open(&data_dir)
+                .map_err(|e| format!("cannot open the site-module marketplace: {e}"))?;
+            let resolver = modules.resolver.clone();
+            app.manage(modules);
+            site_modules::start(app.handle().clone(), settings.check_module_updates);
             // DownloadManager spawns its actor on the current runtime.
-            let downloads = tauri::async_runtime::block_on(async { Downloads::start(&data_dir, &settings) })
+            let downloads = tauri::async_runtime::block_on(async { Downloads::start(&data_dir, &settings, resolver) })
                 .map_err(|e| format!("cannot start the download manager: {e}"))?;
             app.manage(downloads);
             downloads::forward_events(app.handle().clone());
