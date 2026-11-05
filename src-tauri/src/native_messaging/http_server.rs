@@ -156,6 +156,7 @@ async fn handle_add_download(
         filename: req.filename,
         dir,
         start: zoo_core::StartMode::Now,
+        headers: Vec::new(),
     };
     let reply = match app.state::<crate::downloads::Downloads>().manager.add(request).await {
         Ok(task) => AddDownloadResponse {

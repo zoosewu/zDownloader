@@ -41,6 +41,19 @@ struct State {
     unflushed: u64,
 }
 
+/// What a previous attempt left at a part file's path.
+pub enum Previous {
+    /// Nothing usable: start over.
+    None,
+    /// The same resource: continue.
+    Same(PartFile),
+    /// Recorded for another URL, same size. Check its content (`read_at`) against the new
+    /// URL before keeping it; it is only recorded as the new URL's once flushed.
+    Moved(PartFile),
+    /// Recorded for another URL that cannot be serving the same file; why.
+    Changed(String),
+}
+
 pub struct PartFile {
     path: PathBuf,
     file: File,
@@ -68,30 +81,49 @@ impl PartFile {
 
     /// Reopen a previous attempt if it describes the same resource; `None` means start over.
     pub fn resume(path: PathBuf, validator: &Validator) -> io::Result<Option<Self>> {
-        // Without a known size there is no way to verify what is missing.
-        if validator.size.is_none() {
-            return Ok(None);
-        }
+        Ok(match Self::open(path, validator)? {
+            Previous::Same(part) => Some(part),
+            _ => None,
+        })
+    }
+
+    /// What a previous attempt left at `path`, judged against the resource `validator` describes.
+    pub fn open(path: PathBuf, validator: &Validator) -> io::Result<Previous> {
         let sidecar: Sidecar = match std::fs::read(sidecar_path(&path)) {
             Ok(bytes) => match serde_json::from_slice(&bytes) {
                 Ok(s) => s,
-                Err(_) => return Ok(None),
+                Err(_) => return Ok(Previous::None),
             },
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Previous::None),
             Err(e) => return Err(e),
         };
-        if sidecar.validator != *validator {
-            return Ok(None);
+        let moved = sidecar.validator.url != validator.url;
+        if moved && sidecar.done.covered() > 0 && (validator.size.is_none() || validator.size != sidecar.validator.size) {
+            return Ok(Previous::Changed(match validator.size {
+                Some(size) => format!("size is {size} bytes, the download so far is for {:?}", sidecar.validator.size),
+                None => "the new URL does not report a size".into(),
+            }));
+        }
+        // Without a known size there is no way to verify what is missing.
+        if validator.size.is_none() || (!moved && sidecar.validator != *validator) {
+            return Ok(Previous::None);
         }
         let file = match OpenOptions::new().read(true).write(true).open(&path) {
             Ok(f) => f,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Previous::None),
             Err(e) => return Err(e),
         };
         if Some(file.metadata()?.len()) != validator.size {
-            return Ok(None);
+            return Ok(Previous::None);
         }
-        Ok(Some(Self::with_state(path, file, sidecar.validator, sidecar.done)))
+        // A moved part carries the new validator, persisted by its first flush.
+        let part = Self::with_state(path, file, validator.clone(), sidecar.done);
+        Ok(if moved { Previous::Moved(part) } else { Previous::Same(part) })
+    }
+
+    /// Read `buf.len()` bytes at `offset`.
+    pub fn read_at(&self, offset: u64, buf: &mut [u8]) -> io::Result<()> {
+        read_exact_at(&self.file, buf, offset)
     }
 
     fn with_state(path: PathBuf, file: File, validator: Validator, done: RangeSet) -> Self {
@@ -230,6 +262,28 @@ fn remove_if_exists(path: &Path) -> io::Result<()> {
 #[cfg(unix)]
 fn write_all_at(file: &File, buf: &[u8], offset: u64) -> io::Result<()> {
     std::os::unix::fs::FileExt::write_all_at(file, buf, offset)
+}
+
+#[cfg(unix)]
+fn read_exact_at(file: &File, buf: &mut [u8], offset: u64) -> io::Result<()> {
+    std::os::unix::fs::FileExt::read_exact_at(file, buf, offset)
+}
+
+#[cfg(windows)]
+fn read_exact_at(file: &File, mut buf: &mut [u8], mut offset: u64) -> io::Result<()> {
+    use std::os::windows::fs::FileExt;
+    while !buf.is_empty() {
+        match file.seek_read(buf, offset) {
+            Ok(0) => return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "failed to fill whole buffer")),
+            Ok(n) => {
+                buf = &mut buf[n..];
+                offset += n as u64;
+            }
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -375,6 +429,28 @@ mod tests {
         assert!(PartFile::resume(path.clone(), &changed).unwrap().is_none());
         assert!(PartFile::resume(path.clone(), &validator(Some(9))).unwrap().is_none());
         assert!(PartFile::resume(dir.path().join("missing.part"), &validator(Some(8))).unwrap().is_none());
+    }
+
+    #[test]
+    fn progress_recorded_for_another_url_must_be_checked() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("f.part");
+        {
+            let part = PartFile::create(path.clone(), validator(Some(8))).unwrap();
+            part.write_at(2, b"cd").unwrap();
+            part.flush().unwrap();
+        }
+        let moved = |size| Validator { url: "https://mirror/f".into(), size, etag: None, last_modified: None };
+
+        assert!(matches!(PartFile::open(path.clone(), &moved(Some(9))).unwrap(), Previous::Changed(_)));
+        assert!(matches!(PartFile::open(path.clone(), &moved(None)).unwrap(), Previous::Changed(_)));
+        let Previous::Moved(part) = PartFile::open(path.clone(), &moved(Some(8))).unwrap() else { panic!("moved") };
+        let mut buf = [0; 2];
+        part.read_at(2, &mut buf).unwrap();
+        assert_eq!((&buf, part.done_ranges()), (b"cd", vec![(2, 4)]));
+        drop(part);
+        // Not flushed: the record still belongs to the old URL.
+        assert!(PartFile::resume(path.clone(), &validator(Some(8))).unwrap().is_some());
     }
 
     #[test]

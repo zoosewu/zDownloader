@@ -14,6 +14,11 @@ name: string,
  */
 customName: boolean, dir: string, 
 /**
+ * Sent with every request of the download (User-Agent, Referer, Cookie, ...). Headers a
+ * site module returns take precedence.
+ */
+headers: Array<[string, string]>, 
+/**
  * Where the finished file actually landed (may differ from `dir/name` after renaming).
  */
 finalPath: string | null, state: TaskState, 

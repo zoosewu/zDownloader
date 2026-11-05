@@ -22,6 +22,7 @@ const defaultSettings: AppSettings = {
   autoRetryEnabled: true,
   maxRetryCount: 3,
   retryIntervalSecs: 5,
+  userAgent: null,
 };
 
 // Settings atom

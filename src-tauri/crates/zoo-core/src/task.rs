@@ -74,6 +74,10 @@ pub struct Task {
     #[serde(default)]
     pub custom_name: bool,
     pub dir: PathBuf,
+    /// Sent with every request of the download (User-Agent, Referer, Cookie, ...). Headers a
+    /// site module returns take precedence.
+    #[serde(default)]
+    pub headers: Vec<(String, String)>,
     /// Where the finished file actually landed (may differ from `dir/name` after renaming).
     pub final_path: Option<PathBuf>,
     pub state: TaskState,
@@ -169,6 +173,21 @@ pub struct AddRequest {
     pub filename: Option<String>,
     pub dir: PathBuf,
     pub start: StartMode,
+    /// See `Task::headers`.
+    #[serde(default)]
+    pub headers: Vec<(String, String)>,
+}
+
+/// Changes to a task that is not running. Missing fields stay as they are.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskUpdate {
+    /// A new URL for the same file (a mirror, a fresh share link). Progress is kept only if
+    /// the new URL serves the same bytes; otherwise the task fails with `SourceChanged`.
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub headers: Option<Vec<(String, String)>>,
 }
 
 /// The engine's slice of the app settings. Applied immediately by `update_config`.
@@ -183,6 +202,8 @@ pub struct Config {
     pub auto_retry: AutoRetry,
     /// Per-request retries inside a transfer.
     pub transfer_retry: RetryPolicy,
+    /// User-Agent for requests that do not set one; `None` means zoo-downloader's own.
+    pub user_agent: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -202,6 +223,7 @@ impl Default for Config {
             speed_limit: None,
             auto_retry: AutoRetry { enabled: true, max_attempts: 3, interval: Duration::from_secs(30) },
             transfer_retry: RetryPolicy::default(),
+            user_agent: None,
         }
     }
 }

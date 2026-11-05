@@ -18,11 +18,12 @@ fn config() -> Config {
         speed_limit: None,
         auto_retry: AutoRetry { enabled: false, max_attempts: 0, interval: Duration::from_millis(10) },
         transfer_retry: RetryPolicy { max_attempts: 4, base_delay: Duration::from_millis(5), max_delay: Duration::from_millis(10) },
+        user_agent: None,
     }
 }
 
 async fn download(m: &DownloadManager, url: String, dir: &std::path::Path) -> zoo_core::Task {
-    let id = m.add(AddRequest { url, filename: None, dir: dir.into(), start: StartMode::Now }).await.unwrap().id;
+    let id = m.add(AddRequest { url, filename: None, dir: dir.into(), start: StartMode::Now, headers: Vec::new() }).await.unwrap().id;
     for _ in 0..500 {
         let t = m.list().await.unwrap().into_iter().find(|t| t.id == id).unwrap();
         if matches!(t.state, TaskState::Completed | TaskState::Failed) {

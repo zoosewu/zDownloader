@@ -41,11 +41,11 @@
   - [x] 4c zoo-core Resolver seam、任務 phase、重新解析、取消、打包設定（captcha UI 移到 4e）
   - [x] 4d 開發 CLI（new/check/test、錄製重播、--json）、AGENTS.md、SDK 型別、manifest schema、範本（--inspect 未做）
   - [x] 4d+ 模組端補充：`Resolved.maxConnections`（下載核心依此限制連線數）、SDK 說明以 `headers` 覆寫 User-Agent 並附測試
-  - [ ] 4.5 下載核心補強（2026-11-05 決定，排在 4d 之後、4e 之前；UI 與 4e 一起）
-    - [ ] 更新網址：暫停或失敗的任務可換網址（也可以是分享頁）；保留進度前比對大小，並從已下載區段抽樣比對位元組；不符時詢問，預設從頭下載
-    - [ ] 直接連結自訂 header：新增任務時可填 User-Agent / Referer / Cookie；設定頁的預設 User-Agent 與常用預設
+  - [x] 4.5 下載核心補強（2026-11-05 決定，排在 4d 之後、4e 之前；UI 與 4e 一起）
+    - [x] 更新網址：`update` / `restart` 命令、大小與抽樣比對、`SourceChanged`（UI 詢問、預設從頭下載：4e）
+    - [x] 直接連結自訂 header：`Task.headers`、設定 `userAgent`（新增任務的 header 欄位、設定頁常用預設：4e）
     - [ ] 不做：TLS 指紋偽裝（代價過高，有需要再評估）
-  - [ ] 4e Marketplace 與前端模組頁
+  - [ ] 4e Marketplace 與前端模組頁（含 4.5 的 UI：換網址對話框與 SourceChanged 詢問、新增任務的 header、設定頁 User-Agent 預設；錯誤訊息在地化）
   - [ ] 4f k2s 遷移、刪除舊模組系統
   - [ ] 4g 實機驗證與文件
 - [ ] Chrome 擴充重寫（native messaging）— 另排

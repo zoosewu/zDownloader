@@ -11,6 +11,7 @@ zoo-downloader 的領域術語。程式碼、文件、討論都使用這些名�
 - **DownloadManager**：唯一擁有所有任務狀態並決定何時執行的 module（`zoo-core`）。
 - **Task state（任務狀態）**：Scheduled → Queued → Running → Completed / Failed / Paused / Cancelled。
 - **rev（版本）**：任務每次變更遞增的序號；同一任務的兩份資料，以 rev 較大者為準。
+- **Update URL（更新網址）**：替暫停或失敗的任務換網址。保留進度前比對新網址的大小與抽樣位元組；不符時任務以 `SourceChanged` 失敗，等使用者決定從頭下載（`restart`）或改回原網址。
 - **ConnectionSource**：每個請求取得連線的來源，有直連（Direct）與代理池（ProxyPool）兩個 adapter。
 
 ## 網站模組

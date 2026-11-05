@@ -18,7 +18,7 @@ use crate::part_file::PartFile;
 use crate::rate::RateLimiter;
 use crate::resolve::{self, Resolver};
 use crate::store::JsonStore;
-use crate::task::{AddRequest, Config, Event, Phase, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState};
+use crate::task::{AddRequest, Config, Event, Phase, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState, TaskUpdate};
 use crate::transfer::{self, Ctx, Progress, TransferSpec};
 use chrono::Utc;
 use std::collections::HashMap;
@@ -45,6 +45,8 @@ enum Cmd {
     Resume(TaskId, Reply<Task>),
     Cancel(TaskId, Reply<Task>),
     Retry(TaskId, Reply<Task>),
+    Restart(TaskId, Reply<Task>),
+    Update(TaskId, TaskUpdate, Reply<Task>),
     Remove(TaskId, Reply<()>),
     PauseAll(oneshot::Sender<Vec<Task>>),
     ResumeAll(oneshot::Sender<Vec<Task>>),
@@ -122,6 +124,14 @@ impl DownloadManager {
     /// Start a failed or cancelled task again, resetting its retry count.
     pub async fn retry(&self, id: TaskId) -> Result<Task, CoreError> {
         self.ask(|r| Cmd::Retry(id, r)).await?
+    }
+    /// Delete the task's partial data and download it again from the start.
+    pub async fn restart(&self, id: TaskId) -> Result<Task, CoreError> {
+        self.ask(|r| Cmd::Restart(id, r)).await?
+    }
+    /// Change the URL or headers of a task that is not running (pause it first).
+    pub async fn update(&self, id: TaskId, update: TaskUpdate) -> Result<Task, CoreError> {
+        self.ask(|r| Cmd::Update(id, update, r)).await?
     }
     /// Drop the task from the list. Partial data is deleted; a finished file is kept.
     pub async fn remove(&self, id: TaskId) -> Result<(), CoreError> {
@@ -254,6 +264,12 @@ impl Actor {
             Cmd::Retry(id, reply) => {
                 let _ = reply.send(self.retry(id));
             }
+            Cmd::Restart(id, reply) => {
+                let _ = reply.send(self.restart(id));
+            }
+            Cmd::Update(id, update, reply) => {
+                let _ = reply.send(self.update(id, update));
+            }
             Cmd::Remove(id, reply) => {
                 let _ = reply.send(self.remove(id));
             }
@@ -291,10 +307,8 @@ impl Actor {
     }
 
     fn add(&mut self, req: AddRequest) -> Result<Task, CoreError> {
-        let parsed = url::Url::parse(&req.url).map_err(|e| CoreError::Invalid(format!("invalid URL: {e}")))?;
-        if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
-            return Err(CoreError::Invalid("URL must be http(s) with a host".into()));
-        }
+        check_url(&req.url)?;
+        check_headers(&req.headers)?;
         let (state, scheduled_at) = match req.start {
             StartMode::Now => (TaskState::Queued, None),
             StartMode::Later => (TaskState::Paused, None),
@@ -307,6 +321,7 @@ impl Actor {
             custom_name: req.filename.is_some(),
             url: req.url,
             dir: req.dir,
+            headers: req.headers,
             final_path: None,
             state,
             phase: None,
@@ -372,6 +387,50 @@ impl Actor {
         })?;
         self.pump();
         self.snapshot(id)
+    }
+
+    fn restart(&mut self, id: TaskId) -> Result<Task, CoreError> {
+        let (state, part) = self.task(id).map(|t| (t.state, part_path_of(t)))?;
+        match state {
+            TaskState::Running | TaskState::Completed => return Err(invalid_transition(state, "restart")),
+            // A previous job still stopping deletes the part when it reports back.
+            _ if self.jobs.contains_key(&id) => self.stop_job(id, Stop::Cancel),
+            _ => discard_part(&part),
+        }
+        self.set(id, |t| {
+            t.state = TaskState::Queued;
+            t.phase = None;
+            t.error = None;
+            t.downloaded = 0;
+            t.total = None;
+            t.retry_count = 0;
+            t.next_retry_at = None;
+            t.scheduled_at = None;
+            t.finished_at = None;
+        })?;
+        self.pump();
+        self.snapshot(id)
+    }
+
+    fn update(&mut self, id: TaskId, update: TaskUpdate) -> Result<Task, CoreError> {
+        let state = self.task(id)?.state;
+        if matches!(state, TaskState::Running | TaskState::Completed | TaskState::Cancelled) {
+            return Err(invalid_transition(state, "update"));
+        }
+        if let Some(url) = &update.url {
+            check_url(url)?;
+        }
+        if let Some(headers) = &update.headers {
+            check_headers(headers)?;
+        }
+        self.set(id, |t| {
+            if let Some(url) = update.url {
+                t.url = url;
+            }
+            if let Some(headers) = update.headers {
+                t.headers = headers;
+            }
+        })
     }
 
     fn cancel(&mut self, id: TaskId) -> Result<Task, CoreError> {
@@ -463,7 +522,7 @@ impl Actor {
         let spec = TransferSpec {
             origin: task.url.clone(),
             url: task.url.clone(),
-            headers: Vec::new(),
+            headers: with_user_agent(task.headers.clone(), self.cfg.user_agent.as_deref()),
             dir: task.dir.clone(),
             name: task.name.clone(),
             part_path: part_path_of(task),
@@ -474,7 +533,7 @@ impl Actor {
         let ctx = Ctx {
             conn: self.conn.clone(),
             rate: self.rate.clone(),
-            progress: Arc::new(Progress::default()),
+            progress: Arc::new(Progress::starting_at(task.downloaded, task.total)),
             cancel: CancellationToken::new(),
         };
         self.jobs.insert(
@@ -711,7 +770,7 @@ async fn run_job(
     msgs: &mpsc::UnboundedSender<JobMsg>,
 ) -> Result<PathBuf, CoreError> {
     let mut resolved_again = false;
-    let connections = spec.connections;
+    let (connections, own_headers) = (spec.connections, std::mem::take(&mut spec.headers));
     loop {
         let report: resolve::PhaseReport = {
             let msgs = msgs.clone();
@@ -732,7 +791,7 @@ async fn run_job(
             }
         }
         spec.url = source.url;
-        spec.headers = source.headers;
+        spec.headers = merge_headers(source.headers, &own_headers);
         spec.connections = source.max_connections.map_or(connections, |max| connections.min(max.max(1)));
         let _ = msgs.send(JobMsg::Phase(id, Phase::Transferring));
         match transfer::run(&spec, ctx).await {
@@ -740,6 +799,49 @@ async fn run_job(
             other => return other,
         }
     }
+}
+
+fn check_url(url: &str) -> Result<(), CoreError> {
+    let parsed = url::Url::parse(url).map_err(|e| CoreError::Invalid(format!("invalid URL: {e}")))?;
+    if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
+        return Err(CoreError::Invalid("URL must be http(s) with a host".into()));
+    }
+    Ok(())
+}
+
+/// Headers the transfer sets itself.
+const RESERVED_HEADERS: [&str; 3] = ["range", "host", "content-length"];
+
+fn check_headers(headers: &[(String, String)]) -> Result<(), CoreError> {
+    for (name, value) in headers {
+        let header = reqwest::header::HeaderName::from_bytes(name.as_bytes())
+            .map_err(|_| CoreError::Invalid(format!("invalid header name {name:?}")))?;
+        if RESERVED_HEADERS.contains(&header.as_str()) {
+            return Err(CoreError::Invalid(format!("the {name} header is set by the download itself")));
+        }
+        reqwest::header::HeaderValue::from_str(value)
+            .map_err(|_| CoreError::Invalid(format!("invalid value for header {name}")))?;
+    }
+    Ok(())
+}
+
+fn has_header(headers: &[(String, String)], name: &str) -> bool {
+    headers.iter().any(|(n, _)| n.eq_ignore_ascii_case(name))
+}
+
+/// The configured User-Agent, unless the task sets its own.
+fn with_user_agent(mut headers: Vec<(String, String)>, user_agent: Option<&str>) -> Vec<(String, String)> {
+    if let Some(ua) = user_agent.filter(|_| !has_header(&headers, "user-agent")) {
+        headers.push(("User-Agent".into(), ua.into()));
+    }
+    headers
+}
+
+/// `resolved` (from the site module) wins over the task's own headers of the same name.
+fn merge_headers(mut resolved: Vec<(String, String)>, own: &[(String, String)]) -> Vec<(String, String)> {
+    let missing: Vec<_> = own.iter().filter(|(name, _)| !has_header(&resolved, name)).cloned().collect();
+    resolved.extend(missing);
+    resolved
 }
 
 fn part_path_of(task: &Task) -> PathBuf {

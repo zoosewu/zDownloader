@@ -26,6 +26,7 @@ fn config() -> Config {
         speed_limit: None,
         auto_retry: AutoRetry { enabled: false, max_attempts: 3, interval: Duration::from_millis(50) },
         transfer_retry: RetryPolicy { max_attempts: 2, base_delay: Duration::from_millis(10), max_delay: Duration::from_millis(20) },
+        user_agent: None,
     }
 }
 
@@ -75,7 +76,7 @@ fn start(cfg: Config, store: &Path, resolver: Arc<dyn Resolver>) -> DownloadMana
 }
 
 fn req(dir: &Path, filename: Option<&str>) -> AddRequest {
-    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now }
+    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new() }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {
@@ -258,9 +259,14 @@ async fn resolved_headers_can_replace_the_user_agent() {
     let dir = tempfile::tempdir().unwrap();
     let url = fx.url("/file/1000");
     let headers = vec![("User-Agent".to_string(), "netdisk;7.42.0.5;PC".to_string())];
-    let m = start(config(), dir.path(), Scripted::new(move |_| Ok(Source { headers: headers.clone(), ..expiring(url.clone()) })));
-    let id = m.add(req(dir.path(), None)).await.unwrap().id;
+    let cfg = Config { user_agent: Some("configured".into()), ..config() };
+    let m = start(cfg, dir.path(), Scripted::new(move |_| Ok(Source { headers: headers.clone(), ..expiring(url.clone()) })));
+    // The task's own headers apply too, unless the module sets the same one.
+    let own = vec![("user-agent".to_string(), "task".to_string()), ("Referer".to_string(), "https://share.example/".to_string())];
+    let id = m.add(AddRequest { headers: own, ..req(dir.path(), None) }).await.unwrap().id;
     wait_until(&m, id, |t| t.state == TaskState::Completed).await;
-    let agents: Vec<_> = fx.requests().iter().map(|r| r.headers.get("user-agent").cloned()).collect();
+    let requests = fx.requests();
+    let agents: Vec<_> = requests.iter().map(|r| r.headers.get("user-agent").cloned()).collect();
     assert!(agents.iter().all(|ua| ua.as_deref() == Some("netdisk;7.42.0.5;PC")), "{agents:?}");
+    assert!(requests.iter().all(|r| r.headers.get("referer").map(String::as_str) == Some("https://share.example/")));
 }

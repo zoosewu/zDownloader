@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tauri::State;
 use ts_rs::TS;
-use zoo_core::{AddRequest, SegmentMap, StartMode, Task, TaskId};
+use zoo_core::{AddRequest, SegmentMap, StartMode, Task, TaskId, TaskUpdate};
 
 fn task_id(id: &str) -> CmdResult<TaskId> {
     Ok(id.parse()?)
@@ -35,11 +35,13 @@ pub async fn downloads_add(
     filename: Option<String>,
     dir: Option<String>,
     start: StartMode,
+    headers: Option<Vec<(String, String)>>,
     downloads: State<'_, Downloads>,
     settings: State<'_, SettingsState>,
 ) -> CmdResult<Task> {
     let dir = target_dir(dir, &settings).await?;
-    Ok(downloads.manager.add(AddRequest { url, filename, dir, start }).await?)
+    let headers = headers.unwrap_or_default();
+    Ok(downloads.manager.add(AddRequest { url, filename, dir, start, headers }).await?)
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -62,7 +64,7 @@ pub async fn downloads_import_batch(
     let dir = target_dir(dir, &settings).await?;
     let mut result = BatchResult { added: Vec::new(), failed: Vec::new() };
     for url in urls {
-        let req = AddRequest { url: url.clone(), filename: None, dir: dir.clone(), start };
+        let req = AddRequest { url: url.clone(), filename: None, dir: dir.clone(), start, headers: Vec::new() };
         match downloads.manager.add(req).await {
             Ok(task) => result.added.push(task),
             Err(e) => result.failed.push((url, e.to_string())),
@@ -94,6 +96,18 @@ pub async fn downloads_cancel(id: String, downloads: State<'_, Downloads>) -> Cm
 #[tauri::command]
 pub async fn downloads_retry(id: String, downloads: State<'_, Downloads>) -> CmdResult<Task> {
     Ok(downloads.manager.retry(task_id(&id)?).await?)
+}
+
+/// Discard the partial data and download from the start.
+#[tauri::command]
+pub async fn downloads_restart(id: String, downloads: State<'_, Downloads>) -> CmdResult<Task> {
+    Ok(downloads.manager.restart(task_id(&id)?).await?)
+}
+
+/// Change the URL or headers of a task that is not running.
+#[tauri::command]
+pub async fn downloads_update(id: String, update: TaskUpdate, downloads: State<'_, Downloads>) -> CmdResult<Task> {
+    Ok(downloads.manager.update(task_id(&id)?, update).await?)
 }
 
 #[tauri::command]

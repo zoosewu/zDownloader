@@ -77,6 +77,7 @@ async fn handle_message(app: &AppHandle, message: NativeMessage) -> NativeRespon
                 filename: Some(filename),
                 dir,
                 start: zoo_core::StartMode::Now,
+                headers: Vec::new(),
             };
             match app.state::<crate::downloads::Downloads>().manager.add(request).await {
                 Ok(task) => NativeResponse::DownloadStarted { filename: task.name },

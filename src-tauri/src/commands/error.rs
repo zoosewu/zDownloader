@@ -34,6 +34,7 @@ impl From<CoreError> for CommandError {
             CoreError::NotFound => "notFound",
             CoreError::Invalid(_) => "invalid",
             CoreError::Resolve { .. } => "resolve",
+            CoreError::SourceChanged(_) => "sourceChanged",
         };
         Self::new(code, e.to_string())
     }

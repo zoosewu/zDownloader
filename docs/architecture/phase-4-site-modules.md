@@ -1,6 +1,6 @@
 # Phase 4 設計規格：網站模組系統重建
 
-- 狀態：已確認（2026-10-31），實作中：4a～4d 完成
+- 狀態：已確認（2026-10-31），實作中：4a～4d、4.5 完成
 - 依據：[ADR-0001 marketplace](../adr/0001-site-module-marketplace.md)、[ADR-0002 執行環境](../adr/0002-site-module-runtime.md)
 - 修正：review B 段全部、SEC-3..6、D-4、D-5、C-11（偵測競態）
 - 術語見 [GLOSSARY.md](../../GLOSSARY.md)
@@ -127,6 +127,20 @@ export default defineModule({
   - `tauri build --config src-tauri/tauri.bundle.json` 加上 externalBin。這個設定不放在主設定，否則平常的 `cargo build` 會因為缺少這個檔案而失敗。
   - shell 在 app 執行檔旁尋找 `zoo-module(.exe)`。開發時用 `cargo build -p zoo-module` 產生在同一個 target 目錄。
   - captcha 的 UI 延到 4e，在那之前 captcha 一律視為使用者拒絕。
+- 下載核心補強（4.5，UI 與 4e 一起做）：
+  - `DownloadManager::update(id, TaskUpdate { url, headers })`：
+    - 可以換網址和 header，兩個都可省略；
+    - 只能用在暫停、失敗、排隊、排程中的任務；
+    - 新網址也可以是分享頁。
+  - 換了網址，下一次傳輸時 `PartFile::open` 會回報 `Previous::Moved`，進入比對：
+    - 大小相同，且從已下載的部分平均抽 4 段（每段 64 KiB，含頭尾）向新網址取回的位元組都相同，才續傳，並把進度記錄改成新網址的；
+    - 大小不同、大小不明、不支援分段，或位元組不同，任務失敗，錯誤是 `CoreError::SourceChanged`；
+    - 這個錯誤不會自動重試，原本的進度保留，把網址改回舊的就能接著下載。
+  - `restart(id)`：刪除進度並重新排隊。UI 詢問時，預設的「從頭下載」就是這個命令。
+  - 同一個網址、伺服器換了檔案（ETag 等不同）時維持原本行為：直接從頭下載。
+  - `Task.headers`：新增任務時指定，同名時以模組回傳的 header 為準；`Range`、`Host`、`Content-Length` 不允許指定。
+  - `Config.user_agent`（設定 `userAgent`）只在請求沒有指定 User-Agent 時使用。
+  - 任務開始時進度計數沿用既有進度。修正前，傳輸開始前就失敗（例如 probe 失敗）會把畫面上的進度歸零。
 
 ## 開發工具（`zoo-module` CLI）
 
@@ -174,7 +188,7 @@ export default defineModule({
 | 4b ✅ | Policy + `fetch` + Web API + `DOMParser` + zoo API（帳密佔位、captcha、wait） | 以 fixture server 測白名單、SSRF、redirect、帳密只送往白名單、回應大小上限 |
 | 4c ✅ | zoo-core `Resolver` seam、任務 phase、重新解析、續傳比對改用原始網址；shell 的 ModuleResolver；host 執行檔隨附（`externalBin`）與 dev 建置 | 端到端：範例模組 + fixture server，經 DownloadManager 下載成功；連結過期重新解析 |
 | 4d ✅ | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md；`Resolved.maxConnections`；SDK 說明以 `headers` 覆寫 User-Agent（偽裝成其他下載軟體，例如百度網盤） | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
-| 4.5 | 下載核心補強：更新網址（比對大小並抽樣比對位元組；不符時詢問，預設從頭下載）、直接連結自訂 header 與預設 User-Agent | zoo-core 整合測試：換成鏡像後續傳、內容不同時拒絕續傳、header 送達 |
+| 4.5 ✅ | 下載核心補強：更新網址（比對大小並抽樣比對位元組；不符時詢問，預設從頭下載）、直接連結自訂 header 與預設 User-Agent | zoo-core 整合測試：換成鏡像後續傳、內容不同時拒絕續傳、header 送達 |
 | 4e | Marketplace：來源、catalog、安裝/更新/移除、權限同意、本機來源熱重載；前端模組頁 | 整合測試：本機 catalog 安裝、權限擴大要求重新同意、sha256 不符拒絕安裝 |
 | 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |
 | 4g | 實機驗證與文件 | 驗證清單 |

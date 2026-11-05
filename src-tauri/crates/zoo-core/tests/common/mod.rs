@@ -9,6 +9,7 @@
 //!   fail=CODE&times=K  the first K requests get status CODE
 //!   status=CODE    always answer CODE with an empty body
 //!   delay_ms=D     sleep D ms before each 16 KiB chunk
+//!   alt            serve different bytes (see `alt_byte_at`): another file of the same size
 //! Requests whose target is an absolute URL are recorded as proxied (the fixture doubles as
 //! a plain HTTP proxy for its own URLs).
 #![allow(dead_code)]
@@ -79,6 +80,11 @@ pub fn byte_at(i: u64) -> u8 {
 
 pub fn expected(size: u64) -> Vec<u8> {
     (0..size).map(byte_at).collect()
+}
+
+/// Byte `i` of a fixture file served with `alt`.
+pub fn alt_byte_at(i: u64) -> u8 {
+    !byte_at(i)
 }
 
 async fn handle(stream: TcpStream, state: Arc<Mutex<State>>) -> std::io::Result<()> {
@@ -181,7 +187,8 @@ async fn handle(stream: TcpStream, state: Arc<Mutex<State>>) -> std::io::Result<
             tokio::time::sleep(d).await;
         }
         let chunk_end = (pos + 16 * 1024).min(end);
-        let mut chunk: Vec<u8> = (pos..chunk_end).map(byte_at).collect();
+        let byte = if params.contains_key("alt") { alt_byte_at } else { byte_at };
+        let mut chunk: Vec<u8> = (pos..chunk_end).map(byte).collect();
         if let Some(limit) = drop_after {
             if sent + chunk.len() as u64 >= limit {
                 chunk.truncate((limit - sent) as usize);

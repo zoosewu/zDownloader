@@ -30,6 +30,10 @@ pub enum CoreError {
     /// A site module could not turn the URL into a download.
     #[error("{message}")]
     Resolve { message: String, hint: Option<String>, retryable: bool },
+    /// The task's URL was changed and the new one does not serve the bytes already
+    /// downloaded. The partial data is kept; `restart` discards it.
+    #[error("the new URL serves a different file: {0}")]
+    SourceChanged(String),
 }
 
 impl CoreError {

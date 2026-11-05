@@ -36,6 +36,9 @@ pub struct AppSettings {
     pub auto_retry_enabled: bool,
     pub max_retry_count: u32,
     pub retry_interval_secs: u64,
+    /// User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
+    #[serde(default)]
+    pub user_agent: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -77,6 +80,7 @@ impl Default for AppSettings {
             auto_retry_enabled: true,
             max_retry_count: 3,
             retry_interval_secs: 5,
+            user_agent: None,
         }
     }
 }
@@ -99,6 +103,7 @@ impl AppSettings {
                 interval: std::time::Duration::from_secs(self.retry_interval_secs.max(1)),
             },
             transfer_retry: Default::default(),
+            user_agent: self.user_agent.clone().filter(|ua| !ua.trim().is_empty()),
         }
     }
 }

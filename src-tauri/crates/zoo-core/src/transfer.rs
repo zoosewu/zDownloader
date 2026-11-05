@@ -11,7 +11,7 @@
 
 use crate::connection::{ConnectionSource, Lease, Outcome};
 use crate::error::CoreError;
-use crate::part_file::{PartFile, Validator};
+use crate::part_file::{PartFile, Previous, Validator};
 use crate::rate::RateLimiter;
 use crate::task::ActiveRange;
 use futures_util::StreamExt;
@@ -92,6 +92,14 @@ impl Default for Progress {
 }
 
 impl Progress {
+    /// Counters that start where the task left off, so a job that fails before it transfers
+    /// anything does not report the task's progress as lost.
+    pub fn starting_at(downloaded: u64, total: Option<u64>) -> Self {
+        let progress = Self::default();
+        progress.reset(downloaded, total);
+        progress
+    }
+
     /// Finished and in-flight ranges of a running ranged transfer; `None` in stream mode.
     pub fn segments(&self) -> Option<(Vec<(u64, u64)>, Vec<ActiveRange>)> {
         let done = self.part.lock().unwrap().as_ref()?.done_ranges();
@@ -148,8 +156,19 @@ pub async fn run(spec: &TransferSpec, ctx: &Ctx) -> Result<PathBuf, CoreError> {
             Err(SegmentError::Core(e)) => Err(e),
             Ok(path) => Ok(path),
         },
-        Probe::Whole(response) => stream(spec, ctx, Some(response)).await,
+        Probe::Whole(response) => {
+            // Progress made at another URL cannot be checked against a server without ranges.
+            let no_size = Validator { url: spec.origin.clone(), size: None, etag: None, last_modified: None };
+            if let Previous::Changed(_) = PartFile::open(spec.part_path.clone(), &no_size)? {
+                return Err(no_ranges());
+            }
+            stream(spec, ctx, Some(response)).await
+        }
     }
+}
+
+fn no_ranges() -> CoreError {
+    CoreError::SourceChanged("the new URL does not support resuming, so the download so far cannot be checked".into())
 }
 
 enum Probe {
@@ -228,9 +247,15 @@ impl From<std::io::Error> for SegmentError {
 }
 
 async fn ranged(spec: &TransferSpec, ctx: &Ctx, validator: Validator) -> Result<PathBuf, SegmentError> {
-    let part = match PartFile::resume(spec.part_path.clone(), &validator)? {
-        Some(part) => part,
-        None => {
+    let part = match PartFile::open(spec.part_path.clone(), &validator)? {
+        Previous::Same(part) => part,
+        Previous::Moved(part) => {
+            verify_moved(spec, ctx, &part).await?;
+            part.flush()?;
+            part
+        }
+        Previous::Changed(why) => return Err(CoreError::SourceChanged(why).into()),
+        Previous::None => {
             PartFile::discard(&spec.part_path)?;
             PartFile::create(spec.part_path.clone(), validator)?
         }
@@ -253,6 +278,70 @@ async fn ranged(spec: &TransferSpec, ctx: &Ctx, validator: Validator) -> Result<
 
     let part = Arc::try_unwrap(part).map_err(|_| CoreError::Protocol("part file still shared".into()))?;
     Ok(part.finalize(&spec.dir, &spec.name)?)
+}
+
+const SAMPLES: u64 = 4;
+const SAMPLE_LEN: u64 = 64 * 1024;
+
+/// The task's URL changed since `part` was downloaded: sampled ranges of what it holds must
+/// come back identical from the new URL, or the progress is not this file's.
+async fn verify_moved(spec: &TransferSpec, ctx: &Ctx, part: &PartFile) -> Result<(), CoreError> {
+    for range in samples(&part.done_ranges()) {
+        let mut ours = vec![0; (range.end - range.start) as usize];
+        part.read_at(range.start, &mut ours)?;
+        let theirs = with_retry(spec.retry, &ctx.cancel, || fetch_sample(spec, ctx, range.clone())).await?;
+        if theirs != ours {
+            return Err(CoreError::SourceChanged(format!("bytes {}-{} differ", range.start, range.end - 1)));
+        }
+    }
+    Ok(())
+}
+
+async fn fetch_sample(spec: &TransferSpec, ctx: &Ctx, range: Range<u64>) -> Result<Vec<u8>, CoreError> {
+    let (lease, response) = send(ctx, spec, Some(format!("bytes={}-{}", range.start, range.end - 1))).await?;
+    match response.status() {
+        StatusCode::PARTIAL_CONTENT => {}
+        StatusCode::OK => return Err(no_ranges()),
+        status => {
+            ctx.conn.report(&lease, Outcome::Failure);
+            return Err(CoreError::Http(status.as_u16()));
+        }
+    }
+    let content_range = response.headers().get(CONTENT_RANGE).and_then(|v| v.to_str().ok()).and_then(parse_content_range);
+    if !content_range.is_some_and(|cr| cr.start == range.start && cr.end_inclusive == range.end - 1) {
+        return Err(CoreError::Protocol(format!("asked for bytes {}-{}, got another range", range.start, range.end - 1)));
+    }
+    let body = tokio::select! {
+        _ = ctx.cancel.cancelled() => return Err(CoreError::Cancelled),
+        body = response.bytes() => body?,
+    };
+    Ok(body.to_vec())
+}
+
+/// Up to `SAMPLES` ranges of at most `SAMPLE_LEN` bytes, spread evenly over the done bytes
+/// (the first and the last included).
+fn samples(done: &[(u64, u64)]) -> Vec<Range<u64>> {
+    let covered: u64 = done.iter().map(|(s, e)| e - s).sum();
+    let len = SAMPLE_LEN.min(covered);
+    let mut out: Vec<Range<u64>> = Vec::new();
+    if len == 0 {
+        return out;
+    }
+    for i in 0..SAMPLES {
+        // Position `at` counts done bytes only; find the range it falls in.
+        let mut at = i * (covered - len) / (SAMPLES - 1);
+        for &(s, e) in done {
+            if at < e - s {
+                let range = s + at..(s + at + len).min(e);
+                if out.last() != Some(&range) {
+                    out.push(range);
+                }
+                break;
+            }
+            at -= e - s;
+        }
+    }
+    out
 }
 
 /// Fetch every missing range of `part` with up to `spec.connections` workers.
@@ -485,6 +574,18 @@ mod tests {
         assert_eq!(parse_content_range("bytes 5-9/*").unwrap().total, None);
         assert_eq!(parse_content_range("bytes */0"), None);
         assert_eq!(parse_content_range("items 0-1/2"), None);
+    }
+
+    #[test]
+    fn samples_spread_over_done_bytes() {
+        assert!(samples(&[]).is_empty());
+        assert_eq!(samples(&[(10, 20)]), vec![10..20]);
+        let mb = 1024 * 1024;
+        let s = samples(&[(0, mb), (3 * mb, 4 * mb)]);
+        assert_eq!(s.len(), 4);
+        assert_eq!(s[0], 0..SAMPLE_LEN);
+        assert_eq!(s[3], 4 * mb - SAMPLE_LEN..4 * mb);
+        assert!(s.iter().all(|r| r.end <= mb || r.start >= 3 * mb), "samples stay inside done ranges: {s:?}");
     }
 
     #[test]

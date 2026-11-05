@@ -18,7 +18,7 @@ use commands::clipboard::{detect_url, detect_url_module, get_clipboard_content};
 use commands::downloads::{
     downloads_add, downloads_cancel, downloads_clear_finished, downloads_import_batch,
     downloads_list, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
-    downloads_resume_all, downloads_retry, downloads_segments,
+    downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_update,
 };
 use commands::module_management::{
     delete_module_credentials, get_all_modules, get_module_audit_logs, get_module_credentials_status,
@@ -84,6 +84,8 @@ pub fn run() {
             downloads_resume,
             downloads_cancel,
             downloads_retry,
+            downloads_restart,
+            downloads_update,
             downloads_remove,
             downloads_pause_all,
             downloads_resume_all,

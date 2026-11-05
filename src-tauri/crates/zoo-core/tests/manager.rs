@@ -21,6 +21,7 @@ fn config() -> Config {
         speed_limit: None,
         auto_retry: AutoRetry { enabled: false, max_attempts: 3, interval: Duration::from_millis(50) },
         transfer_retry: RetryPolicy { max_attempts: 2, base_delay: Duration::from_millis(10), max_delay: Duration::from_millis(20) },
+        user_agent: None,
     }
 }
 
@@ -29,7 +30,7 @@ fn start(cfg: Config, store: &Path) -> DownloadManager {
 }
 
 fn req(url: String, dir: &Path, start: StartMode) -> AddRequest {
-    AddRequest { url, filename: None, dir: dir.to_path_buf(), start }
+    AddRequest { url, filename: None, dir: dir.to_path_buf(), start, headers: Vec::new() }
 }
 
 async fn get(m: &DownloadManager, id: TaskId) -> Task {

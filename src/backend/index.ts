@@ -16,6 +16,7 @@ import type { StartMode } from './bindings/StartMode';
 import type { SegmentMap } from './bindings/SegmentMap';
 import type { Task } from './bindings/Task';
 import type { TaskId } from './bindings/TaskId';
+import type { TaskUpdate } from './bindings/TaskUpdate';
 
 export type { AppSettings } from './bindings/AppSettings';
 export type { BatchResult } from './bindings/BatchResult';
@@ -32,6 +33,7 @@ export type { ActiveRange } from './bindings/ActiveRange';
 export type { Task } from './bindings/Task';
 export type { TaskId } from './bindings/TaskId';
 export type { TaskState } from './bindings/TaskState';
+export type { TaskUpdate } from './bindings/TaskUpdate';
 export type { Theme } from './bindings/Theme';
 
 export class BackendError extends Error {
@@ -75,12 +77,14 @@ export interface AddDownload {
   /** Defaults to the download folder from settings. */
   dir?: string | null;
   start: StartMode;
+  /** Sent with every request of the download (User-Agent, Referer, Cookie, ...). */
+  headers?: Array<[string, string]> | null;
 }
 
 export const backend = {
   downloads: {
-    add: ({ url, filename = null, dir = null, start }: AddDownload) =>
-      call<Task>('downloads_add', { url, filename, dir, start }),
+    add: ({ url, filename = null, dir = null, start, headers = null }: AddDownload) =>
+      call<Task>('downloads_add', { url, filename, dir, start, headers }),
     importBatch: (filePath: string, start: StartMode, dir: string | null = null) =>
       call<BatchResult>('downloads_import_batch', { filePath, dir, start }),
     list: () => call<Task[]>('downloads_list'),
@@ -88,6 +92,10 @@ export const backend = {
     resume: (id: TaskId) => call<Task>('downloads_resume', { id }),
     cancel: (id: TaskId) => call<Task>('downloads_cancel', { id }),
     retry: (id: TaskId) => call<Task>('downloads_retry', { id }),
+    /** Discard the partial data and download from the start. */
+    restart: (id: TaskId) => call<Task>('downloads_restart', { id }),
+    /** Change the URL or headers of a task that is not running. */
+    update: (id: TaskId, update: TaskUpdate) => call<Task>('downloads_update', { id, update }),
     remove: (id: TaskId) => call<null>('downloads_remove', { id }),
     pauseAll: () => call<Task[]>('downloads_pause_all'),
     resumeAll: () => call<Task[]>('downloads_resume_all'),

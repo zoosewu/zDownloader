@@ -6,4 +6,8 @@ export type AppSettings = { language: string, theme: Theme, autoStart: boolean, 
 /**
  * When every proxy is unusable, connect directly instead of failing.
  */
-proxyFallbackDirect: boolean, proxyVerificationIntervalHours: number, enableClipboardMonitoring: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, };
+proxyFallbackDirect: boolean, proxyVerificationIntervalHours: number, enableClipboardMonitoring: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
+/**
+ * User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
+ */
+userAgent: string | null, };
