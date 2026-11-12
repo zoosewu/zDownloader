@@ -132,7 +132,23 @@ pub fn start(app: AppHandle, check_updates: bool) {
 fn official_dir(app: &AppHandle) -> Option<PathBuf> {
     let bundled = app.path().resource_dir().ok().map(|dir| dir.join("marketplace"));
     let source = cfg!(debug_assertions).then(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("marketplace"));
-    [bundled, source].into_iter().flatten().find(|dir| dir.join(zoo_marketplace::catalog::FILE).is_file())
+    [bundled, source].into_iter().flatten().find(|dir| dir.join(zoo_marketplace::catalog::FILE).is_file()).map(plain_path)
+}
+
+/// Without Windows' `\\?\` prefix (resource paths have it), so the folder reads as people type it.
+fn plain_path(path: PathBuf) -> PathBuf {
+    match path.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
+        Some(rest) if !rest.starts_with(r"UNC\") => PathBuf::from(rest),
+        _ => path,
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn verbatim_prefixes_are_dropped() {
+    assert_eq!(plain_path(PathBuf::from(r"\\?\D:\app\marketplace")), PathBuf::from(r"D:\app\marketplace"));
+    assert_eq!(plain_path(PathBuf::from(r"\\?\UNC\server\share")), PathBuf::from(r"\\?\UNC\server\share"));
+    assert_eq!(plain_path(PathBuf::from("/opt/app")), PathBuf::from("/opt/app"));
 }
 
 /// Module credentials in the OS keychain.

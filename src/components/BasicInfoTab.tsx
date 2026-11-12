@@ -1,11 +1,13 @@
 // Basic info tab component - displays basic download information
-import React from 'react';
-import { Box, Typography, Stack } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Button, Typography, Stack } from '@mui/material';
+import { Edit as EditIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '../backend';
 import { formatBytes } from '../utils/downloadCalculations';
 import { formatAbsoluteTime } from '../utils/formatters';
 import CollapsibleField from './CollapsibleField';
+import EditTaskDialog, { editable } from './EditTaskDialog';
 
 interface BasicInfoTabProps {
   task: Task;
@@ -16,9 +18,18 @@ interface BasicInfoTabProps {
  */
 const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ task }) => {
   const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
 
   return (
     <Box sx={{ padding: 3 }}>
+      {editable(task) && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button size="small" startIcon={<EditIcon fontSize="small" />} onClick={() => setEditing(true)} sx={{ textTransform: 'none' }}>
+            {t('downloads.edit.title')}
+          </Button>
+        </Box>
+      )}
+      <EditTaskDialog task={editing ? task : null} onClose={() => setEditing(false)} />
       <Stack spacing={0.5}>
         {/* URL - Collapsible */}
         <CollapsibleField

@@ -21,6 +21,7 @@ import { useAtom } from 'jotai';
 import { backend, type AppSettings, type SpeedLimitMode } from '../backend';
 import { settingsAtom } from '../stores/settingsStore';
 import { open, save } from '@tauri-apps/plugin-dialog';
+import UserAgentField from './UserAgentField';
 
 export default function AdvancedSettings() {
   const { t } = useTranslation();
@@ -190,6 +191,19 @@ export default function AdvancedSettings() {
               />
             )}
           </Stack>
+        </Box>
+
+        {/* User-Agent for downloads that do not set their own */}
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            {t('headers.userAgent')}
+          </Typography>
+          <UserAgentField
+            value={settings.userAgent ?? ''}
+            onChange={(value) => setSettings({ ...settings, userAgent: value.trim() ? value : null })}
+            placeholder={t('headers.userAgentDefault')}
+            helperText={t('settings.userAgentHelp')}
+          />
         </Box>
 
         {/* Auto Retry Settings */}

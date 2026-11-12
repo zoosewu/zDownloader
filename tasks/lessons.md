@@ -10,3 +10,13 @@
 
 - 規則：新增 UI 時不加多餘的次要標籤或說明文字（例如「留空表示立即開始」、格數統計）。標籤本身已能表達的就不再補充。
 - 例外：沒有它就無法理解畫面的資訊（例如分段顏色圖例）。
+
+## 在真的 app 裡操作過才算驗證完（2026-11-12）
+
+- 錯誤：4e2 的 captcha 視窗只有單元測試，假設「capability 只給 main 視窗，外部網頁就沒有 IPC」。4e3 實際操作才發現兩件事：
+  - Tauri 2 的 capability 不管 app 自己的 command，外部頁面能呼叫 `modules_list`；
+  - 同步 command 建立視窗在 Windows 會 deadlock。
+- 規則：
+  - 涉及視窗、IPC、權限邊界的功能，要在真的 app 裡測：WebView2 加 `--remote-debugging-port`，用 CDP 操作並截圖。
+  - 安全假設要寫成可以被推翻的檢查，例如從外部頁面呼叫 command，確認被拒絕。
+  - Tauri command 要建立視窗時一律寫成 `async`。

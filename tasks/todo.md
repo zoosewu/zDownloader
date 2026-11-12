@@ -45,15 +45,18 @@
     - [x] 更新網址：`update` / `restart` 命令、大小與抽樣比對、`SourceChanged`（UI 詢問、預設從頭下載：4e）
     - [x] 直接連結自訂 header：`Task.headers`、設定 `userAgent`（新增任務的 header 欄位、設定頁常用預設：4e）
     - [ ] 不做：TLS 指紋偽裝（代價過高，有需要再評估）
-  - [ ] 4e Marketplace 與前端模組頁（規格 2026-11-05 確認：四種來源都支援、圖片與 reCAPTCHA 都做、分三段每段回報）
+  - [x] 4e Marketplace 與前端模組頁（規格 2026-11-05 確認：四種來源都支援、圖片與 reCAPTCHA 都做、分三段每段回報）
     - [x] 4e1 `zoo-marketplace` crate：來源、catalog、plan/install、sha256、權限同意、順序、帳密 seam
     - [x] 4e2 shell：command 與事件、captcha 互動、本機來源熱重載、內附官方來源、啟動時檢查更新
-    - [ ] 4e3 前端：模組頁、權限同意、帳密表單、captcha 對話框；4.5 的 UI（換網址、SourceChanged 詢問、header、User-Agent 預設）、錯誤訊息在地化
+    - [x] 4e3 前端：模組頁、權限同意、帳密表單、captcha 對話框；4.5 的 UI（換網址、SourceChanged 詢問、header、User-Agent 預設）、錯誤訊息在地化
   - [ ] 4f k2s 遷移、刪除舊模組系統
   - [ ] 4g 實機驗證與文件
 - [ ] Chrome 擴充重寫（native messaging）— 另排
 
 ## 已知待辦（合併時發現）
+
+- `.env.development` 設 `VITE_DEV_MODE=true`：`pnpm tauri dev` 的視窗也會走 HTTP bridge（只支援 5 個 command），開發時大部分功能不能用。應改成只有瀏覽器開前端時才走 bridge（2026-11-12 發現，待決定）
+- `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`
 
 - `@mui/icons-material` v7 與 `@mui/material` v6 版本不一致
 - `package.json` 缺 `packageManager`

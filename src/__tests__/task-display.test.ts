@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import type { Task } from '../backend/bindings/Task';
-import { errorText } from '../components/DownloadTableRow';
+import { errorText } from '../utils/errors';
 import { statusLabel } from '../utils/downloadCalculations';
 
-const t = (key: string) => key;
+const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
 
 function task(overrides: Partial<Task>): Task {
   return {
@@ -12,6 +12,7 @@ function task(overrides: Partial<Task>): Task {
     name: 'f.bin',
     customName: false,
     dir: '/tmp',
+    headers: [],
     finalPath: null,
     state: 'running',
     phase: null,
@@ -48,7 +49,13 @@ describe('task status', () => {
       state: 'failed',
       error: { kind: 'resolve', detail: { message: 'k2s@official: file deleted', hint: 'ask for a new link', retryable: false } },
     });
-    expect(errorText(failed)).toBe('k2s@official: file deleted (ask for a new link)');
-    expect(errorText(task({ state: 'failed', error: { kind: 'http', detail: 404 } }))).toBe('http: 404');
+    expect(errorText(failed.error, t)).toBe('k2s@official: file deleted (ask for a new link)');
+  });
+
+  test('core errors are translated, keeping the detail', () => {
+    expect(errorText({ kind: 'http', detail: 404 }, t)).toBe('errors.core.http {"status":404}');
+    expect(errorText({ kind: 'sourceChanged', detail: 'bytes 0-65535 differ' }, t)).toBe('errors.core.sourceChanged: bytes 0-65535 differ');
+    expect(errorText({ kind: 'cancelled' }, t)).toBe('errors.core.cancelled');
+    expect(errorText(null, t)).toBe('');
   });
 });

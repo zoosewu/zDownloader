@@ -1,207 +1,116 @@
-// CAPTCHA dialog component for user verification
-import React, { useState } from 'react';
+// A site module needs a captcha solved. Image captchas are answered here; a reCAPTCHA is
+// solved on the site's own page in a window of its own. One captcha at a time, oldest first.
+import { useEffect, useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Typography,
+  Alert,
   Box,
-  CircularProgress,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
 } from '@mui/material';
-import { useAtom } from 'jotai';
-import { invoke } from '../utils/tauri';
-import {
-  currentCaptchaAtom,
-  showCaptchaDialogAtom,
-} from '../stores/captchaStore';
+import { useTranslation } from 'react-i18next';
+import { backend, type CaptchaRequest } from '../backend';
 
-export const CaptchaDialog: React.FC = () => {
-  const [currentCaptcha, setCurrentCaptcha] = useAtom(currentCaptchaAtom);
-  const [showDialog, setShowDialog] = useAtom(showCaptchaDialogAtom);
-  const [solution, setSolution] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+/** Captchas waiting for an answer, kept in step with the backend. */
+function usePendingCaptchas(): CaptchaRequest[] {
+  const [pending, setPending] = useState<CaptchaRequest[]>([]);
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    backend.events
+      .onCaptchaEvent((event) =>
+        setPending((list) =>
+          event.type === 'opened' ? [...list.filter((c) => c.id !== event.data.id), event.data] : list.filter((c) => c.id !== event.data)
+        )
+      )
+      .then((stop) => (disposed ? stop() : (unlisten = stop)));
+    // Captchas that opened before this mounted.
+    backend.captcha
+      .pending()
+      .then((list) => !disposed && setPending((current) => [...list.filter((c) => !current.some((x) => x.id === c.id)), ...current]))
+      .catch((error) => console.warn('[captcha] cannot list pending captchas:', error.message));
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+  return pending;
+}
+
+export default function CaptchaDialog() {
+  const { t } = useTranslation();
+  const pending = usePendingCaptchas();
+  const current = pending[0] ?? null;
+  const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleClose = async () => {
-    if (currentCaptcha && !isSubmitting) {
-      try {
-        // Cancel the CAPTCHA challenge
-        await invoke('cancel_captcha', {
-          challengeId: currentCaptcha.id,
-        });
-      } catch (err) {
-        console.error('Failed to cancel CAPTCHA:', err);
-      }
-
-      setCurrentCaptcha(null);
-      setShowDialog(false);
-      setSolution('');
-      setError(null);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!currentCaptcha || !solution.trim()) {
-      setError('Please enter a solution');
-      return;
-    }
-
-    setIsSubmitting(true);
+  useEffect(() => {
+    setText('');
     setError(null);
+  }, [current?.id]);
 
-    try {
-      // Submit the CAPTCHA solution
-      await invoke('submit_captcha_solution', {
-        challengeId: currentCaptcha.id,
-        solutionText: solution.trim(),
-        metadata: null,
-      });
+  if (!current) return null;
 
-      // Close dialog on success
-      setCurrentCaptcha(null);
-      setShowDialog(false);
-      setSolution('');
-    } catch (err) {
-      console.error('Failed to submit CAPTCHA solution:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to submit solution'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !isSubmitting) {
-      handleSubmit();
-    }
-  };
-
-  if (!currentCaptcha) {
-    return null;
-  }
+  const run = (action: Promise<unknown>) => action.catch((e) => setError((e as Error).message));
+  const decline = () => run(backend.captcha.answer(current.id, null));
+  const challenge = current.challenge;
 
   return (
-    <Dialog
-      open={showDialog}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-      disableEscapeKeyDown={isSubmitting}
-    >
-      <DialogTitle>CAPTCHA Verification Required</DialogTitle>
+    <Dialog open onClose={decline} maxWidth="xs" fullWidth>
+      <DialogTitle>{t('captcha.title')}</DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Module: {currentCaptcha.module_id}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Download Task: {currentCaptcha.task_id}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            CAPTCHA Type: {currentCaptcha.captcha_type}
-          </Typography>
-        </Box>
-
-        {/* Display CAPTCHA image if type is 'image' */}
-        {currentCaptcha.captcha_type === 'image' && (
+        {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
+        {challenge.kind === 'image' ? (
           <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              mb: 2,
-              p: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
+            component="form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(backend.captcha.answer(current.id, text.trim()));
             }}
           >
-            <img
-              src={currentCaptcha.challenge_data}
-              alt="CAPTCHA"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '200px',
-                display: 'block',
-              }}
-              onError={(e) => {
-                console.error('Failed to load CAPTCHA image');
-                e.currentTarget.style.display = 'none';
-              }}
+            <Box
+              component="img"
+              src={`data:${challenge.mime};base64,${challenge.base64}`}
+              alt={t('captcha.imageAlt')}
+              sx={{ display: 'block', maxWidth: '100%', mx: 'auto', my: 1, imageRendering: 'pixelated' }}
+            />
+            <TextField
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              label={t('captcha.enterText')}
+              fullWidth
+              autoFocus
+              margin="dense"
             />
           </Box>
-        )}
-
-        {/* Display challenge data for other types */}
-        {currentCaptcha.captcha_type !== 'image' && (
-          <Box
-            sx={{
-              mb: 2,
-              p: 2,
-              bgcolor: 'grey.100',
-              borderRadius: 1,
-            }}
-          >
-            <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-              {currentCaptcha.challenge_data}
-            </Typography>
-          </Box>
-        )}
-
-        <TextField
-          autoFocus
-          margin="dense"
-          label="Enter CAPTCHA Solution"
-          type="text"
-          fullWidth
-          variant="outlined"
-          value={solution}
-          onChange={(e) => setSolution(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={isSubmitting}
-          error={!!error}
-          helperText={error}
-          placeholder="Type the characters you see above"
-        />
-
-        {/* Display additional parameters if any */}
-        {Object.keys(currentCaptcha.params).length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              Additional Information:
-            </Typography>
-            {Object.entries(currentCaptcha.params).map(([key, value]) => (
-              <Typography
-                key={key}
-                variant="caption"
-                display="block"
-                color="text.secondary"
-              >
-                {key}: {value}
-              </Typography>
-            ))}
-          </Box>
+        ) : (
+          <DialogContentText>{t('captcha.recaptchaMessage', { host: hostOf(challenge.pageUrl) })}</DialogContentText>
         )}
       </DialogContent>
-
       <DialogActions>
-        <Button onClick={handleClose} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={isSubmitting || !solution.trim()}
-          startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit'}
-        </Button>
+        <Button onClick={decline}>{t('captcha.decline')}</Button>
+        {challenge.kind === 'image' ? (
+          <Button variant="contained" disabled={!text.trim()} onClick={() => run(backend.captcha.answer(current.id, text.trim()))}>
+            {t('captcha.submit')}
+          </Button>
+        ) : (
+          <Button variant="contained" autoFocus onClick={() => run(backend.captcha.openWindow(current.id))}>
+            {t('captcha.openPage')}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );
-};
+}
 
-export default CaptchaDialog;
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}

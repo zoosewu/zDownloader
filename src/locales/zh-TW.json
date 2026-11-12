@@ -24,7 +24,8 @@
     "ok": "確定",
     "apply": "套用",
     "reset": "重設",
-    "progress": "進度"
+    "progress": "進度",
+    "later": "稍後"
   },
   "downloads": {
     "title": "下載列表",
@@ -181,6 +182,16 @@
       "resolving": "解析中",
       "waiting": "倒數中",
       "awaitingUser": "等待驗證"
+    },
+    "edit": {
+      "title": "更換網址或 Header",
+      "urlHelp": "可換成鏡像或新的分享連結；內容相同時會保留進度。"
+    },
+    "sourceChanged": {
+      "title": "新網址的檔案不一樣",
+      "message": "「{{name}}」的新網址與已下載的內容不符，無法接著下載。",
+      "restart": "從頭下載",
+      "otherUrl": "換別的網址"
     }
   },
   "settings": {
@@ -237,7 +248,8 @@
       "exportFailed": "無法匯出設定",
       "importFailed": "無法匯入設定"
     },
-    "proxyFallbackDirect": "所有代理都無法使用時改用直接連線"
+    "proxyFallbackDirect": "所有代理都無法使用時改用直接連線",
+    "userAgentHelp": "下載沒有指定 User-Agent 時使用；模組回傳的與任務自訂的優先。"
   },
   "proxy": {
     "title": "代理管理",
@@ -268,14 +280,13 @@
     }
   },
   "captcha": {
-    "title": "驗證碼驗證",
-    "description": "請解決驗證碼以繼續下載",
-    "submit": "提交",
-    "refresh": "重新整理",
-    "solving": "正在解決驗證碼...",
-    "success": "驗證碼驗證成功",
-    "failed": "驗證碼驗證失敗",
-    "timeout": "驗證碼逾時"
+    "title": "需要驗證",
+    "imageAlt": "驗證碼圖片",
+    "enterText": "輸入圖片中的文字",
+    "recaptchaMessage": "{{host}} 需要通過 reCAPTCHA。會在新視窗開啟該網站，完成驗證後自動繼續。",
+    "openPage": "開啟驗證頁面",
+    "submit": "送出",
+    "decline": "略過"
   },
   "format": {
     "speed": "{{value}}/s",
@@ -324,90 +335,55 @@
       "scheduleFailed": "無法排程下載"
     }
   },
-  "urlDetection": {
-    "detecting": "檢測中...",
-    "failed": "檢測失敗",
-    "supportedBy": "支援模組",
-    "requiresAuth": "需要認證"
-  },
   "modules": {
     "title": "網站模組",
+    "installed": {
+      "title": "已安裝",
+      "checkOnStart": "啟動時檢查更新",
+      "empty": "尚未安裝任何模組。到「瀏覽」安裝，或在「來源」新增模組市集。",
+      "local": "本機",
+      "update": "更新到 {{version}}",
+      "moveUp": "提高優先順序",
+      "moveDown": "降低優先順序",
+      "remove": "移除",
+      "review": "檢視",
+      "needsConsent": "模組要求新的權限，同意前不會生效。",
+      "missingCredentials": "尚未設定：{{fields}}",
+      "confirmRemove": "移除「{{name}}」？儲存的帳號資料也會一併刪除。"
+    },
+    "sources": {
+      "title": "來源",
+      "add": "新增來源",
+      "addHelp": "GitHub owner/repo、catalog 的 https:// 網址、git URL 或本機資料夾",
+      "refresh": "重新整理所有來源",
+      "remove": "移除來源及其模組",
+      "count": "{{count}} 個模組"
+    },
+    "browse": {
+      "title": "瀏覽",
+      "empty": "來源中沒有可安裝的模組。",
+      "install": "安裝",
+      "installed": "已安裝"
+    },
+    "trust": {
+      "official": "官方"
+    },
+    "consent": {
+      "community": "這個模組來自社群來源，請確認你信任它的作者。",
+      "domains": "可以連線到",
+      "credentials": "會使用的帳號資料",
+      "accept": "同意並安裝",
+      "acceptUpdate": "同意並更新"
+    },
     "credentials": {
-      "title": "認證管理",
-      "description": "管理網站模組的登入認證資訊",
-      "saveCredentials": "儲存認證",
-      "deleteCredentials": "刪除認證",
-      "credentialStatus": "認證狀態",
-      "configured": "已設定",
-      "notConfigured": "未設定",
-      "missingKeys": "缺少認證欄位",
-      "confirmDelete": "確定要刪除 {{moduleName}} 的認證資訊嗎？",
-      "deleteSuccess": "已刪除認證資訊",
-      "saveSuccess": "已儲存認證資訊",
-      "promptTitle": "需要認證",
-      "promptDescription": "模組「{{moduleName}}」需要認證才能下載。請輸入您的登入資訊。",
-      "username": "用戶名",
-      "password": "密碼",
-      "apiKey": "API 金鑰",
-      "token": "令牌",
-      "email": "電子郵件",
-      "enterCredential": "請輸入{{field}}",
-      "securityNotice": "您的認證資訊將安全存儲在系統密鑰鏈中。",
-      "authErrorDetected": "檢測到認證錯誤。請更新您的登入資訊後重試。",
-      "retryWithAuth": "重新認證並重試",
-      "errors": {
-        "saveFailed": "儲存認證失敗: {{error}}",
-        "deleteFailed": "刪除認證失敗: {{error}}",
-        "loadFailed": "載入認證狀態失敗: {{error}}",
-        "emptyField": "{{field}} 不能為空",
-        "invalidCredentials": "認證資訊無效",
-        "unknownModule": "無法識別模組，請手動設定認證",
-        "checkFailed": "檢查認證狀態失敗: {{error}}"
-      }
+      "title": "帳號",
+      "optional": "選填",
+      "stored": "已儲存（留空保持不變）",
+      "clear": "清除"
     },
-    "management": {
-      "title": "模組管理",
-      "noModules": "未找到可用模組",
-      "scanModules": "掃描模組",
-      "scanToFind": "點擊「掃描模組」以尋找可用的網站模組",
-      "scanComplete": "掃描完成：找到 {{found}} 個模組，成功載入 {{loaded}} 個",
-      "reloadModule": "重新載入",
-      "reloadSuccess": "已重新載入模組：{{moduleId}}",
-      "unloadModule": "卸載模組",
-      "moduleDetail": "模組詳細資訊",
-      "permissions": "權限",
-      "urlPatterns": "支援的網址模式",
-      "allowedDomains": "允許的網域",
-      "requiredCredentials": "需要認證",
-      "loadedAt": "載入時間",
-      "homepage": "首頁",
-      "auditLogs": "審計日誌",
-      "statistics": "統計資訊",
-      "totalDownloads": "總下載數",
-      "successfulDownloads": "成功下載",
-      "failedDownloads": "失敗下載",
-      "lastUsed": "最後使用",
-      "never": "從未使用",
-      "status": {
-        "pending": "等待中",
-        "loading": "載入中",
-        "active": "啟用",
-        "failed": "失敗",
-        "suspended": "已暫停",
-        "unloaded": "已卸載"
-      },
-      "errors": {
-        "loadFailed": "載入模組失敗: {{error}}",
-        "reloadFailed": "重新載入模組失敗: {{error}}",
-        "unloadFailed": "卸載模組失敗: {{error}}",
-        "scanFailed": "掃描模組失敗: {{error}}"
-      }
-    },
-    "urlDetection": {
-      "supported": "由 {{moduleName}} 支援",
-      "notSupported": "無可用模組支援此網址",
-      "requiresAuth": "需要認證",
-      "detectFailed": "偵測模組失敗"
+    "match": {
+      "resolvedBy": "由「{{name}}」模組解析",
+      "needsCredentials": "「{{name}}」模組需要帳號，請先到 設定 → 網站模組 輸入"
     }
   },
   "dev": {
@@ -444,6 +420,27 @@
         "item3": "自動進度：模擬任務會自動更新進度，就像真實下載一樣",
         "item4": "這些設定儲存在瀏覽器本地，不會影響生產環境"
       }
+    }
+  },
+  "headers": {
+    "toggle": "User-Agent、Referer、Cookie",
+    "userAgent": "User-Agent",
+    "userAgentDefault": "預設（zoo-downloader）",
+    "referer": "Referer",
+    "cookie": "Cookie",
+    "cookieStored": "Cookie 會以明文存在下載紀錄中"
+  },
+  "errors": {
+    "core": {
+      "http": "伺服器回應 HTTP {{status}}",
+      "network": "網路錯誤",
+      "protocol": "伺服器的回應無法理解",
+      "io": "檔案錯誤",
+      "noConnection": "沒有可用的連線",
+      "cancelled": "已取消",
+      "notFound": "找不到任務",
+      "invalid": "無效的要求",
+      "sourceChanged": "新網址的檔案不一樣"
     }
   }
 }

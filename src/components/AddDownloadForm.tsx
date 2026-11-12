@@ -5,20 +5,19 @@ import {
   TextField,
   Button,
   Alert,
+  Collapse,
   InputAdornment,
 } from '@mui/material';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
-import { backend, type StartMode } from '../backend';
+import { backend, type InstalledInfo, type StartMode } from '../backend';
 import { upsertTaskAtom } from '../stores/downloadStore';
 import { invoke } from '../utils/tauri';
 import { useNavigation } from '../hooks/useNavigation';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { settingsAtom } from '../stores/settingsStore';
-import UrlDetectionIndicator, { UrlDetectionStatus } from './UrlDetectionIndicator';
-import CredentialPromptDialog from './CredentialPromptDialog';
-import { getModuleCredentialsStatus } from '../api/modules';
-import type { CredentialStatus } from '../types/module';
+import HeaderFieldsEditor from './HeaderFieldsEditor';
+import { emptyHeaderFields, fromHeaderFields, type HeaderFields } from '../utils/headers';
 
 interface UrlDetectionResult {
   url: string;
@@ -27,14 +26,6 @@ interface UrlDetectionResult {
   detectionMode?: string;
   suggestedFilename?: string;
   fileExtension?: string;
-}
-
-interface UrlModuleDetectionResult {
-  url: string;
-  moduleId?: string;
-  moduleName?: string;
-  isSupported: boolean;
-  requiresAuth: boolean;
 }
 
 interface AddDownloadFormProps {
@@ -54,22 +45,12 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isUserEditedFilename, setIsUserEditedFilename] = useState(false); // Track if user manually edited filename
-  const [detectionStatus, setDetectionStatus] = useState<UrlDetectionStatus | null>(null); // T146: URL detection indicator
-
-  // T117-T118: Credential prompt state
-  const [showCredentialPrompt, setShowCredentialPrompt] = useState(false);
-  const [credentialPromptData, setCredentialPromptData] = useState<{
-    moduleId: string;
-    moduleName: string;
-    requiredKeys: string[];
-  } | null>(null);
+  /** The installed module that will resolve the URL; null for a direct download. */
+  const [module, setModule] = useState<InstalledInfo | null>(null);
+  const [headers, setHeaders] = useState<HeaderFields>(emptyHeaderFields);
+  const [showHeaders, setShowHeaders] = useState(false);
   const [scheduleAt, setScheduleAt] = useState(''); // datetime-local value; empty = start now
   const upsertTask = useSetAtom(upsertTaskAtom);
-  const [pendingDownload, setPendingDownload] = useState<{
-    url: string;
-    filename: string;
-    downloadPath: string;
-  } | null>(null);
 
   const { navigateTo } = useNavigation();
 
@@ -142,48 +123,16 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     return () => clearTimeout(timeoutId);
   }, [url, isUserEditedFilename]);
 
-  // T145: Detect module support when URL changes
+  // Which installed module will resolve the URL.
   useEffect(() => {
-    // Reset detection status if URL is empty
-    if (!url.trim()) {
-      setDetectionStatus(null);
+    const target = url.trim();
+    if (!target) {
+      setModule(null);
       return;
     }
-
-    // Set detecting state
-    setDetectionStatus({
-      isDetecting: true,
-      isSupported: false,
-      requiresAuth: false,
-    });
-
-    // Debounce the module detection
-    const timeoutId = setTimeout(async () => {
-      try {
-        console.log('[AddDownloadForm] Checking module support...');
-        const result = await invoke<UrlModuleDetectionResult>('detect_url_module', {
-          url: url.trim(),
-        });
-        console.log('[AddDownloadForm] Module detection result:', result);
-
-        setDetectionStatus({
-          isDetecting: false,
-          isSupported: result.isSupported,
-          moduleId: result.moduleId,
-          moduleName: result.moduleName,
-          requiresAuth: result.requiresAuth,
-        });
-      } catch (e) {
-        console.log('[AddDownloadForm] Module detection failed:', e);
-        setDetectionStatus({
-          isDetecting: false,
-          isSupported: false,
-          requiresAuth: false,
-          error: String(e),
-        });
-      }
-    }, 600); // 600ms debounce (slightly longer than filename detection)
-
+    const timeoutId = setTimeout(() => {
+      backend.modules.match(target).then(setModule).catch(() => setModule(null));
+    }, 400);
     return () => clearTimeout(timeoutId);
   }, [url]);
 
@@ -201,7 +150,13 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     const start: StartMode = scheduleAt
       ? { mode: 'at', at: new Date(scheduleAt).toISOString() }
       : { mode: 'now' };
-    const task = await backend.downloads.add({ url: downloadUrl, filename: name || null, dir, start });
+    const task = await backend.downloads.add({
+      url: downloadUrl,
+      filename: name || null,
+      dir,
+      start,
+      headers: fromHeaderFields(headers),
+    });
     upsertTask(task);
   };
 
@@ -251,49 +206,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         console.log('[AddDownloadForm] ⚠ URL detection unavailable, skipping frontend validation:', detectionError);
       }
 
-      // T117: Check if URL requires authentication
-      console.log('[AddDownloadForm] Checking if module requires authentication...');
-      if (detectionStatus?.isSupported && detectionStatus?.requiresAuth && detectionStatus?.moduleId) {
-        console.log('[AddDownloadForm] Module requires auth, checking credential status...');
-
-        try {
-          const credStatus: CredentialStatus = await getModuleCredentialsStatus(
-            detectionStatus.moduleId,
-            ['username', 'password'] // TODO: Get actual required keys from module metadata
-          );
-
-          console.log('[AddDownloadForm] Credential status:', credStatus);
-
-          if (!credStatus.configured || credStatus.missingKeys.length > 0) {
-            console.log('[AddDownloadForm] ⚠ Missing credentials, prompting user...');
-
-            // Store pending download info
-            setPendingDownload({
-              url: url.trim(),
-              filename: filename.trim(),
-              downloadPath,
-            });
-
-            // Show credential prompt dialog
-            setCredentialPromptData({
-              moduleId: detectionStatus.moduleId,
-              moduleName: detectionStatus.moduleName || detectionStatus.moduleId,
-              requiredKeys: credStatus.missingKeys.length > 0
-                ? credStatus.missingKeys
-                : credStatus.credentialKeys,
-            });
-            setShowCredentialPrompt(true);
-            setLoading(false);
-            return; // Stop here and wait for user to input credentials
-          }
-
-          console.log('[AddDownloadForm] ✓ Credentials are configured');
-        } catch (credError) {
-          console.warn('[AddDownloadForm] ⚠ Failed to check credential status:', credError);
-          // Continue anyway - backend will handle auth errors
-        }
-      }
-
       await addDownload(url.trim(), filename.trim(), downloadPath);
 
       console.log('[AddDownloadForm] Navigating to main page...');
@@ -313,45 +225,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     if (event.key === 'Enter' && !loading) {
       handleSubmit(event as any);
     }
-  };
-
-  // T118: Handle credential prompt success
-  const handleCredentialSuccess = async () => {
-    console.log('[AddDownloadForm] Credentials saved, resuming download...');
-
-    if (!pendingDownload) {
-      console.error('[AddDownloadForm] No pending download found');
-      return;
-    }
-
-    setLoading(true);
-    setShowCredentialPrompt(false);
-
-    try {
-      // Create and start the download
-      await addDownload(pendingDownload.url, pendingDownload.filename, pendingDownload.downloadPath);
-
-      // Clear pending download
-      setPendingDownload(null);
-      setCredentialPromptData(null);
-
-      // Navigate to main page
-      navigateTo('main');
-    } catch (e: any) {
-      console.error('[AddDownloadForm] ✗ Error starting download after credentials:', e);
-      setError(e.message || '建立下載任務失敗');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // T118: Handle credential prompt cancel
-  const handleCredentialCancel = () => {
-    console.log('[AddDownloadForm] User cancelled credential input');
-    setShowCredentialPrompt(false);
-    setPendingDownload(null);
-    setCredentialPromptData(null);
-    setLoading(false);
   };
 
   return (
@@ -374,8 +247,13 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         helperText="請輸入要下載的檔案網址"
       />
 
-      {/* T146: URL Detection Indicator */}
-      <UrlDetectionIndicator status={detectionStatus} />
+      {module && (
+        <Alert severity={missingCredentials(module) ? 'warning' : 'info'} sx={{ mt: 1 }}>
+          {missingCredentials(module)
+            ? t('modules.match.needsCredentials', { name: module.name })
+            : t('modules.match.resolvedBy', { name: module.name })}
+        </Alert>
+      )}
 
       <TextField
         label="檔案名稱（選填）"
@@ -418,6 +296,13 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         inputProps={{ min: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) }}
       />
 
+      <Button size="small" onClick={() => setShowHeaders((v) => !v)} sx={{ mt: 1, textTransform: 'none' }}>
+        {t('headers.toggle')}
+      </Button>
+      <Collapse in={showHeaders}>
+        <HeaderFieldsEditor value={headers} onChange={setHeaders} />
+      </Collapse>
+
       <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
         <Button
           variant="contained"
@@ -437,19 +322,13 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         </Button>
       </Box>
 
-      {/* T118: Credential Prompt Dialog */}
-      {credentialPromptData && (
-        <CredentialPromptDialog
-          open={showCredentialPrompt}
-          moduleId={credentialPromptData.moduleId}
-          moduleName={credentialPromptData.moduleName}
-          requiredKeys={credentialPromptData.requiredKeys}
-          onClose={handleCredentialCancel}
-          onSuccess={handleCredentialSuccess}
-        />
-      )}
     </Box>
   );
 };
+
+/** Required account details the module has no value for yet. */
+function missingCredentials(module: InstalledInfo): boolean {
+  return module.credentials.some((c) => !c.optional && !c.set);
+}
 
 export default AddDownloadForm;

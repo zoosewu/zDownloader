@@ -24,7 +24,8 @@
     "ok": "OK",
     "apply": "Apply",
     "reset": "Reset",
-    "progress": "Progress"
+    "progress": "Progress",
+    "later": "Later"
   },
   "downloads": {
     "title": "Download List",
@@ -181,6 +182,16 @@
       "resolving": "Resolving",
       "waiting": "Countdown",
       "awaitingUser": "Needs you"
+    },
+    "edit": {
+      "title": "Change URL or headers",
+      "urlHelp": "A mirror or a fresh share link; progress is kept if the file is the same."
+    },
+    "sourceChanged": {
+      "title": "The new URL serves a different file",
+      "message": "The new URL of \"{{name}}\" does not match what was downloaded, so it cannot continue.",
+      "restart": "Start over",
+      "otherUrl": "Use another URL"
     }
   },
   "settings": {
@@ -237,7 +248,8 @@
       "exportFailed": "Failed to export settings",
       "importFailed": "Failed to import settings"
     },
-    "proxyFallbackDirect": "Connect directly when no proxy is usable"
+    "proxyFallbackDirect": "Connect directly when no proxy is usable",
+    "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins."
   },
   "proxy": {
     "title": "Proxy Management",
@@ -268,14 +280,13 @@
     }
   },
   "captcha": {
-    "title": "CAPTCHA Verification",
-    "description": "Please solve the CAPTCHA to continue downloading",
+    "title": "Verification needed",
+    "imageAlt": "Captcha image",
+    "enterText": "Type the text in the image",
+    "recaptchaMessage": "{{host}} asks for a reCAPTCHA. The site opens in a new window; the download continues once you pass it.",
+    "openPage": "Open the page",
     "submit": "Submit",
-    "refresh": "Refresh",
-    "solving": "Solving CAPTCHA...",
-    "success": "CAPTCHA solved successfully",
-    "failed": "CAPTCHA verification failed",
-    "timeout": "CAPTCHA timeout"
+    "decline": "Skip"
   },
   "format": {
     "speed": "{{value}}/s",
@@ -360,90 +371,76 @@
       }
     }
   },
-  "urlDetection": {
-    "detecting": "Detecting...",
-    "failed": "Detection Failed",
-    "supportedBy": "Supported By",
-    "requiresAuth": "Requires Authentication"
-  },
   "modules": {
-    "title": "Site Modules",
+    "title": "Site modules",
+    "installed": {
+      "title": "Installed",
+      "checkOnStart": "Check for updates on start",
+      "empty": "No modules installed. Install one from Browse, or add a marketplace under Sources.",
+      "local": "Local",
+      "update": "Update to {{version}}",
+      "moveUp": "Higher priority",
+      "moveDown": "Lower priority",
+      "remove": "Remove",
+      "review": "Review",
+      "needsConsent": "The module asks for new permissions; they stay off until you accept.",
+      "missingCredentials": "Not set: {{fields}}",
+      "confirmRemove": "Remove \"{{name}}\"? Its stored account details are deleted too."
+    },
+    "sources": {
+      "title": "Sources",
+      "add": "Add a source",
+      "addHelp": "GitHub owner/repo, an https:// catalog URL, a git URL or a folder",
+      "refresh": "Refresh all sources",
+      "remove": "Remove the source and its modules",
+      "count": "{{count}} modules"
+    },
+    "browse": {
+      "title": "Browse",
+      "empty": "The sources offer no modules.",
+      "install": "Install",
+      "installed": "Installed"
+    },
+    "trust": {
+      "official": "Official"
+    },
+    "consent": {
+      "community": "This module comes from a community source. Make sure you trust its author.",
+      "domains": "May connect to",
+      "credentials": "Account details it uses",
+      "accept": "Accept and install",
+      "acceptUpdate": "Accept and update"
+    },
     "credentials": {
-      "title": "Credential Management",
-      "description": "Manage login credentials for site modules",
-      "saveCredentials": "Save Credentials",
-      "deleteCredentials": "Delete Credentials",
-      "credentialStatus": "Credential Status",
-      "configured": "Configured",
-      "notConfigured": "Not Configured",
-      "missingKeys": "Missing credential fields",
-      "confirmDelete": "Are you sure you want to delete credentials for {{moduleName}}?",
-      "deleteSuccess": "Credentials deleted successfully",
-      "saveSuccess": "Credentials saved successfully",
-      "promptTitle": "Authentication Required",
-      "promptDescription": "The module \"{{moduleName}}\" requires authentication to download. Please enter your login credentials.",
-      "username": "Username",
-      "password": "Password",
-      "apiKey": "API Key",
-      "token": "Token",
-      "email": "Email",
-      "enterCredential": "Enter {{field}}",
-      "securityNotice": "Your credentials will be securely stored in the system keychain.",
-      "authErrorDetected": "Authentication error detected. Please update your login credentials and try again.",
-      "retryWithAuth": "Re-authenticate and Retry",
-      "errors": {
-        "saveFailed": "Failed to save credentials: {{error}}",
-        "deleteFailed": "Failed to delete credentials: {{error}}",
-        "loadFailed": "Failed to load credential status: {{error}}",
-        "emptyField": "{{field}} cannot be empty",
-        "invalidCredentials": "Invalid credentials",
-        "unknownModule": "Unable to identify module, please configure credentials manually",
-        "checkFailed": "Failed to check credential status: {{error}}"
-      }
+      "title": "Account",
+      "optional": "Optional",
+      "stored": "Stored (leave empty to keep)",
+      "clear": "Clear"
     },
-    "management": {
-      "title": "Module Management",
-      "noModules": "No modules found",
-      "scanModules": "Scan Modules",
-      "scanToFind": "Click 'Scan Modules' to find available site modules",
-      "scanComplete": "Scan complete: found {{found}} modules, loaded {{loaded}} successfully",
-      "reloadModule": "Reload Module",
-      "reloadSuccess": "Module reloaded: {{moduleId}}",
-      "unloadModule": "Unload Module",
-      "moduleDetail": "Module Details",
-      "permissions": "Permissions",
-      "urlPatterns": "Supported URL Patterns",
-      "allowedDomains": "Allowed Domains",
-      "requiredCredentials": "Required Credentials",
-      "loadedAt": "Loaded At",
-      "homepage": "Homepage",
-      "auditLogs": "Audit Logs",
-      "statistics": "Statistics",
-      "totalDownloads": "Total Downloads",
-      "successfulDownloads": "Successful",
-      "failedDownloads": "Failed",
-      "lastUsed": "Last Used",
-      "never": "Never",
-      "status": {
-        "pending": "Pending",
-        "loading": "Loading",
-        "active": "Active",
-        "failed": "Failed",
-        "suspended": "Suspended",
-        "unloaded": "Unloaded"
-      },
-      "errors": {
-        "loadFailed": "Failed to load modules: {{error}}",
-        "reloadFailed": "Failed to reload module: {{error}}",
-        "unloadFailed": "Failed to unload module: {{error}}",
-        "scanFailed": "Failed to scan modules: {{error}}"
-      }
-    },
-    "urlDetection": {
-      "supported": "Supported by {{moduleName}}",
-      "notSupported": "No module available for this URL",
-      "requiresAuth": "Requires Authentication",
-      "detectFailed": "Module detection failed"
+    "match": {
+      "resolvedBy": "Resolved by the \"{{name}}\" module",
+      "needsCredentials": "The \"{{name}}\" module needs an account: enter it in Settings → Site modules first"
+    }
+  },
+  "headers": {
+    "toggle": "User-Agent, Referer, Cookie",
+    "userAgent": "User-Agent",
+    "userAgentDefault": "Default (zoo-downloader)",
+    "referer": "Referer",
+    "cookie": "Cookie",
+    "cookieStored": "The cookie is stored in plain text with the download list"
+  },
+  "errors": {
+    "core": {
+      "http": "The server answered HTTP {{status}}",
+      "network": "Network error",
+      "protocol": "The server answered something unexpected",
+      "io": "File error",
+      "noConnection": "No connection available",
+      "cancelled": "Cancelled",
+      "notFound": "Task not found",
+      "invalid": "Invalid request",
+      "sourceChanged": "The new URL serves a different file"
     }
   }
 }

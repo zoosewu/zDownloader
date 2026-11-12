@@ -133,6 +133,8 @@ export const backend = {
   },
   modules: {
     list: () => call<InstalledInfo[]>('modules_list'),
+    /** The installed, enabled module that will resolve `url`, or null for a direct download. */
+    match: (url: string) => call<InstalledInfo | null>('modules_match', { url }),
     sources: () => call<SourceInfo[]>('modules_sources'),
     /** `owner/repo`, an https:// catalog URL, a git URL or a folder path. */
     addSource: (location: string) => call<SourceInfo>('modules_add_source', { location }),

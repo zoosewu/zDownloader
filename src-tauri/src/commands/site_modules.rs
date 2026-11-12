@@ -20,6 +20,13 @@ pub fn modules_list(modules: State<'_, SiteModules>) -> Vec<InstalledInfo> {
     modules.market.installed()
 }
 
+/// The installed module that would resolve `url`, if any.
+#[tauri::command]
+pub fn modules_match(url: String, modules: State<'_, SiteModules>) -> Option<InstalledInfo> {
+    let key = modules.resolver.module_for(&url)?.module.id;
+    modules.market.installed().into_iter().find(|m| m.key == key)
+}
+
 #[tauri::command]
 pub fn modules_sources(modules: State<'_, SiteModules>) -> Vec<SourceInfo> {
     modules.market.sources()
@@ -122,8 +129,10 @@ pub fn captcha_answer(id: String, answer: Option<String>, modules: State<'_, Sit
 
 /// Open the site's page in a window of its own for a reCAPTCHA. The token is taken from a
 /// navigation the page script makes once it is solved; closing the window declines.
+///
+/// Async on purpose: creating a window from a synchronous command deadlocks on Windows.
 #[tauri::command]
-pub fn captcha_open_window(id: String, app: AppHandle, modules: State<'_, SiteModules>) -> CmdResult<()> {
+pub async fn captcha_open_window(id: String, app: AppHandle, modules: State<'_, SiteModules>) -> CmdResult<()> {
     let label = site_modules::captcha_window(&id);
     if let Some(window) = app.get_webview_window(&label) {
         let _ = window.set_focus();

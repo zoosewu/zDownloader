@@ -233,6 +233,25 @@ export default defineModule({
   - 本機模組每 2 秒重新讀一次 manifest。只讀 manifest，成本很低，所以不用檔案監看。
   - 設定 `checkModuleUpdates` 預設開啟：只在啟動時檢查更新，不會自動安裝。
   - 舊的 `get_pending_captchas` 等 command 與舊模組系統一起在 4f 刪除。
+- 實作（4e3）：
+  - 設定 → 網站模組（`components/modules/`）分成三個分頁：已安裝、來源、瀏覽。
+  - 安裝流程 `useInstall`：
+    - 先呼叫 `planInstall`；
+    - `needsConsent` 時顯示權限對話框，更新時新增的權限以橘色標出；
+    - 不需同意時直接安裝。
+  - `CaptchaDialog` 依 `captcha-event` 與 `captcha_pending` 一次顯示一個。
+  - 新增下載頁用 `modules_match` 顯示由哪個模組解析，模組缺帳號時改為警告。
+  - 4.5 的 UI：
+    - 詳細面板的「更換網址或 Header」（`EditTaskDialog`）；
+    - `SourceChangedPrompt` 在任務因 `sourceChanged` 失敗時詢問，預設按鈕是「從頭下載」；
+    - 新增下載可以展開填 header；
+    - 進階設定提供預設 User-Agent 與常用選項。
+  - 錯誤訊息由 `utils/errors.ts` 翻譯。
+  - **只有 `main` 視窗能呼叫 app command**（`lib.rs` 包住 `generate_handler`）。
+    - Tauri 2 的 capability 只管 plugin command，不管 app 自己的 command。
+    - 實測時，captcha 視窗裡的外部網頁原本可以呼叫 `modules_list`，修正後回傳 `forbidden`。
+  - `captcha_open_window` 必須是 async command：同步 command 建立視窗在 Windows 會 deadlock（實測整個後端卡死）。
+  - 舊模組系統的前端（ModuleList、ModuleCard、CredentialPromptDialog、captchaStore、`api/modules.ts`、`types/`）已刪除。
 - **這次不做**：
   - 稽核紀錄：host 目前不記錄每個請求；
   - 簽章：照決定 #7。

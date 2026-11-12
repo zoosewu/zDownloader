@@ -23,8 +23,8 @@ import Footer from './components/Footer';
 import { useNavigation } from './hooks/useNavigation';
 import { useClipboard } from './hooks/useClipboard';
 import { useDownloadSync } from './hooks/useDownloadSync';
-import { useTauriEvents } from './hooks/useTauriEvents';
 import CaptchaDialog from './components/CaptchaDialog';
+import SourceChangedPrompt from './components/SourceChangedPrompt';
 import { waitForTauri } from './utils/tauri';
 import { backend } from './backend';
 import './i18n';
@@ -42,7 +42,6 @@ function App() {
 
   useClipboard(tauriReady);
   useDownloadSync(tauriReady);
-  useTauriEvents(tauriReady);
   const { currentPage, navigateTo } = useNavigation();
   const [currentTheme] = useAtom(themeAtom);
   const [, setSettings] = useAtom(settingsAtom);
@@ -146,6 +145,7 @@ function App() {
         <Footer />
 
         <CaptchaDialog />
+        <SourceChangedPrompt />
       </Box>
     </ThemeProvider>
   );

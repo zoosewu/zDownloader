@@ -27,7 +27,7 @@ use commands::module_management::{
 };
 use commands::site_modules::{
     captcha_answer, captcha_open_window, captcha_pending, modules_add_source, modules_cancel_install, modules_install,
-    modules_list, modules_move, modules_plan_install, modules_refresh, modules_remove, modules_remove_source,
+    modules_list, modules_match, modules_move, modules_plan_install, modules_refresh, modules_remove, modules_remove_source,
     modules_set_credentials, modules_set_enabled, modules_sources,
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
@@ -47,41 +47,19 @@ pub struct UrlDetectorState {
     pub registry: Arc<Mutex<modules::url_detector::ModuleRegistry>>,
 }
 
+/// The app's own window (tauri.conf.json); the only one that may call app commands.
+const MAIN_WINDOW: &str = "main";
+
 // Used by the frontend as a "backend is ready" ping.
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    let settings = load_settings_from_file();
-
-    let app = tauri::Builder::default()
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Stdout,
-                ))
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::LogDir {
-                        file_name: Some("zoo-downloader".to_string()),
-                    },
-                ))
-                .level(log::LevelFilter::Info)
-                .build(),
-        )
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_dialog::init())
-        .manage(Arc::new(std::sync::Mutex::new(CaptchaManager::new())))
-        .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
-        .manage(UrlDetectorState {
-            registry: Arc::new(Mutex::new(modules::url_detector::ModuleRegistry::new())),
-        })
-        // Keep in sync with src/backend/index.ts (checked by src/__tests__/command-names.test.ts).
-        .invoke_handler(tauri::generate_handler![
+/// Every app command. Keep in sync with src/backend/index.ts (checked by
+/// src/__tests__/command-names.test.ts).
+fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
+    let handle: fn(tauri::ipc::Invoke) -> bool = tauri::generate_handler![
             greet,
             downloads_add,
             downloads_import_batch,
@@ -124,6 +102,7 @@ pub fn run() {
             scan_modules,
             get_module_audit_logs,
             modules_list,
+            modules_match,
             modules_sources,
             modules_add_source,
             modules_remove_source,
@@ -138,7 +117,46 @@ pub fn run() {
             captcha_pending,
             captcha_answer,
             captcha_open_window,
-        ])
+    ];
+    handle(invoke)
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let settings = load_settings_from_file();
+
+    let app = tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ))
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("zoo-downloader".to_string()),
+                    },
+                ))
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(Arc::new(std::sync::Mutex::new(CaptchaManager::new())))
+        .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
+        .manage(UrlDetectorState {
+            registry: Arc::new(Mutex::new(modules::url_detector::ModuleRegistry::new())),
+        })
+        // App commands answer the main window only. Captcha windows show other sites' pages and
+        // must not reach the app (capabilities cover plugin commands, not these).
+        .invoke_handler(move |invoke| {
+            if invoke.message.webview_ref().label() != MAIN_WINDOW {
+                invoke.resolver.reject(commands::error::CommandError::new("forbidden", "not available in this window"));
+                return true;
+            }
+            app_commands(invoke)
+        })
         .setup(move |app| {
             log::info!("Zoo Downloader v{} starting", env!("CARGO_PKG_VERSION"));
 

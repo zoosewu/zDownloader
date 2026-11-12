@@ -14,6 +14,8 @@ import {
   DeleteOutline as RemoveIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { errorText } from '../utils/errors';
 import type { Task, TaskState } from '../backend';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import { formatTaskForTable } from '../utils/downloadCalculations';
@@ -137,7 +139,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         </TableCell>
 
         <TableCell sx={getCellWidthStyle('status')}>
-          <Tooltip title={statusTooltip(task, displayData.statusLabel)} arrow>
+          <Tooltip title={statusTooltip(task, displayData.statusLabel, t)} arrow>
             <Chip
               label={displayData.statusLabel}
               color={STATE_COLOR[task.state]}
@@ -183,19 +185,10 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
 
 DownloadTableRow.displayName = 'DownloadTableRow';
 
-function statusTooltip(task: Task, label: string): string {
-  if (task.error) return `${label}: ${errorText(task)}`;
+function statusTooltip(task: Task, label: string, t: TFunction): string {
+  if (task.error) return `${label}: ${errorText(task.error, t)}`;
   if (task.state === 'running' && task.phase?.kind === 'waiting' && task.phase.reason) return task.phase.reason;
   return '';
-}
-
-export function errorText(task: Task): string {
-  const error = task.error;
-  if (!error) return '';
-  if (error.kind === 'resolve') {
-    return error.detail.hint ? `${error.detail.message} (${error.detail.hint})` : error.detail.message;
-  }
-  return 'detail' in error ? `${error.kind}: ${error.detail}` : error.kind;
 }
 
 export default DownloadTableRow;

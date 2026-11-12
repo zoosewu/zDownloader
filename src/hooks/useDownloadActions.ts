@@ -19,6 +19,7 @@ export function useDownloadActions() {
       resume: (id: TaskId) => one(backend.downloads.resume(id)),
       cancel: (id: TaskId) => one(backend.downloads.cancel(id)),
       retry: (id: TaskId) => one(backend.downloads.retry(id)),
+      restart: (id: TaskId) => one(backend.downloads.restart(id)),
       remove: async (id: TaskId) => {
         await backend.downloads.remove(id);
         removed(id);

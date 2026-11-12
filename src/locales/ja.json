@@ -24,7 +24,8 @@
     "ok": "OK",
     "apply": "適用",
     "reset": "リセット",
-    "progress": "進捗"
+    "progress": "進捗",
+    "later": "後で"
   },
   "downloads": {
     "title": "ダウンロードリスト",
@@ -181,6 +182,16 @@
       "resolving": "解析中",
       "waiting": "待機中",
       "awaitingUser": "確認待ち"
+    },
+    "edit": {
+      "title": "URL またはヘッダーを変更",
+      "urlHelp": "ミラーや新しい共有リンクに変更できます。内容が同じなら進捗を引き継ぎます。"
+    },
+    "sourceChanged": {
+      "title": "新しい URL のファイルが異なります",
+      "message": "「{{name}}」の新しい URL はダウンロード済みの内容と一致しないため、続行できません。",
+      "restart": "最初からダウンロード",
+      "otherUrl": "別の URL にする"
     }
   },
   "settings": {
@@ -237,7 +248,8 @@
       "exportFailed": "設定のエクスポートに失敗しました",
       "importFailed": "設定のインポートに失敗しました"
     },
-    "proxyFallbackDirect": "使用できるプロキシがない場合は直接接続する"
+    "proxyFallbackDirect": "使用できるプロキシがない場合は直接接続する",
+    "userAgentHelp": "ダウンロードが User-Agent を指定しないときに使います。モジュールやタスクの指定が優先されます。"
   },
   "dev": {
     "banner": {
@@ -275,101 +287,65 @@
       }
     }
   },
-  "urlDetection": {
-    "detecting": "検出中...",
-    "failed": "検出失敗",
-    "supportedBy": "対応モジュール",
-    "requiresAuth": "認証が必要"
-  },
   "modules": {
     "title": "サイトモジュール",
+    "installed": {
+      "title": "インストール済み",
+      "checkOnStart": "起動時に更新を確認",
+      "empty": "モジュールはまだありません。「参照」からインストールするか、「ソース」でマーケットプレイスを追加してください。",
+      "local": "ローカル",
+      "update": "{{version}} に更新",
+      "moveUp": "優先度を上げる",
+      "moveDown": "優先度を下げる",
+      "remove": "削除",
+      "review": "確認",
+      "needsConsent": "モジュールが新しい権限を求めています。同意するまで有効になりません。",
+      "missingCredentials": "未設定：{{fields}}",
+      "confirmRemove": "「{{name}}」を削除しますか？保存したアカウント情報も削除されます。"
+    },
+    "sources": {
+      "title": "ソース",
+      "add": "ソースを追加",
+      "addHelp": "GitHub の owner/repo、カタログの https:// URL、git URL、またはフォルダー",
+      "refresh": "すべてのソースを更新",
+      "remove": "ソースとそのモジュールを削除",
+      "count": "{{count}} 個のモジュール"
+    },
+    "browse": {
+      "title": "参照",
+      "empty": "ソースにインストールできるモジュールはありません。",
+      "install": "インストール",
+      "installed": "インストール済み"
+    },
+    "trust": {
+      "official": "公式"
+    },
+    "consent": {
+      "community": "このモジュールはコミュニティのソースから提供されています。作者を信頼できるか確認してください。",
+      "domains": "接続先",
+      "credentials": "使用するアカウント情報",
+      "accept": "同意してインストール",
+      "acceptUpdate": "同意して更新"
+    },
     "credentials": {
-      "title": "認証管理",
-      "description": "サイトモジュールのログイン認証情報を管理",
-      "saveCredentials": "認証情報を保存",
-      "deleteCredentials": "認証情報を削除",
-      "credentialStatus": "認証ステータス",
-      "configured": "設定済み",
-      "notConfigured": "未設定",
-      "missingKeys": "認証フィールドが不足しています",
-      "confirmDelete": "{{moduleName}}の認証情報を削除してもよろしいですか？",
-      "deleteSuccess": "認証情報を削除しました",
-      "saveSuccess": "認証情報を保存しました",
-      "promptTitle": "認証が必要",
-      "promptDescription": "モジュール「{{moduleName}}」はダウンロードに認証が必要です。ログイン情報を入力してください。",
-      "username": "ユーザー名",
-      "password": "パスワード",
-      "apiKey": "APIキー",
-      "token": "トークン",
-      "email": "メールアドレス",
-      "enterCredential": "{{field}}を入力してください",
-      "securityNotice": "認証情報はシステムのキーチェーンに安全に保存されます。",
-      "authErrorDetected": "認証エラーが検出されました。ログイン情報を更新して再試行してください。",
-      "retryWithAuth": "再認証して再試行",
-      "errors": {
-        "saveFailed": "認証情報の保存に失敗しました: {{error}}",
-        "deleteFailed": "認証情報の削除に失敗しました: {{error}}",
-        "loadFailed": "認証ステータスの読み込みに失敗しました: {{error}}",
-        "emptyField": "{{field}}を入力してください",
-        "invalidCredentials": "無効な認証情報",
-        "unknownModule": "モジュールを識別できません。手動で認証を設定してください",
-        "checkFailed": "認証ステータスの確認に失敗しました: {{error}}"
-      }
+      "title": "アカウント",
+      "optional": "任意",
+      "stored": "保存済み（空欄なら変更なし）",
+      "clear": "クリア"
     },
-    "management": {
-      "title": "モジュール管理",
-      "noModules": "モジュールが見つかりません",
-      "scanModules": "モジュールをスキャン",
-      "scanToFind": "「モジュールをスキャン」をクリックして利用可能なサイトモジュールを検索",
-      "scanComplete": "スキャン完了: {{found}}個のモジュールが見つかり、{{loaded}}個を読み込みました",
-      "reloadModule": "モジュールを再読み込み",
-      "reloadSuccess": "モジュールを再読み込みしました: {{moduleId}}",
-      "unloadModule": "モジュールをアンロード",
-      "moduleDetail": "モジュール詳細",
-      "permissions": "権限",
-      "urlPatterns": "対応URLパターン",
-      "allowedDomains": "許可されたドメイン",
-      "requiredCredentials": "必要な認証",
-      "loadedAt": "読み込み日時",
-      "homepage": "ホームページ",
-      "auditLogs": "監査ログ",
-      "statistics": "統計情報",
-      "totalDownloads": "総ダウンロード数",
-      "successfulDownloads": "成功",
-      "failedDownloads": "失敗",
-      "lastUsed": "最終使用",
-      "never": "未使用",
-      "status": {
-        "pending": "待機中",
-        "loading": "読み込み中",
-        "active": "有効",
-        "failed": "失敗",
-        "suspended": "一時停止",
-        "unloaded": "アンロード済み"
-      },
-      "errors": {
-        "loadFailed": "モジュールの読み込みに失敗しました: {{error}}",
-        "reloadFailed": "モジュールの再読み込みに失敗しました: {{error}}",
-        "unloadFailed": "モジュールのアンロードに失敗しました: {{error}}",
-        "scanFailed": "モジュールのスキャンに失敗しました: {{error}}"
-      }
-    },
-    "urlDetection": {
-      "supported": "{{moduleName}}がサポート",
-      "notSupported": "このURLに対応するモジュールがありません",
-      "requiresAuth": "認証が必要",
-      "detectFailed": "モジュール検出に失敗しました"
+    "match": {
+      "resolvedBy": "「{{name}}」モジュールが解析します",
+      "needsCredentials": "「{{name}}」モジュールにはアカウントが必要です。先に 設定 → サイトモジュール で入力してください"
     }
   },
   "captcha": {
-    "title": "CAPTCHA認証",
-    "description": "CAPTCHAを解決してダウンロードを続行してください",
+    "title": "認証が必要です",
+    "imageAlt": "CAPTCHA 画像",
+    "enterText": "画像の文字を入力",
+    "recaptchaMessage": "{{host}} で reCAPTCHA が必要です。サイトを新しいウィンドウで開き、認証が済むと自動で続行します。",
+    "openPage": "ページを開く",
     "submit": "送信",
-    "refresh": "更新",
-    "solving": "CAPTCHA解決中...",
-    "success": "CAPTCHA認証成功",
-    "failed": "CAPTCHA認証失敗",
-    "timeout": "CAPTCHAタイムアウト"
+    "decline": "スキップ"
   },
   "dialogs": {
     "deleteConfirm": "このダウンロードを削除してもよろしいですか？",
@@ -444,6 +420,27 @@
       "invalidDateTime": "日付と時刻を選択してください",
       "pastTime": "スケジュール時刻は未来でなければなりません",
       "scheduleFailed": "ダウンロードのスケジュールに失敗しました"
+    }
+  },
+  "headers": {
+    "toggle": "User-Agent、Referer、Cookie",
+    "userAgent": "User-Agent",
+    "userAgentDefault": "既定（zoo-downloader）",
+    "referer": "Referer",
+    "cookie": "Cookie",
+    "cookieStored": "Cookie はダウンロード一覧に平文で保存されます"
+  },
+  "errors": {
+    "core": {
+      "http": "サーバーが HTTP {{status}} を返しました",
+      "network": "ネットワークエラー",
+      "protocol": "サーバーの応答を解釈できません",
+      "io": "ファイルエラー",
+      "noConnection": "使用できる接続がありません",
+      "cancelled": "キャンセルされました",
+      "notFound": "タスクが見つかりません",
+      "invalid": "無効な要求",
+      "sourceChanged": "新しい URL のファイルが異なります"
     }
   }
 }

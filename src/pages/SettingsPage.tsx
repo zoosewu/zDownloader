@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import ProxySettings from '../components/ProxySettings';
 import GeneralSettings from '../components/GeneralSettings';
 import AdvancedSettings from '../components/AdvancedSettings';
-import ModuleList from '../components/ModuleList';
+import ModulesSettings from '../components/modules/ModulesSettings';
 import PageLayout from '../components/PageLayout';
 
 interface TabPanelProps {
@@ -58,7 +58,7 @@ export default function SettingsPage() {
       </TabPanel>
 
       <TabPanel value={currentTab} index={2}>
-        <ModuleList />
+        <ModulesSettings />
       </TabPanel>
 
       <TabPanel value={currentTab} index={3}>

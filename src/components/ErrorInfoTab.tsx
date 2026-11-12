@@ -3,7 +3,7 @@ import React from 'react';
 import { Box, Typography, Alert, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '../backend';
-import { errorText } from './DownloadTableRow';
+import { errorText } from '../utils/errors';
 import { formatAbsoluteTime } from '../utils/formatters';
 
 interface ErrorInfoTabProps {
@@ -31,7 +31,7 @@ const ErrorInfoTab: React.FC<ErrorInfoTabProps> = ({ task }) => {
             {t(`downloads.state.${task.state}`)}
           </Typography>
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {errorText(task)}
+            {errorText(task.error, t)}
           </Typography>
         </Alert>
 
