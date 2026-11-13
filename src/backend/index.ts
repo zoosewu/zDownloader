@@ -22,6 +22,7 @@ import type { SegmentMap } from './bindings/SegmentMap';
 import type { Task } from './bindings/Task';
 import type { TaskId } from './bindings/TaskId';
 import type { TaskUpdate } from './bindings/TaskUpdate';
+import type { UrlInfo } from './bindings/UrlInfo';
 
 export type { AppSettings } from './bindings/AppSettings';
 export type { BatchResult } from './bindings/BatchResult';
@@ -35,6 +36,7 @@ export type { PermissionSummary } from './bindings/PermissionSummary';
 export type { PlanSummary } from './bindings/PlanSummary';
 export type { SourceInfo } from './bindings/SourceInfo';
 export type { Trust } from './bindings/Trust';
+export type { UrlInfo } from './bindings/UrlInfo';
 export type { CoreError } from './bindings/CoreError';
 export type { Event as DownloadEvent } from './bindings/Event';
 export type { ImportResult } from './bindings/ImportResult';
@@ -131,10 +133,12 @@ export const backend = {
     clear: () => call<null>('proxies_clear'),
     resetFailed: () => call<null>('proxies_reset_failed'),
   },
+  urls: {
+    /** File name, resolving module, and whether it is worth offering as a download. */
+    inspect: (url: string) => call<UrlInfo>('urls_inspect', { url }),
+  },
   modules: {
     list: () => call<InstalledInfo[]>('modules_list'),
-    /** The installed, enabled module that will resolve `url`, or null for a direct download. */
-    match: (url: string) => call<InstalledInfo | null>('modules_match', { url }),
     sources: () => call<SourceInfo[]>('modules_sources'),
     /** `owner/repo`, an https:// catalog URL, a git URL or a folder path. */
     addSource: (location: string) => call<SourceInfo>('modules_add_source', { location }),

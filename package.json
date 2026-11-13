@@ -16,7 +16,8 @@
     "tauri:dev": "./scripts/run-tauri-dev.sh",
     "build:win": "tauri build --config src-tauri/tauri.bundle.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "build:debug": "tauri build --config src-tauri/tauri.bundle.json --debug --runner cargo-xwin --target x86_64-pc-windows-msvc",
-    "build:module-host": "node scripts/build-module-host.mjs"
+    "build:module-host": "node scripts/build-module-host.mjs",
+    "build:official-modules": "node scripts/build-official-modules.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.0.0",

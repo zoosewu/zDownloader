@@ -143,6 +143,32 @@ fn plain_path(path: PathBuf) -> PathBuf {
     }
 }
 
+/// Every module of the shipped catalog installs, and the bundle carries the files it needs.
+#[cfg(test)]
+#[tokio::test]
+async fn the_official_marketplace_installs_and_is_bundled() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let conf: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dir.join("tauri.conf.json")).unwrap()).unwrap();
+    let bundled = &conf["bundle"]["resources"];
+    let catalog = zoo_marketplace::Catalog::parse(&std::fs::read(dir.join("marketplace").join(zoo_marketplace::catalog::FILE)).unwrap()).unwrap();
+    assert!(bundled.get(format!("marketplace/{}", zoo_marketplace::catalog::FILE)).is_some());
+
+    let data = tempfile::tempdir().unwrap();
+    let market = Marketplace::open(data.path(), Arc::new(zoo_marketplace::MemorySecrets::default())).unwrap();
+    market.set_official(&dir.join("marketplace")).await.unwrap();
+    for module in &catalog.modules {
+        let plan = market.plan_install(&format!("{}@official", module.id)).await.unwrap();
+        market.install(plan).unwrap();
+        let manifest = zoo_module_client::manifest::Manifest::parse(&std::fs::read_to_string(dir.join("marketplace").join(&module.source).join("manifest.json")).unwrap()).unwrap();
+        assert_eq!(manifest.version, module.version, "{}: catalog and manifest versions differ", module.id);
+        for file in ["manifest.json", manifest.entry.as_str()] {
+            let path = format!("marketplace/{}/{file}", module.source);
+            assert_eq!(bundled[&path], path, "tauri.conf.json bundle.resources must list {path}");
+        }
+    }
+    assert_eq!(market.installed().len(), catalog.modules.len());
+}
+
 #[cfg(test)]
 #[test]
 fn verbatim_prefixes_are_dropped() {

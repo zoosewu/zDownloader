@@ -11,6 +11,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Official site modules ship their bundle (the app runs it)
+!src-tauri/marketplace/*/dist/
 *.local
 build
 
@@ -62,4 +64,3 @@ package-lock.json
 yarn.lock
 
 
-modules/example-downloader/target/*

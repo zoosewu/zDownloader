@@ -1,0 +1,69 @@
+[
+  {
+    "name": "premium",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "url": "https://*.keep2share.cc/*/holiday.mp4*",
+      "filename": "holiday.mp4"
+    }
+  },
+  {
+    "name": "free",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "url": "https://*.keep2share.cc/*/holiday.mp4*",
+      "filename": "holiday.mp4"
+    }
+  },
+  {
+    "name": "free-wrong-captcha",
+    "url": "https://keep2share.cc/file/a4b8776255578",
+    "expect": {
+      "url": "https://*.keep2share.cc/*/holiday.mp4*",
+      "filename": "holiday.mp4"
+    }
+  },
+  {
+    "name": "login-recaptcha",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "url": "https://*.keep2share.cc/*/holiday.mp4*",
+      "filename": "holiday.mp4"
+    }
+  },
+  {
+    "name": "wrong-password",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "error": "wrong username or password"
+    }
+  },
+  {
+    "name": "deleted",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "error": "file not found"
+    }
+  },
+  {
+    "name": "folder",
+    "url": "https://k2s.cc/file/f0lder1234",
+    "expect": {
+      "error": "folder"
+    }
+  },
+  {
+    "name": "premium-only",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "error": "only premium accounts"
+    }
+  },
+  {
+    "name": "daily-limit",
+    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "expect": {
+      "error": "free downloads are used up"
+    }
+  }
+]

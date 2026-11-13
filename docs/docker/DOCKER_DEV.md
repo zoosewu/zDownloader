@@ -130,7 +130,6 @@ HTTP Bridge 目前支援以下 commands：
 
 - `greet` - 測試用
 - `get_clipboard_content` - 取得剪貼簿內容
-- `detect_url` - URL 檢測
 - `create_download_with_path` - 建立下載任務
 - `start_download` - 開始下載
 - `get_download_list` - 取得下載列表

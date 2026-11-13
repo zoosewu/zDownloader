@@ -36,19 +36,12 @@ tauri-plugin-log = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
 uuid = { version = "1", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
 keyring = "2.0"
 dirs = "5.0"
-futures = "0.3"
 regex = "1"
 warp = "0.3"
 log = "0.4"
-
-# Module system dependencies (Feature 004)
-deno_core = "0.372"  # Updated to latest available version
-semver = "1.0"
 
 [dev-dependencies]
 tempfile = "3.8"

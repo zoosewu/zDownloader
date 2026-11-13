@@ -145,7 +145,7 @@ Test Files  1 passed (1)
 ```typescript
 import { validateBackendResponse } from './src/__tests__/api-serialization.test';
 
-const response = await invoke('detect_url', { url });
+const response = await invoke('urls_inspect', { url });
 if (!validateBackendResponse(response)) {
   console.error('Backend response validation failed');
 }

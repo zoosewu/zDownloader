@@ -143,8 +143,9 @@ async fn record_once_then_replay_offline() {
     assert!(!cassette.contains("s3cret-pass"), "credential values never reach a recording");
     assert!(cassette.contains("{{credential:password}}"));
 
-    // The site is gone; the recordings are enough.
+    // The site is gone; the recordings are enough, even without the account.
     drop(server);
+    std::fs::remove_file(dir.join(".credentials.json")).unwrap();
     let (ok, report) = json_of(&dir, &["test", "--json", "--allow-loopback"]).await;
     assert!(ok, "{report:#}");
     let ok_case = &report["cases"][0];

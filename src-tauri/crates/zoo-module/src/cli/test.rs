@@ -12,7 +12,7 @@ use std::sync::Arc;
 use serde::Serialize;
 use tokio::sync::oneshot;
 use zoo_module_client::manifest::glob;
-use zoo_module_client::protocol::{Captcha, Limits, ModuleError, Resolved};
+use zoo_module_client::protocol::{Captcha, Limits, ModuleError, Resolved, Secret};
 
 use super::project::{Case, Diagnostic, Project};
 use crate::budget::Budget;
@@ -129,7 +129,7 @@ pub fn run(dir: &std::path::Path, options: &Options) -> Report {
 fn run_case(
     project: &Project,
     case: &Case,
-    credentials: &std::collections::BTreeMap<String, zoo_module_client::protocol::Secret>,
+    credentials: &std::collections::BTreeMap<String, Secret>,
     options: &Options,
 ) -> CaseReport {
     let cassette_path = project.cassette_path(&case.name);
@@ -147,11 +147,17 @@ fn run_case(
         _ => Transport::Live,
     };
     let trace = Rc::new(Trace::default());
+    let credentials = match &recording {
+        Some(cassette) if mode == Mode::Replay => {
+            cassette.credentials.iter().map(|key| (key.clone(), Secret("replay".into()))).collect()
+        }
+        _ => credentials.clone(),
+    };
     let answers = recording.map(|c| c.captchas).unwrap_or_default();
     let hooks = Rc::new(TestHooks { trace: trace.clone(), mode, recorded_answers: Default::default(), replay_answers: RefCell::new(answers.into()) });
 
     let policy = Policy::new(&project.manifest.permissions.network.allow_domains, options.allow_loopback);
-    let outcome = Net::new(policy, Credentials::new(credentials), transport, Some(trace.clone()))
+    let outcome = Net::new(policy, Credentials::new(&credentials), transport, Some(trace.clone()))
         .map_err(|message| ModuleError::Crashed { message })
         .and_then(|net| {
             let net = Rc::new(net);
@@ -161,6 +167,7 @@ fn run_case(
                     version: cassette::VERSION,
                     exchanges: net.recorded(),
                     captchas: hooks.recorded_answers.borrow().clone(),
+                    credentials: credentials.keys().cloned().collect(),
                 };
                 if let Err(e) = cassette.save(&cassette_path) {
                     trace.push(Step::Log { level: "error".into(), message: e });

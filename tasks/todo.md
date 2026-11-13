@@ -49,8 +49,12 @@
     - [x] 4e1 `zoo-marketplace` crate：來源、catalog、plan/install、sha256、權限同意、順序、帳密 seam
     - [x] 4e2 shell：command 與事件、captcha 互動、本機來源熱重載、內附官方來源、啟動時檢查更新
     - [x] 4e3 前端：模組頁、權限同意、帳密表單、captcha 對話框；4.5 的 UI（換網址、SourceChanged 詢問、header、User-Agent 預設）、錯誤訊息在地化
-  - [ ] 4f k2s 遷移、刪除舊模組系統
+  - [x] 4f k2s 遷移、刪除舊模組系統（規格 2026-11-13 確認）
+    - [x] k2s 依官方 API v2 重寫，放進官方 marketplace（手寫 cassette，4g 實錄）
+    - [x] `urls_inspect` 取代 `detect_url` 與 `modules_match`
+    - [x] 刪除舊模組系統（Rust、`modules/`、deno_core 依賴、文件）
   - [ ] 4g 實機驗證與文件
+    - [ ] 用真實 k2s 帳號錄製 cassette（免費流程的 `free_download_key`、等待欄位、登入 reCAPTCHA 頁的 site key 都是依文件推測）
 - [ ] Chrome 擴充重寫（native messaging）— 另排
 
 ## 已知待辦（合併時發現）
@@ -61,4 +65,4 @@
 - `@mui/icons-material` v7 與 `@mui/material` v6 版本不一致
 - `package.json` 缺 `packageManager`
 - 正式建置 chunk 722 kB
-- `pub mod modules` 是讓 examples 能編譯的最小修正，需重新評估公開面
+- shell 的 `utils/clipboard.rs` 另外輪詢剪貼簿並送出 `clipboard-detected` 事件，前端沒有人聽（前端 `useClipboard` 自己輪詢），可刪（4f 發現）

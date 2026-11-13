@@ -20,13 +20,6 @@ pub fn modules_list(modules: State<'_, SiteModules>) -> Vec<InstalledInfo> {
     modules.market.installed()
 }
 
-/// The installed module that would resolve `url`, if any.
-#[tauri::command]
-pub fn modules_match(url: String, modules: State<'_, SiteModules>) -> Option<InstalledInfo> {
-    let key = modules.resolver.module_for(&url)?.module.id;
-    modules.market.installed().into_iter().find(|m| m.key == key)
-}
-
 #[tauri::command]
 pub fn modules_sources(modules: State<'_, SiteModules>) -> Vec<SourceInfo> {
     modules.market.sources()

@@ -20,3 +20,10 @@
   - 涉及視窗、IPC、權限邊界的功能，要在真的 app 裡測：WebView2 加 `--remote-debugging-port`，用 CDP 操作並截圖。
   - 安全假設要寫成可以被推翻的檢查，例如從外部頁面呼叫 command，確認被拒絕。
   - Tauri command 要建立視窗時一律寫成 `async`。
+
+## 要入庫的產物先確認沒被 .gitignore 吃掉（2026-11-13）
+
+- 錯誤：4f 的 k2s `dist/index.js` 是 app 要執行的檔案，但根目錄 `.gitignore` 的 `dist` 讓它沒進 commit。本機測試全過，因為檔案在工作目錄裡。
+- 規則：
+  - 新增「要入庫的建置產物」時，`git check-ignore -v <檔案>` 確認沒被忽略，commit 後看 `git show --stat` 有沒有它。
+  - 測試通過不代表 commit 完整：本機有、repo 沒有的檔案只有乾淨的 checkout 才會暴露。

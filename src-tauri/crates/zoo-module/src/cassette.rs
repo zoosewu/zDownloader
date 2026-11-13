@@ -18,6 +18,10 @@ pub struct Cassette {
     /// Captcha answers given while recording, in order; `null` for declined.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub captchas: Vec<Option<String>>,
+    /// The credential keys the module had while recording. Replays give it the same keys
+    /// (with stand-in values) whatever `.credentials.json` holds, so they take the same path.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub credentials: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

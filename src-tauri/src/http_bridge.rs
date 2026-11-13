@@ -111,23 +111,6 @@ async fn handle_invoke(
             }
         }
 
-        "detect_url" => {
-            // For now, return a simple validation
-            let url = extract_string_param(&request.args, "url")
-                .map_err(StringError)?;
-
-            let is_valid = url.starts_with("http://") || url.starts_with("https://");
-
-            let detection_result = serde_json::json!({
-                "url": url,
-                "isValid": is_valid,
-                "detectorName": "builtin",
-                "detectionMode": "http_bridge",
-            });
-
-            Ok(detection_result)
-        }
-
         "settings_get" => {
             let settings = app.state::<crate::commands::settings::SettingsState>().settings.lock().await.clone();
             serde_json::to_value(settings).map_err(|e| e.to_string())
@@ -157,12 +140,4 @@ async fn handle_invoke(
     };
 
     Ok(warp::reply::json(&response))
-}
-
-fn extract_string_param(args: &Option<Value>, key: &str) -> Result<String, String> {
-    args.as_ref()
-        .and_then(|v| v.get(key))
-        .and_then(|v| v.as_str())
-        .map(String::from)
-        .ok_or_else(|| format!("Missing '{}' parameter", key))
 }

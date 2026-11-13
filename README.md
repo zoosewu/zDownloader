@@ -38,12 +38,11 @@ A powerful, feature-rich download manager built with Tauri, React, and Rust. Zoo
 - **User-friendly Dialog**: Clear interface for CAPTCHA resolution
 
 ### Site Module System (NEW!)
-- **Extensible Module Architecture**: Support for site-specific download modules
-- **Secure Sandbox**: JavaScript modules run in isolated environment with 8-layer security
-- **TypeScript Support**: Full IntelliSense and type checking for module developers
-- **Keep2Share (K2S) Built-in**: Premium file hosting support with authentication
-- **Developer Tools**: Complete toolchain including module testing and validation
-- **Permission System**: Fine-grained control over network access and resources
+- **Marketplaces**: install modules from the official marketplace, GitHub, https, git or a local folder
+- **Isolated**: each call runs in a separate process with a network allowlist and time/memory limits
+- **Credentials stay yours**: kept in the system keychain; modules only see placeholders
+- **Keep2Share in the official marketplace**: captcha and countdown for free accounts, premium accounts skip both
+- **Developer tools**: `zoo-module new / check / test` with recorded, offline-replayable test cases
 
 ### User Interface
 - **Modern Material-UI Design**: Clean and intuitive interface
@@ -167,59 +166,36 @@ npm run tauri build
 
 ### Site Modules
 
-Zoo Downloader supports site-specific modules for premium file hosting services. Modules are JavaScript files that run in a secure sandbox with fine-grained permissions.
+Site modules turn share pages (file hosts) into direct downloads. Each one is a single JavaScript
+file that runs in its own process with a network allowlist, time and memory limits, and no
+access to your files or passwords.
 
-#### Using Built-in Modules
+#### Using modules
 
-**Keep2Share (K2S) Module** - Built-in support for premium downloads:
+1. **Settings → Site modules → Browse** lists what the marketplaces offer. The official
+   marketplace ships with the app and includes **Keep2Share (k2s.cc)**.
+2. Installing shows the permissions a module asks for; updates that ask for more ask again.
+3. If a module takes an account, enter it under **Installed**. It is kept in the system
+   keychain; modules only ever see placeholders.
+4. Paste a share link as usual. The add-download page shows which module resolves it.
+   Captchas open in a dialog (image) or a window (reCAPTCHA).
 
-1. **Navigate to Module Settings**
-   - Open Settings → Module Management
-   - See list of installed modules
+Other marketplaces can be added under **Sources**: a GitHub `owner/repo`, an https catalog URL,
+a git URL or a local folder (reloaded as you edit it).
 
-2. **Configure Authentication**
-   - When downloading from K2S, you'll be prompted for credentials
-   - Enter your username and password
-   - Credentials are stored securely and never exposed to modules
+#### Writing a module
 
-3. **Download Premium Files**
-   - Add K2S URLs normally
-   - Module automatically handles authentication and premium link extraction
-   - Supports retry mechanism for expired sessions
+```bash
+cd src-tauri && cargo build -p zoo-module      # the module host and its CLI
+zoo-module new my-site                         # TypeScript template, types and AGENTS.md
+cd my-site && pnpm install && pnpm build
+zoo-module test --record                       # run test cases against the real site, record them
+zoo-module test                                # replay offline
+```
 
-#### Developing Custom Modules
-
-For developers who want to add support for new sites:
-
-1. **Quick Start**
-   ```bash
-   # Copy the module template
-   cp -r modules/_template modules/my-site
-
-   # Edit manifest and implementation
-   cd modules/my-site
-   # Edit manifest.json and index.js
-
-   # Test your module
-   node ../../src-tauri/tests/fixtures/site-modules/test-module.js
-   ```
-
-2. **Full TypeScript Support**
-   - IntelliSense and autocomplete in VS Code
-   - Type definitions in `modules/@types/zoo-downloader/`
-   - Code snippets in `modules/.vscode/`
-
-3. **Documentation**
-   - See `specs/004-site-module-integration/quickstart.md` for detailed guide
-   - See `modules/k2s/` for a complete working example
-   - See `modules/_template/` for module structure
-
-**Security Features:**
-- 8-layer security sandbox (Deno runtime isolation)
-- Fine-grained network permissions (domain allowlist)
-- Resource limits (memory, CPU time)
-- No file system access
-- Credential proxy (modules never see raw passwords)
+`AGENTS.md` in the template explains the API and the workflow (it is written so an AI agent can
+write the module). The full design is in `docs/architecture/phase-4-site-modules.md`;
+`src-tauri/marketplace/k2s/` is a complete example.
 
 ## 🏗️ Architecture
 
@@ -264,45 +240,21 @@ zoo-downloader/
 │   │   └── zh-TW.json            # Traditional Chinese
 │   └── types/                    # TypeScript type definitions
 │
-├── src-tauri/                    # Backend source code
-│   ├── src/
-│   │   ├── commands/             # Tauri command handlers
-│   │   │   ├── download.rs       # Download operations
-│   │   │   ├── proxy.rs          # Proxy management
-│   │   │   └── ...
-│   │   ├── download/             # Download engine
-│   │   │   ├── engine.rs         # Core download logic
-│   │   │   ├── segment.rs        # Segmentation logic
-│   │   │   ├── merger.rs         # Segment merging
-│   │   │   └── ...
-│   │   ├── models/               # Data models
-│   │   │   ├── download_task.rs  # Download task model
-│   │   │   ├── download_segment.rs
-│   │   │   └── proxy.rs          # Proxy model
-│   │   ├── proxy/                # Proxy pool
-│   │   │   └── pool.rs           # Proxy management
-│   │   ├── modules/              # Website-specific modules
-│   │   │   ├── captcha.rs        # CAPTCHA handling
-│   │   │   ├── auth.rs           # Authentication
-│   │   │   └── ...
-│   │   ├── native_messaging/     # Chrome extension integration
-│   │   │   └── http_server.rs    # HTTP server
-│   │   └── lib.rs                # Library entry point
-│   └── Cargo.toml                # Rust dependencies
+├── src-tauri/                    # Backend: Tauri shell over the crates below
+│   ├── src/                      # Commands, events, settings, site-module wiring
+│   ├── crates/
+│   │   ├── zoo-core/             # Download engine (no Tauri dependency)
+│   │   ├── zoo-module/           # Site-module host and the zoo-module CLI (SDK, template)
+│   │   ├── zoo-module-client/    # Runs the host from the app: protocol, manifest, resolver
+│   │   └── zoo-marketplace/      # Sources, catalogs, install, permissions, credentials
+│   ├── marketplace/              # The official marketplace shipped with the app (k2s)
+│   └── Cargo.toml
 │
 ├── chrome-extension/             # Chrome extension
 │   ├── manifest.json             # Extension manifest
 │   ├── background.js             # Background service worker
 │   ├── content.js                # Content script
 │   └── popup.html                # Extension popup
-│
-├── modules/                      # Site-specific download modules
-│   ├── @types/                   # TypeScript type definitions
-│   │   └── zoo-downloader/       # Module development types
-│   ├── .vscode/                  # VS Code snippets for module development
-│   ├── _template/                # Module template
-│   ├── k2s/                      # Keep2Share module (built-in)
-│   └── example-simple/           # Minimal example module
 │
 └── package.json                  # Node.js dependencies
 ```

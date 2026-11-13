@@ -8428,15 +8428,10 @@ dependencies = [
 name = "zoo-downloader"
 version = "0.1.0"
 dependencies = [
- "chrono",
- "deno_core",
  "dirs 5.0.1",
- "futures",
  "keyring",
  "log",
  "regex",
- "reqwest 0.13.5",
- "semver",
  "serde",
  "serde_json",
  "tauri",

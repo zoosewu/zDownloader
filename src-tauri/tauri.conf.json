@@ -40,7 +40,9 @@
     "active": true,
     "targets": "all",
     "resources": {
-      "marketplace/": "marketplace/"
+      "marketplace/zoo-marketplace.json": "marketplace/zoo-marketplace.json",
+      "marketplace/k2s/manifest.json": "marketplace/k2s/manifest.json",
+      "marketplace/k2s/dist/index.js": "marketplace/k2s/dist/index.js"
     },
     "icon": [
       "icons/32x32.png",

@@ -3,7 +3,6 @@ mod commands;
 mod downloads;
 mod http_bridge;
 mod models;
-pub mod modules;
 mod site_modules;
 pub mod native_messaging;
 mod storage;
@@ -12,22 +11,15 @@ mod utils;
 #[cfg(test)]
 mod bindings;
 
-use commands::captcha::{
-    cancel_captcha, get_active_captcha_count, get_pending_captchas, submit_captcha_solution,
-};
-use commands::clipboard::{detect_url, detect_url_module, get_clipboard_content};
+use commands::clipboard::get_clipboard_content;
 use commands::downloads::{
     downloads_add, downloads_cancel, downloads_clear_finished, downloads_import_batch,
     downloads_list, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
     downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_update,
 };
-use commands::module_management::{
-    delete_module_credentials, get_all_modules, get_module_audit_logs, get_module_credentials_status,
-    get_module_detail, reload_module, save_module_credentials, scan_modules, unload_module,
-};
 use commands::site_modules::{
     captcha_answer, captcha_open_window, captcha_pending, modules_add_source, modules_cancel_install, modules_install,
-    modules_list, modules_match, modules_move, modules_plan_install, modules_refresh, modules_remove, modules_remove_source,
+    modules_list, modules_move, modules_plan_install, modules_refresh, modules_remove, modules_remove_source,
     modules_set_credentials, modules_set_enabled, modules_sources,
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
@@ -35,17 +27,12 @@ use commands::settings::{
     load_settings_from_file, settings_export, settings_get, settings_import, settings_reset,
     settings_update, SettingsState,
 };
+use commands::urls::urls_inspect;
 use downloads::Downloads;
-use modules::captcha::CaptchaManager;
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::Mutex;
 use utils::clipboard::start_clipboard_monitor;
-
-// URL Detector State (thread-safe, different from site module registry)
-pub struct UrlDetectorState {
-    pub registry: Arc<Mutex<modules::url_detector::ModuleRegistry>>,
-}
 
 /// The app's own window (tauri.conf.json); the only one that may call app commands.
 const MAIN_WINDOW: &str = "main";
@@ -76,33 +63,18 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             downloads_clear_finished,
             downloads_segments,
             get_clipboard_content,
-            detect_url,
-            detect_url_module,
+            urls_inspect,
             proxies_import,
             proxies_list,
             proxies_remove,
             proxies_clear,
             proxies_reset_failed,
-            get_pending_captchas,
-            submit_captcha_solution,
-            cancel_captcha,
-            get_active_captcha_count,
             settings_get,
             settings_update,
             settings_export,
             settings_import,
             settings_reset,
-            save_module_credentials,
-            get_module_credentials_status,
-            delete_module_credentials,
-            get_all_modules,
-            get_module_detail,
-            reload_module,
-            unload_module,
-            scan_modules,
-            get_module_audit_logs,
             modules_list,
-            modules_match,
             modules_sources,
             modules_add_source,
             modules_remove_source,
@@ -143,11 +115,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(Arc::new(std::sync::Mutex::new(CaptchaManager::new())))
         .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
-        .manage(UrlDetectorState {
-            registry: Arc::new(Mutex::new(modules::url_detector::ModuleRegistry::new())),
-        })
         // App commands answer the main window only. Captcha windows show other sites' pages and
         // must not reach the app (capabilities cover plugin commands, not these).
         .invoke_handler(move |invoke| {

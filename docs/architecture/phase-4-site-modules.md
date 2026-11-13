@@ -240,7 +240,7 @@ export default defineModule({
     - `needsConsent` 時顯示權限對話框，更新時新增的權限以橘色標出；
     - 不需同意時直接安裝。
   - `CaptchaDialog` 依 `captcha-event` 與 `captcha_pending` 一次顯示一個。
-  - 新增下載頁用 `modules_match` 顯示由哪個模組解析，模組缺帳號時改為警告。
+  - 新增下載頁顯示由哪個模組解析（4f 起改用 `urls_inspect`），模組缺帳號時改為警告。
   - 4.5 的 UI：
     - 詳細面板的「更換網址或 Header」（`EditTaskDialog`）；
     - `SourceChangedPrompt` 在任務因 `sourceChanged` 失敗時詢問，預設按鈕是「從頭下載」；
@@ -260,6 +260,78 @@ export default defineModule({
 
 `src-tauri/src/modules/` 全部（js_runtime、js_module、loader、registry、sandbox、credential_proxy 的 HTTP 部分、url_detector 的模組部分），`commands/module_management.rs`、`commands/captcha.rs` 改寫；`modules/@types`、`modules/.vscode`、`MODULES.md`、specs/004 的 MODULE_BUILD_SYSTEM 與 SMART_MODULE_PATH 由新文件取代。保留並移入新位置：manifest 驗證邏輯、keychain CRUD、`CaptchaManager` 的概念。
 
+## 4f 規格：k2s 遷移與刪除舊模組系統（2026-11-13 確認並完成）
+
+### k2s 模組
+
+- 位置：`src-tauri/marketplace/k2s/`，用 `zoo-module new` 的範本（TypeScript）。`dist/index.js` 入庫，因為 app 執行的是打包後的檔案。
+- 官方 catalog 加入 `{ "id": "k2s", "source": "k2s", ... }`。本機來源可以不填 sha256，所以不需要每次重建時同步雜湊。
+- 舊模組的端點（`/file/info`、`/file/download`、Bearer header）是猜的，**全部依官方 API v2 重寫**：
+  - base `https://keep2share.cc/api/v2/`，全部 POST JSON，`auth_token` 放在 body 裡。
+  - 網址：`k2s.cc/file/<id>[/name]`、`keep2share.cc/file/<id>`，含子網域。
+  - 流程：
+    1. 有帳密時 `login` 取得 `auth_token`。登入要求 reCAPTCHA（errorCode 33）時，用 `requestReCaptcha` 拿到頁面，交給 `zoo.captcha.recaptcha`。
+    2. 用 `getFilesInfo` 取得檔名與大小；資料夾、不存在、被封鎖的檔案直接失敗，並附上提示。
+    3. `getUrl`：
+       - 30（需要 captcha）：`requestCaptcha` → `zoo.captcha.image` → 帶 `captcha_challenge` / `captcha_response` 重試；
+       - 41（免費使用者需等待）：`zoo.wait` 後帶 `free_download_key` 重試；
+       - 43（只限付費）、42、20–23：`zoo.fail` 並附上可以採取的動作。
+  - 回傳 `{ url, filename, size }`；免費帳號設 `maxConnections: 1`，付費帳號不限制。
+  - 帳密只保留 `username`、`password`（optional）。舊的 `apiKey` 不在 API 裡，刪除。
+  - 官方文件沒有寫清楚免費流程（`free_download_key` 從哪裡來、等待秒數放在哪個欄位）與 reCAPTCHA 的 site key。這些先依文件推測寫成，**4g 用真實帳號錄製時確認並修正**。
+- 測試：
+  - `tests/cases.json` 涵蓋：付費帳號、免費帳號（captcha + 等待）、檔案已刪除、資料夾、只限付費。
+  - cassette 先依官方文件的回應格式手寫，讓 `zoo-module test` 能離線驗證流程分支；4g 再以真實錄製取代。
+  - Rust 測試：官方 catalog 裡的每個模組都要通過 `Manifest::parse`，`dist` 也要存在。
+
+### 取代 `detect_url`
+
+舊的 `detect_url` 有兩個用途：剪貼簿監看判斷要不要跳到新增下載頁，以及新增下載頁自動填入檔名。兩者都改用新的 `urls_inspect(url) -> UrlInfo`，並取代 4e3 的 `modules_match`：
+
+- `UrlInfo { filename: Option<String>, module: Option<InstalledInfo> }`
+  - `filename`：用 `zoo_core::naming` 從網址推出；網址沒有副檔名時為 `null`。
+  - `module`：會負責解析這個網址的模組。
+- 剪貼簿監看：有 `module`，或 `filename` 帶有常見下載副檔名時，才跳到新增下載頁。副檔名清單從舊的 builtin detector 搬過來。
+- `useClipboard`、`AddDownloadForm` 原本直接呼叫 `invoke`，改走 `backend.urls.inspect`。
+- `http_bridge` 的 `detect_url` 分支一併刪除。
+
+### 刪除
+
+- `src-tauri/src/modules/`：整個目錄。
+- 舊 command：
+  - `commands/captcha.rs`、`commands/module_management.rs`；
+  - `clipboard.rs` 的 `detect_url`、`detect_url_module`；
+  - `UrlDetectorState`，以及 `lib.rs` 裡相關的註冊。
+- `src-tauri/tests/module_loading_test.rs`、`tests/fixtures/site-modules/`。
+- `modules/` 整個目錄：舊 k2s、`example-simple`、`_template`、`@types`、`jsconfig.json`；`.gitignore` 裡的相關項目。
+- Cargo 依賴：
+  - shell 的 `deno_core`：host 在 `zoo-module` crate，shell 不需要；
+  - `semver`：如果刪除後沒有其他地方使用。
+- 文件：`MODULES.md`、specs/004 中被取代的部分；CLAUDE.md 那句「4f 刪除」改成已完成。
+- 刪除後用 `cargo build` 與 clippy 確認沒有殘留的死碼，再用 grep 確認前端沒有呼叫已刪除的 command（vitest 的命令名稱一致性測試也會檢查）。
+
+### 驗證
+
+- `zoo-module check` 與 `zoo-module test` 對 k2s 全部通過。
+- Rust workspace、vitest、`tsc`、`pnpm build` 全部通過。
+- 在 app 裡實際操作：
+  - 「瀏覽」分頁看得到 k2s，可以安裝；
+  - 貼上 k2s 網址時，剪貼簿監看會跳轉，新增下載頁顯示「由 Keep2Share 模組解析」；
+  - 貼上一般檔案網址時，會自動填入檔名。
+- 真實帳號下載：留到 4g，需要你操作（帳密只存在你本機的 `.credentials.json` 或 app 的金鑰圈）。
+
+### 實作（4f）
+
+- k2s 用 `getFileStatus`（不需登入）取得檔名、大小、是否為資料夾；`getUrl` 的迴圈最多 6 輪，處理 captcha（30、31 重新出題）、`free_download_key` 與等待（41）。等待超過 600 秒（`zoo.wait` 的上限）視為免費額度用完，直接失敗並說明。
+- 走過免費流程（captcha 或等待）才設 `maxConnections: 1`，不另外呼叫 `accountInfo` 判斷帳號類型。
+- 手寫 cassette 9 個：付費、免費、免費答錯 captcha、登入要求 reCAPTCHA、密碼錯誤、已刪除、資料夾、只限付費、免費額度用完。錯誤回應的 HTTP 狀態用 API 的 `code`。
+- `zoo-module test` 補強：cassette 記錄錄製時模組拿到的帳密 key，重播時給同樣的 key（值是替代字串），不看本機 `.credentials.json`，所以沒有帳號也能重播同一條流程。
+- 官方模組的建置：`pnpm build:official-modules`（`scripts/build-official-modules.mjs`，選項與範本的 `pnpm build` 相同）。`official-modules.test.ts` 檢查 `dist` 與原始碼一致、`types/` 是目前的 SDK、能通過型別檢查。
+- 打包：`bundle.resources` 只列 catalog、各模組的 `manifest.json` 與 `dist/index.js`，不帶 `node_modules` 與測試。shell 的測試 `the_official_marketplace_installs_and_is_bundled` 檢查每個 catalog 模組都能安裝、版本與 manifest 一致、檔案都在打包清單裡。
+- `urls_inspect` 在 `commands/urls.rs`；剪貼簿監看與新增下載頁都改用它。模組解析的網址不預填檔名，由模組決定。
+- 刪除時一併移除變成死碼的 `utils/url_validator.rs`、`utils/error.rs`、`http_bridge` 的 `extract_string_param`，以及 shell 不再使用的 `reqwest`、`chrono`、`futures`。
+- 在 app 裡實際操作：k2s 從內附市集安裝；複製 k2s 網址會跳到新增下載頁並顯示「由 Keep2Share 模組解析」；複製 `.exe` 網址會跳轉，複製網頁網址不會；輸入一般檔案網址會自動填入檔名。
+
 ## 子階段
 
 | 子階段 | 內容 | 驗證 |
@@ -270,7 +342,7 @@ export default defineModule({
 | 4d ✅ | CLI：new / check / test、錄製重播、`--json`、產生 d.ts；模組範本與 AGENTS.md；`Resolved.maxConnections`；SDK 說明以 `headers` 覆寫 User-Agent（偽裝成其他下載軟體，例如百度網盤） | 用範本新建模組並通過 test；讓 AI 依 AGENTS.md 寫一個 fixture 網站的模組 |
 | 4.5 ✅ | 下載核心補強：更新網址（比對大小並抽樣比對位元組；不符時詢問，預設從頭下載）、直接連結自訂 header 與預設 User-Agent | zoo-core 整合測試：換成鏡像後續傳、內容不同時拒絕續傳、header 送達 |
 | 4e | 4e1 `zoo-marketplace`：來源（GitHub、HTTPS、git、本機）、catalog、安裝/更新/移除、權限同意、優先順序、帳密；4e2 shell 接線、captcha 互動、熱重載、內附官方來源；4e3 前端模組頁、captcha 對話框、4.5 的 UI | 整合測試：HTTP fixture catalog 安裝、sha256 不符拒絕、權限擴大要求重新同意、離線可用、git 來源、本機來源重新載入 |
-| 4f | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |
+| 4f ✅ | k2s 遷移到新 API，改由內附的官方 marketplace 提供；刪除舊模組系統 | k2s 以錄製檔通過 test；實際帳號測試需要你操作 |
 | 4g | 實機驗證與文件 | 驗證清單 |
 
 每個子階段各自 commit 並通過全部測試；4f 之前舊模組系統保留不動。

@@ -571,6 +571,6 @@ chmod +x .git/hooks/pre-commit
 - `crates/zoo-module/tests/sdk.rs`：執行期全域物件與 `globals.d.ts` 完全相同；宣告的每個成員都存在；JSON Schema 與 `Manifest::parse` 對同一組範例的判定相同。
 - `src/__tests__/module-sdk.test.ts`：範本能通過型別檢查；不支援的 API（`document`、`WebSocket`、`require`、`Deno` 等）與錯誤的 `resolve` 回傳值會被標錯。
 
-舊的 `modules/@types`、`modules/.vscode`、`modules/_template` 屬於舊模組系統，4f 刪除，不要再更新。
+官方 marketplace 在 `src-tauri/marketplace/`：每個模組是一個範本專案（`src/index.ts` → 入庫的 `dist/index.js`）。改了模組原始碼或 SDK 後執行 `pnpm build:official-modules` 並把 `sdk/` 複製到模組的 `types/`（`official-modules.test.ts` 會檢查兩者）；新增模組時把它的 `manifest.json` 與 `dist/index.js` 加進 `tauri.conf.json` 的 `bundle.resources`（`site_modules` 的測試會檢查）。
 
 <!-- MANUAL ADDITIONS END -->

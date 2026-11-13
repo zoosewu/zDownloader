@@ -1,5 +1,12 @@
 {
   "name": "official",
   "owner": "zoo-downloader",
-  "modules": []
+  "modules": [
+    {
+      "id": "k2s",
+      "version": "1.0.0",
+      "source": "k2s",
+      "description": "Keep2Share (k2s.cc)"
+    }
+  ]
 }

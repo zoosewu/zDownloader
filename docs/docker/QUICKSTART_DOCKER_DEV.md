@@ -124,7 +124,6 @@ HTTP Bridge 已經配置允許所有 origin。如果仍有問題，檢查瀏覽�
 ✅ **完全支援**：
 - `greet` - 測試用
 - `get_clipboard_content` - 取得剪貼簿（需要 Docker 環境支援）
-- `detect_url` - 簡單的 URL 驗證
 - `get_settings` - 返回默認設定
 - `get_download_list` - 返回空列表
 

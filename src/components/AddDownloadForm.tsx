@@ -19,15 +19,6 @@ import { settingsAtom } from '../stores/settingsStore';
 import HeaderFieldsEditor from './HeaderFieldsEditor';
 import { emptyHeaderFields, fromHeaderFields, type HeaderFields } from '../utils/headers';
 
-interface UrlDetectionResult {
-  url: string;
-  isValid: boolean;
-  detectorName?: string;
-  detectionMode?: string;
-  suggestedFilename?: string;
-  fileExtension?: string;
-}
-
 interface AddDownloadFormProps {
   initialUrl?: string;
   onCancel: () => void;
@@ -54,76 +45,18 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
 
   const { navigateTo } = useNavigation();
 
-  // Auto-paste from clipboard when form opens (if no initialUrl)
+  // Fill in a download link from the clipboard when the form opens empty.
   useEffect(() => {
-    const checkClipboard = async () => {
-      // Skip if we already have an initial URL
-      if (initialUrl) {
-        console.log('[AddDownloadForm] Initial URL provided, skipping clipboard check');
-        return;
+    if (initialUrl) return;
+    (async () => {
+      const content = (await invoke<string>('get_clipboard_content').catch(() => '')).trim();
+      if (content && (await backend.urls.inspect(content).catch(() => null))?.downloadable) {
+        setUrl(content);
       }
+    })();
+  }, []); // Only on mount
 
-      try {
-        console.log('[AddDownloadForm] Checking clipboard for download URL...');
-        const content = await invoke<string>('get_clipboard_content');
-
-        if (!content) {
-          console.log('[AddDownloadForm] Clipboard is empty');
-          return;
-        }
-
-        console.log('[AddDownloadForm] Clipboard content:', content.substring(0, 100));
-
-        // Validate if it's a download URL
-        const result = await invoke<UrlDetectionResult>('detect_url', { url: content });
-        console.log('[AddDownloadForm] Detection result:', result);
-
-        if (result.isValid) {
-          console.log('[AddDownloadForm] Valid download URL found in clipboard, auto-filling');
-          setUrl(content);
-          if (result.suggestedFilename) {
-            setFilename(result.suggestedFilename);
-          }
-        } else {
-          console.log('[AddDownloadForm] Clipboard content is not a valid download URL');
-        }
-      } catch (e) {
-        // Silently fail - clipboard auto-paste is optional
-        console.log('[AddDownloadForm] Failed to check clipboard:', e);
-      }
-    };
-
-    checkClipboard();
-  }, []); // Only run once on mount
-
-  // Auto-parse filename when URL changes
-  useEffect(() => {
-    // Skip if URL is empty or if user has manually edited the filename
-    if (!url || isUserEditedFilename) {
-      return;
-    }
-
-    // Debounce the URL detection
-    const timeoutId = setTimeout(async () => {
-      try {
-        console.log('[AddDownloadForm] URL changed, detecting filename...');
-        const result = await invoke<UrlDetectionResult>('detect_url', { url: url.trim() });
-        console.log('[AddDownloadForm] Detection result:', result);
-
-        if (result.isValid && result.suggestedFilename) {
-          console.log('[AddDownloadForm] Auto-filling filename:', result.suggestedFilename);
-          setFilename(result.suggestedFilename);
-        }
-      } catch (e) {
-        // Silently fail - auto-parsing is optional
-        console.log('[AddDownloadForm] Failed to auto-parse filename:', e);
-      }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [url, isUserEditedFilename]);
-
-  // Which installed module will resolve the URL.
+  // Which module resolves the URL, and the file name it names (modules name their own files).
   useEffect(() => {
     const target = url.trim();
     if (!target) {
@@ -131,10 +64,16 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       return;
     }
     const timeoutId = setTimeout(() => {
-      backend.modules.match(target).then(setModule).catch(() => setModule(null));
+      backend.urls
+        .inspect(target)
+        .then((info) => {
+          setModule(info.module);
+          if (!isUserEditedFilename) setFilename(info.module ? '' : (info.filename ?? ''));
+        })
+        .catch(() => setModule(null));
     }, 400);
     return () => clearTimeout(timeoutId);
-  }, [url]);
+  }, [url, isUserEditedFilename]);
 
   const isValidUrl = (urlString: string): boolean => {
     try {
@@ -186,26 +125,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
     setLoading(true);
 
     try {
-      // Try to validate URL with backend detector (optional)
-      // If Tauri API is not ready, skip validation and let backend handle it
-      console.log('[AddDownloadForm] Calling detect_url command...');
-      try {
-        const detectionResult = await invoke<UrlDetectionResult>('detect_url', { url: url.trim() });
-        console.log('[AddDownloadForm] detect_url result:', detectionResult);
-
-        if (!detectionResult.isValid) {
-          console.log('[AddDownloadForm] ✗ URL is not a valid download link');
-          setError('此網址不是有效的下載連結');
-          setLoading(false);
-          return;
-        }
-        console.log('[AddDownloadForm] ✓ URL validation passed');
-      } catch (detectionError) {
-        // Silently skip frontend validation if detect_url fails
-        // Backend will validate the URL when creating the download
-        console.log('[AddDownloadForm] ⚠ URL detection unavailable, skipping frontend validation:', detectionError);
-      }
-
       await addDownload(url.trim(), filename.trim(), downloadPath);
 
       console.log('[AddDownloadForm] Navigating to main page...');
