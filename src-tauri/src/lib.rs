@@ -32,7 +32,6 @@ use downloads::Downloads;
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::Mutex;
-use utils::clipboard::start_clipboard_monitor;
 
 /// The app's own window (tauri.conf.json); the only one that may call app commands.
 const MAIN_WINDOW: &str = "main";
@@ -140,11 +139,6 @@ pub fn run() {
                 .map_err(|e| format!("cannot start the download manager: {e}"))?;
             app.manage(downloads);
             downloads::forward_events(app.handle().clone());
-
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                start_clipboard_monitor(handle).await;
-            });
 
             // HTTP endpoint for the Chrome extension; DISABLE_NATIVE_MESSAGING_SERVER=1 turns it off.
             if std::env::var("DISABLE_NATIVE_MESSAGING_SERVER").as_deref() != Ok("1") {

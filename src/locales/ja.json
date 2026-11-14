@@ -25,7 +25,8 @@
     "apply": "適用",
     "reset": "リセット",
     "progress": "進捗",
-    "later": "後で"
+    "later": "後で",
+    "browse": "参照"
   },
   "downloads": {
     "title": "ダウンロードリスト",

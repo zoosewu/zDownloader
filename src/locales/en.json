@@ -25,7 +25,8 @@
     "apply": "Apply",
     "reset": "Reset",
     "progress": "Progress",
-    "later": "Later"
+    "later": "Later",
+    "browse": "Browse"
   },
   "downloads": {
     "title": "Download List",

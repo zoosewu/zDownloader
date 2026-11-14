@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Task } from '../backend/bindings/Task';
 import { errorText } from '../utils/errors';
-import { statusLabel } from '../utils/downloadCalculations';
+import { displayName, statusLabel } from '../utils/downloadCalculations';
 
 const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
 
@@ -30,6 +30,14 @@ function task(overrides: Partial<Task>): Task {
     ...overrides,
   };
 }
+
+describe('task name', () => {
+  test('a finished file renamed on conflict shows its name on disk', () => {
+    expect(displayName(task({ name: 'a.bin', finalPath: 'C:\\dl\\a (1).bin' }))).toBe('a (1).bin');
+    expect(displayName(task({ name: 'a.bin', finalPath: '/dl/a (1).bin' }))).toBe('a (1).bin');
+    expect(displayName(task({ name: 'a.bin' }))).toBe('a.bin');
+  });
+});
 
 describe('task status', () => {
   test('a running task shows its phase until it transfers', () => {

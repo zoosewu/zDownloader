@@ -109,7 +109,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
         }}
       >
         <TableCell sx={getCellWidthStyle('filename')}>
-          <Tooltip title={task.name} arrow placement="top-start">
+          <Tooltip title={displayData.filename} arrow placement="top-start">
             <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {displayData.filename}
             </Box>

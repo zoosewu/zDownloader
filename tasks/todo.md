@@ -33,7 +33,7 @@
   - [x] 2d ProxyPool adapter（shell 改接留到 2e 與刪舊引擎一起做）
   - [x] 2e Tauri shell（ts-rs 匯出、CommandError、入口、通知、刪舊引擎）— 前端在 2f 改接前執行期不可用
   - [x] 2f 前端（backend adapter、DownloadSync、元件改接、列操作、排程）— 分段視覺化已補回（downloads_segments）
-  - [ ] 2g 實機驗證與文件 — 文件已更新、app 可啟動；手動清單見 phase-2-download-core.md
+  - [x] 2g 實機驗證與文件 — 2026-11-14 以 CDP 與本機測試站跑完清單（只剩系統通知需人工目視），修正多連線 flush 競爭
 - ~~Phase 3 產生式契約 + 前端 DownloadSync（候選 2、5）~~ 併入 Phase 2
 - [ ] Phase 4 網站模組系統重建 — 分支 `rebuild/phase-4`，規格 `docs/architecture/phase-4-site-modules.md`（已確認），依 ADR-0001、ADR-0002
   - [x] 4a client（協定 + Supervisor）+ host 骨架（資源上限、崩潰隔離）— shell 接線移到 4c
@@ -65,4 +65,5 @@
 - `@mui/icons-material` v7 與 `@mui/material` v6 版本不一致
 - `package.json` 缺 `packageManager`
 - 正式建置 chunk 722 kB
-- shell 的 `utils/clipboard.rs` 另外輪詢剪貼簿並送出 `clipboard-detected` 事件，前端沒有人聽（前端 `useClipboard` 自己輪詢），可刪（4f 發現）
+- 代理匯入只接受 `host:port`，`http://host:port` 會被判為格式錯誤（2026-11-14 發現；常見的代理清單多半帶 scheme，可考慮接受）
+- 自動重試等待中的任務，表格顯示「失敗」（`failed` + `nextRetryAt`），可考慮顯示「等待重試」與倒數（2026-11-14 發現）

@@ -63,16 +63,21 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       setModule(null);
       return;
     }
+    let stale = false; // a newer URL was typed before this answer arrived
     const timeoutId = setTimeout(() => {
       backend.urls
         .inspect(target)
         .then((info) => {
+          if (stale) return;
           setModule(info.module);
           if (!isUserEditedFilename) setFilename(info.module ? '' : (info.filename ?? ''));
         })
-        .catch(() => setModule(null));
+        .catch(() => !stale && setModule(null));
     }, 400);
-    return () => clearTimeout(timeoutId);
+    return () => {
+      stale = true;
+      clearTimeout(timeoutId);
+    };
   }, [url, isUserEditedFilename]);
 
   const isValidUrl = (urlString: string): boolean => {
@@ -102,39 +107,24 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log('[AddDownloadForm] ========== Form Submission Started ==========');
-    console.log('[AddDownloadForm] URL:', url);
-    console.log('[AddDownloadForm] Filename:', filename);
-    console.log('[AddDownloadForm] Download Path:', downloadPath);
-
     if (!url.trim()) {
-      console.log('[AddDownloadForm] ✗ Validation failed: URL is empty');
-      setError('請輸入下載網址');
+      setError(t('downloads.errors.emptyUrl'));
       return;
     }
 
     if (!isValidUrl(url.trim())) {
-      console.log('[AddDownloadForm] ✗ Validation failed: Invalid URL format');
-      setError('無效的網址格式');
+      setError(t('downloads.errors.invalidUrl'));
       return;
     }
-
-    console.log('[AddDownloadForm] ✓ Basic validation passed');
 
     setError(null);
     setLoading(true);
 
     try {
       await addDownload(url.trim(), filename.trim(), downloadPath);
-
-      console.log('[AddDownloadForm] Navigating to main page...');
       navigateTo('main');
-      console.log('[AddDownloadForm] ========== Form Submission Completed ==========');
     } catch (e: any) {
-      console.error('[AddDownloadForm] ✗ Error during form submission:', e);
-      console.error('[AddDownloadForm] Error message:', e.message);
-      console.error('[AddDownloadForm] Error stack:', e.stack);
-      setError(e.message || '建立下載任務失敗');
+      setError(e?.message ?? String(e));
     } finally {
       setLoading(false);
     }
@@ -155,7 +145,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       )}
 
       <TextField
-        label="下載網址"
+        label={t('downloads.details.url')}
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         onKeyPress={handleKeyPress}
@@ -163,7 +153,6 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         required
         margin="normal"
         placeholder="https://example.com/file.zip"
-        helperText="請輸入要下載的檔案網址"
       />
 
       {module && (
@@ -175,7 +164,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
       )}
 
       <TextField
-        label="檔案名稱（選填）"
+        label={t('downloads.filenameLabel')}
         value={filename}
         onChange={(e) => {
           setFilename(e.target.value);
@@ -184,21 +173,20 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
         onKeyPress={handleKeyPress}
         fullWidth
         margin="normal"
-        placeholder="留空則使用網址中的檔名"
       />
 
       <TextField
-        label="下載路徑"
+        label={t('settings.downloadPath')}
         value={downloadPath}
         fullWidth
         margin="normal"
-        helperText={pathError || "檔案將儲存到此路徑"}
+        helperText={pathError}
         error={!!pathError}
         InputProps={{
           readOnly: true,
           endAdornment: (
             <InputAdornment position="end">
-              <Button onClick={openDirectoryPicker}>瀏覽</Button>
+              <Button onClick={openDirectoryPicker}>{t('common.browse')}</Button>
             </InputAdornment>
           ),
         }}
@@ -229,7 +217,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
           disabled={loading || !url.trim()}
           sx={{ flex: 1 }}
         >
-          {loading ? '建立中...' : '新增下載'}
+          {t('downloads.addDownload')}
         </Button>
         <Button
           variant="outlined"
@@ -237,7 +225,7 @@ const AddDownloadForm: React.FC<AddDownloadFormProps> = ({
           disabled={loading}
           sx={{ flex: 1 }}
         >
-          取消
+          {t('common.cancel')}
         </Button>
       </Box>
 

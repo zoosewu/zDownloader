@@ -59,6 +59,8 @@ pub struct PartFile {
     file: File,
     validator: Validator,
     state: Mutex<State>,
+    /// Serializes flushes: the connections of a download share one record and its temp file.
+    flushing: Mutex<()>,
     auto_flush: bool,
 }
 
@@ -132,6 +134,7 @@ impl PartFile {
             file,
             validator,
             state: Mutex::new(State { done, last_flush: Instant::now(), unflushed: 0 }),
+            flushing: Mutex::new(()),
             auto_flush: true,
         }
     }
@@ -173,6 +176,8 @@ impl PartFile {
 
     /// Sync data, then persist the done-ranges record.
     pub fn flush(&self) -> io::Result<()> {
+        // Held to the end, so a later flush always writes a later snapshot.
+        let _flushing = self.flushing.lock().unwrap();
         self.file.sync_data()?;
         let sidecar = {
             let mut st = self.state.lock().unwrap();
@@ -407,6 +412,29 @@ mod tests {
         assert_eq!(out, dir.path().join("f (1).bin"));
         assert_eq!(std::fs::read(dir.path().join("f.bin")).unwrap(), b"existing");
         assert_eq!(std::fs::read(out).unwrap(), b"abcd");
+    }
+
+    /// Every connection of a download flushes the same record; they must not trip over each
+    /// other's temp file (a real download failed with "file not found" this way).
+    #[test]
+    fn concurrent_flushes_all_succeed_and_keep_the_latest_progress() {
+        let dir = tempfile::tempdir().unwrap();
+        let part = std::sync::Arc::new(PartFile::create(dir.path().join("f.part"), validator(Some(8 * 16))).unwrap());
+        let threads: Vec<_> = (0..8u64)
+            .map(|n| {
+                let part = part.clone();
+                std::thread::spawn(move || {
+                    for i in 0..16u64 {
+                        part.write_at(n * 16 + i, b"x").unwrap();
+                        part.flush().unwrap();
+                    }
+                })
+            })
+            .collect();
+        for t in threads {
+            t.join().unwrap();
+        }
+        assert_eq!(PartFile::read_record(&dir.path().join("f.part")).unwrap().1, vec![(0, 8 * 16)]);
     }
 
     #[test]

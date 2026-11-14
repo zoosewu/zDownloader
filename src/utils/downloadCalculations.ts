@@ -56,11 +56,16 @@ export interface TableDisplayData {
   remainingTimeFormatted: string;
 }
 
+/** The name on disk: the finished file may have been renamed to avoid a conflict (`a (1).bin`). */
+export function displayName(task: Task): string {
+  return task.finalPath?.split(/[\\/]/).pop() || task.name;
+}
+
 export function formatTaskForTable(task: Task, t: (key: string) => string): TableDisplayData {
   const percent = progressPercent(task);
   return {
     id: task.id,
-    filename: task.name,
+    filename: displayName(task),
     filesizeFormatted: task.total !== null ? formatBytes(task.total) : '--',
     progress: percent ?? 0,
     progressFormatted: percent !== null ? `${percent.toFixed(1)}%` : formatBytes(task.downloaded),
