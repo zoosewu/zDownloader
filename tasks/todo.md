@@ -61,7 +61,11 @@
     - [x] pipe：只有本人與 SYSTEM 可連（`D:P(A;;GA;;;OW)(A;;GA;;;SY)`），interprocess 預設已帶 first-instance 與拒絕遠端
     - [x] 實機：以 pipe client 送 ping、帶 Cookie/Referer/UA 的 add（測試站確認 header、下載完成）、無 Cookie（403）、`../../evil.bat`（只留 basename）、CRLF 注入 Cookie（拒絕）、v2、亂碼；Chrome/Edge 登錄與 manifest 正確
     - 註：登錄目前指向 debug 版 host（尚未存在），第 2 階段補上
-  - [ ] 2 `zoo-native-host`（轉送、啟動 app、pipe 擁有者檢查、打包）
+  - [x] 2 `zoo-native-host`（轉送、啟動 app、pipe 擁有者檢查、打包）
+    - [x] 同步小程式（release 396 KB）：框架讀寫、origin 檢查、轉送前重新編碼成一行、app 沒開就啟動（脫離瀏覽器 job）並等 10 秒、pipe 擁有者必須是旁邊的 app
+    - [x] `pnpm build:sidecars` 取代 `build:module-host`，`externalBin` 加入 host
+    - [x] 實機（以 node 模擬瀏覽器啟動 host）：錯誤 origin 拒絕；app 未開時啟動它並回應（約 0.5 秒），host 結束後 app 繼續執行；之後約 10 ms
+    - 修正：app 繼承 host 的 std handle（瀏覽器的 pipe）會讓呼叫端一直等，啟動前改為不可繼承
   - [ ] 3 擴充（右鍵、Cookie、接管下載、popup、圖示）
   - [ ] 4 實機驗證（Edge 獨立 profile 自動跑；Chrome 由使用者載入確認）與文件
 

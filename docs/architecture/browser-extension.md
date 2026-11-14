@@ -69,7 +69,8 @@ Zoo Downloader（shell 的 browser_bridge 模組）
 - **誰能連 app 的 socket**：
   - 名稱含使用者名稱，避免多使用者電腦互相連到；Unix socket 放在只有本人可讀寫的目錄（`$XDG_RUNTIME_DIR` 或 app 資料夾）。
   - Windows：拒絕遠端連線（`PIPE_REJECT_REMOTE_CLIENTS`），DACL 只給目前使用者；app 用 first-instance 建立，名稱被搶就記錄錯誤、不聽。
-  - host 連上後在 Windows 檢查 pipe 另一端的程序路徑是 app 本身（`GetNamedPipeServerProcessId`），防止別的程式先佔名稱騙取 Cookie。
+  - host 連上後在 Windows 檢查 pipe 另一端的程序路徑是 app 本身（`GetNamedPipeServerProcessId`，透過 interprocess 的 `peer_creds`），防止別的程式先佔名稱騙取 Cookie。
+  - host 啟動 app 前把自己的 std handle 設為不可繼承：否則 app 會一直握著瀏覽器給 host 的 pipe。
 - **Cookie**：只在送出當下讀取 `chrome.cookies.getAll({ url })`，交給 app 後存在任務的 headers（下載紀錄明文，和手動輸入 Cookie 相同，UI 已有提示）。不記 log。
 - **無痕視窗**：不接管、右鍵選單也不附 Cookie（無痕的 Cookie 不該進下載紀錄）。
 
@@ -107,7 +108,7 @@ MV3，純 JavaScript ES module（不需建置），可測的邏輯放在獨立�
   - Windows：`HKCU\Software\Google\Chrome\NativeMessagingHosts\com.zoo.downloader` 與 `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.zoo.downloader` 的預設值指向該檔（`winreg`）。
   - macOS／Linux：把同一份 JSON 寫到 Chrome、Edge 各自的 `NativeMessagingHosts` 目錄。
   - 註冊失敗只記 log，不影響 app。
-- **打包**：`zoo-native-host` 和 `zoo-module` 一樣用 `externalBin` 放在 app 旁，`tauri.bundle.json` 的建置步驟一併編譯。
+- **打包**：`zoo-native-host` 和 `zoo-module` 一樣用 `externalBin` 放在 app 旁，`pnpm build:sidecars`（原 `build:module-host`）一併編譯。
 
 ## 測試
 

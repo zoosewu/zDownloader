@@ -50,3 +50,8 @@
 
 - 錯誤：在 `.setup()` 裡直接建立 interprocess 的 tokio named pipe listener，app 一啟動就 panic（`there is no reactor running`）。單元測試在 `#[tokio::test]` 裡跑，所以全部通過。
 - 規則：需要 Tokio reactor 的東西（tokio 的 socket、pipe、timer）一律放進 `tauri::async_runtime::spawn` 裡建立。啟動相關的改動一定要實際開 app 看 stderr，log 檔不會記 panic。
+
+## Windows 子程序會繼承所有可繼承的 handle（2026-11-15）
+
+- 錯誤：native messaging host 啟動 app 時把 stdio 設成 null，但 app 仍繼承了 host 自己的 stdin/stdout/stderr（瀏覽器的 pipe），呼叫端一直等到 app 結束。
+- 規則：要比自己活得久的子程序（啟動 app、daemon），在 Windows 上先把自己的 std handle 設為不可繼承（`SetHandleInformation(.., HANDLE_FLAG_INHERIT, 0)`）。測試時用「呼叫端是否在 host 結束後立刻返回」驗證，不只看回應內容。

@@ -1,8 +1,8 @@
 {
   "build": {
-    "beforeBuildCommand": "pnpm build:module-host && pnpm build"
+    "beforeBuildCommand": "pnpm build:sidecars && pnpm build"
   },
   "bundle": {
-    "externalBin": ["binaries/zoo-module"]
+    "externalBin": ["binaries/zoo-module", "binaries/zoo-native-host"]
   }
 }

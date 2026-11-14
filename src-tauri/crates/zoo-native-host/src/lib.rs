@@ -4,6 +4,8 @@
 //! as one line over the local socket and passes the one-line answer back. See
 //! docs/architecture/browser-extension.md.
 
+pub mod host;
+
 use interprocess::local_socket::Name;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

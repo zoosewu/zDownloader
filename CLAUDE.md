@@ -36,7 +36,8 @@ pnpm test:run                       # 前端測試（vitest，含命令名稱一
 pnpm exec tsc --noEmit              # 型別檢查
 pnpm build                          # 生產建置
 cd src-tauri && cargo build -p zoo-module  # 開發時的網站模組 host（app 在自己的執行檔旁尋找它）
-pnpm build:module-host              # 打包用的 release host（tauri build --config src-tauri/tauri.bundle.json 會自動執行）
+cd src-tauri && cargo build -p zoo-native-host  # 開發時的瀏覽器擴充 host（app 啟動時把它註冊到 Chrome、Edge）
+pnpm build:sidecars                 # 打包用的 release zoo-module 與 zoo-native-host（tauri build --config src-tauri/tauri.bundle.json 會自動執行）
 ```
 
 Windows 注意：v8 crate 在 target 目錄與 cargo registry 位於不同磁碟時需要建立 symlink（未開啟開發人員模式會失敗，錯誤 1314），可設 `CARGO_TARGET_DIR` 到與 registry 同一磁碟。
