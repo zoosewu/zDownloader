@@ -8,6 +8,10 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [react()],
 
+  // The app loads its bundle from disk, not over a network: one ~800 kB chunk costs nothing,
+  // and splitting it would only add requests.
+  build: { chunkSizeWarningLimit: 1024 },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

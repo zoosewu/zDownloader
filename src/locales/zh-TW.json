@@ -1,57 +1,25 @@
 {
-  "app": {
-    "title": "Zoo Downloader",
-    "description": "跨平台下載器"
-  },
   "common": {
-    "download": "下載",
-    "pause": "暫停",
-    "resume": "繼續",
     "cancel": "取消",
-    "delete": "刪除",
-    "retry": "重試",
-    "settings": "設定",
-    "history": "歷史記錄",
     "close": "關閉",
     "save": "儲存",
     "saving": "儲存中...",
     "add": "新增",
-    "edit": "編輯",
-    "remove": "移除",
-    "confirm": "確認",
-    "yes": "是",
-    "no": "否",
-    "ok": "確定",
-    "apply": "套用",
     "reset": "重設",
     "progress": "進度",
     "later": "稍後",
     "browse": "瀏覽"
   },
   "downloads": {
-    "title": "下載列表",
     "addDownload": "新增下載",
     "noTasks": "暫無下載任務",
-    "unknown": "未知",
     "urlLabel": "下載連結",
-    "urlPlaceholder": "請輸入 HTTP/HTTPS 網址",
     "filenameLabel": "檔案名稱（選填）",
-    "filenamePlaceholder": "自動從網址提取",
-    "filenameHelp": "留空則自動從網址提取檔案名稱",
     "status": {
       "title": "狀態",
-      "pending": "等待中",
-      "initializing": "初始化中",
-      "downloading": "下載中",
       "paused": "已暫停",
       "completed": "已完成",
-      "failed": "失敗",
-      "cancelled": "已取消",
-      "cancelling": "取消中",
-      "verifyingintegrity": "驗證完整性中",
-      "mergingsegments": "合併分段中",
-      "active": "進行中",
-      "pausedCount": "已暫停"
+      "active": "進行中"
     },
     "actions": {
       "download": "開始下載",
@@ -74,50 +42,20 @@
     "errors": {
       "emptyUrl": "請輸入下載連結",
       "invalidUrl": "無效的網址格式，請輸入 HTTP/HTTPS 連結",
-      "invalidClipboard": "剪貼簿內容不是有效的網址",
-      "clipboardPermission": "無法存取剪貼簿，請檢查瀏覽器權限",
-      "startFailed": "無法開始下載",
-      "pauseFailed": "無法暫停下載",
-      "resumeFailed": "無法繼續下載",
-      "cancelFailed": "無法取消下載",
-      "deleteFailed": "無法刪除下載",
-      "queueControlFailed": "佇列控制失敗: {{error}}",
-      "networkError": "網路錯誤: {{error}}",
-      "fileAccessError": "檔案存取錯誤: {{error}}",
-      "insufficientSpace": "磁碟空間不足",
-      "retryFailed": "重試失敗: {{error}}"
+      "queueControlFailed": "佇列控制失敗: {{error}}"
     },
     "batch": {
       "import": "批次匯入",
       "importSuccess": "成功匯入 {{count}} 個下載任務",
       "importError": "批次匯入失敗: {{error}}",
-      "selectFile": "選擇網址檔案",
-      "fileFormat": "文字檔案，每行一個網址",
       "importSkipped": "略過 {{count}} 個無效網址"
     },
-    "clipboard": {
-      "detected": "偵測到剪貼簿中的連結",
-      "accept": "使用此連結",
-      "dismiss": "忽略",
-      "monitoring": "剪貼簿監控已啟用"
-    },
     "statistics": {
-      "totalDownloaded": "總下載量",
       "currentSpeed": "目前速度",
-      "averageSpeed": "平均速度",
       "timeRemaining": "剩餘時間",
-      "timeElapsed": "已用時間",
       "activeDownloads": "進行中下載",
       "completedDownloads": "已完成下載",
-      "failedDownloads": "失敗下載",
       "totalTasks": "任務總數"
-    },
-    "filters": {
-      "all": "全部",
-      "downloading": "下載中",
-      "paused": "已暫停",
-      "completed": "已完成",
-      "failed": "失敗"
     },
     "details": {
       "selectItem": "請選擇一個下載項目以查看詳細資訊",
@@ -135,29 +73,9 @@
       "noError": "無錯誤訊息",
       "retryInfo": "重試資訊",
       "retryCount": "已重試次數",
-      "maxRetries": "最大重試次數",
-      "lastRetryAt": "上次重試時間",
       "scheduledStart": "排程開始時間",
       "notScheduled": "未排程",
-      "segments": "分段",
-      "segmentCount": "{{count}} 個分段",
-      "segmentId": "分段 {{id}}",
-      "sizeRange": "大小範圍",
-      "downloaded": "已下載",
-      "segmentProgress": "分段進度",
-      "proxy": "代理",
-      "noProxy": "無代理",
-      "noSegments": "無分段資訊",
       "nextRetryAt": "下次自動重試"
-    },
-    "priority": {
-      "title": "優先度",
-      "lowest": "最低優先度",
-      "low": "低",
-      "belowDefault": "低於預設",
-      "default": "預設",
-      "aboveDefault": "高於預設",
-      "high": "高"
     },
     "state": {
       "scheduled": "已排程",
@@ -197,13 +115,9 @@
     "retryPending": "等待重試"
   },
   "settings": {
-    "title": "設定",
     "general": "一般",
-    "download": "下載",
     "proxy": "代理",
     "advanced": "進階",
-    "developer": "開發者",
-    "about": "關於",
     "downloadPath": "下載路徑",
     "selectPath": "選擇資料夾",
     "maxConcurrent": "最大同時下載數",
@@ -216,7 +130,6 @@
     "theme": "主題",
     "themeLight": "淺色",
     "themeDark": "深色",
-    "themeAuto": "自動",
     "systemTray": "啟用系統托盤",
     "uiSettings": "介面設定",
     "downloadSettings": "下載設定",
@@ -232,8 +145,6 @@
     "maxRetryCount": "最大重試次數",
     "retryInterval": "重試間隔（秒）",
     "proxySettings": "代理設定",
-    "proxyVerificationInterval": "代理驗證間隔（小時）",
-    "proxyVerificationHelp": "多久驗證一次代理健康狀態 (1-168 小時)",
     "importExport": "匯入/匯出",
     "export": "匯出設定",
     "import": "匯入設定",
@@ -254,32 +165,7 @@
     "userAgentHelp": "下載沒有指定 User-Agent 時使用；模組回傳的與任務自訂的優先。"
   },
   "proxy": {
-    "title": "代理管理",
-    "enabled": "啟用代理",
-    "addProxy": "新增代理",
-    "editProxy": "編輯代理",
-    "removeProxy": "移除代理",
-    "testProxy": "測試代理",
-    "protocol": "通訊協定",
-    "host": "主機",
-    "port": "連接埠",
-    "username": "使用者名稱",
-    "password": "密碼",
-    "status": {
-      "active": "使用中",
-      "inactive": "未使用",
-      "testing": "測試中",
-      "failed": "失敗"
-    },
-    "health": "健康狀態",
-    "latency": "延遲",
-    "successRate": "成功率",
-    "errors": {
-      "invalidHost": "無效的主機位址",
-      "invalidPort": "無效的連接埠號碼",
-      "testFailed": "代理測試失敗",
-      "connectionFailed": "連線失敗"
-    }
+    "enabled": "啟用代理"
   },
   "captcha": {
     "title": "需要驗證",
@@ -289,53 +175,6 @@
     "openPage": "開啟驗證頁面",
     "submit": "送出",
     "decline": "略過"
-  },
-  "format": {
-    "speed": "{{value}}/s",
-    "size": "{{value}}",
-    "time": {
-      "seconds": "{{count}} 秒",
-      "seconds_plural": "{{count}} 秒",
-      "minutes": "{{count}} 分鐘",
-      "minutes_plural": "{{count}} 分鐘",
-      "hours": "{{count}} 小時",
-      "hours_plural": "{{count}} 小時",
-      "days": "{{count}} 天",
-      "days_plural": "{{count}} 天"
-    },
-    "percentage": "{{value}}%"
-  },
-  "notifications": {
-    "downloadStarted": "下載已開始",
-    "downloadCompleted": "下載完成: {{filename}}",
-    "downloadFailed": "下載失敗: {{filename}}",
-    "allDownloadsCompleted": "所有下載已完成",
-    "proxyFailed": "所有代理失敗，已切換至直接連線"
-  },
-  "dialogs": {
-    "deleteConfirm": "確定要刪除此下載嗎？",
-    "deleteTitle": "確認刪除",
-    "clearCompletedConfirm": "確定要清除所有已完成的下載嗎？",
-    "clearCompletedTitle": "清除已完成",
-    "exitConfirm": "目前有進行中的下載，確定要結束嗎？",
-    "exitTitle": "確認結束"
-  },
-  "scheduler": {
-    "scheduleDownload": "排程下載",
-    "selectDate": "選擇日期",
-    "selectTime": "選擇時間",
-    "schedule": "排程",
-    "scheduling": "排程中...",
-    "scheduledFor": "排程於",
-    "cancelSchedule": "取消排程",
-    "scheduleHint": "下載將在指定時間自動開始。",
-    "retryDownload": "重試下載",
-    "retryAttempt": "第 {{count}} 次重試，共 {{max}} 次",
-    "errors": {
-      "invalidDateTime": "請選擇日期和時間",
-      "pastTime": "排程時間必須在未來",
-      "scheduleFailed": "無法排程下載"
-    }
   },
   "modules": {
     "title": "網站模組",
@@ -386,42 +225,6 @@
     "match": {
       "resolvedBy": "由「{{name}}」模組解析",
       "needsCredentials": "「{{name}}」模組需要帳號，請先到 設定 → 網站模組 輸入"
-    }
-  },
-  "dev": {
-    "banner": {
-      "title": "開發模式",
-      "description": "您正在使用開發模式功能。此模式僅用於開發和測試，請前往「設定 > 開發者」調整設定。",
-      "usingMockTasks": "使用模擬任務",
-      "mockModeEnabled": "模擬模式已啟用",
-      "autoProgressEnabled": "自動進度更新"
-    },
-    "settings": {
-      "notAvailable": "開發者選項不可用",
-      "productionMode": "開發者選項僅在開發環境中可用",
-      "warningTitle": "開發者選項",
-      "warningDescription": "這些設定僅用於開發和測試目的。修改這些設定可能會影響應用程式的正常運作。",
-      "mockMode": {
-        "title": "模擬模式",
-        "description": "啟用後，所有下載命令都不會實際執行，但會顯示在 UI 中。這讓您可以測試 UI 而不實際下載檔案。",
-        "enableLabel": "啟用模擬模式（下載不會實際執行）",
-        "enabledMessage": "模擬模式已啟用 - 下載命令不會實際執行，但會在 UI 中正常顯示"
-      },
-      "mockTasks": {
-        "title": "模擬任務",
-        "description": "顯示預設的模擬下載任務，用於測試 UI 的各種狀態（進行中、已完成、失敗等）。",
-        "enableLabel": "使用模擬任務",
-        "autoProgressLabel": "自動更新進度（模擬下載進度）",
-        "loadButton": "載入模擬任務",
-        "clearButton": "清除所有任務"
-      },
-      "info": {
-        "title": "使用說明",
-        "item1": "模擬模式：防止實際下載，但允許測試 UI 互動",
-        "item2": "模擬任務：載入預設的測試資料，包含各種下載狀態",
-        "item3": "自動進度：模擬任務會自動更新進度，就像真實下載一樣",
-        "item4": "這些設定儲存在瀏覽器本地，不會影響生產環境"
-      }
     }
   },
   "headers": {

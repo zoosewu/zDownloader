@@ -1,57 +1,25 @@
 {
-  "app": {
-    "title": "Zoo Downloader",
-    "description": "Cross-Platform Downloader"
-  },
   "common": {
-    "download": "Download",
-    "pause": "Pause",
-    "resume": "Resume",
     "cancel": "Cancel",
-    "delete": "Delete",
-    "retry": "Retry",
-    "settings": "Settings",
-    "history": "History",
     "close": "Close",
     "save": "Save",
     "saving": "Saving...",
     "add": "Add",
-    "edit": "Edit",
-    "remove": "Remove",
-    "confirm": "Confirm",
-    "yes": "Yes",
-    "no": "No",
-    "ok": "OK",
-    "apply": "Apply",
     "reset": "Reset",
     "progress": "Progress",
     "later": "Later",
     "browse": "Browse"
   },
   "downloads": {
-    "title": "Download List",
     "addDownload": "Add Download",
     "noTasks": "No download tasks",
-    "unknown": "Unknown",
     "urlLabel": "Download URL",
-    "urlPlaceholder": "Enter HTTP/HTTPS URL",
     "filenameLabel": "Filename (optional)",
-    "filenamePlaceholder": "Auto-extract from URL",
-    "filenameHelp": "Leave empty to auto-extract filename from URL",
     "status": {
       "title": "Status",
-      "pending": "Pending",
-      "initializing": "Initializing",
-      "downloading": "Downloading",
       "paused": "Paused",
       "completed": "Completed",
-      "failed": "Failed",
-      "cancelled": "Cancelled",
-      "cancelling": "Cancelling",
-      "verifyingintegrity": "Verifying Integrity",
-      "mergingsegments": "Merging Segments",
-      "active": "Active",
-      "pausedCount": "Paused"
+      "active": "Active"
     },
     "actions": {
       "download": "Start Download",
@@ -74,50 +42,20 @@
     "errors": {
       "emptyUrl": "Please enter a download URL",
       "invalidUrl": "Invalid URL format, please enter HTTP/HTTPS URL",
-      "invalidClipboard": "Clipboard content is not a valid URL",
-      "clipboardPermission": "Cannot access clipboard, please check browser permissions",
-      "startFailed": "Failed to start download",
-      "pauseFailed": "Failed to pause download",
-      "resumeFailed": "Failed to resume download",
-      "cancelFailed": "Failed to cancel download",
-      "deleteFailed": "Failed to delete download",
-      "queueControlFailed": "Queue control failed: {{error}}",
-      "networkError": "Network error: {{error}}",
-      "fileAccessError": "File access error: {{error}}",
-      "insufficientSpace": "Insufficient disk space",
-      "retryFailed": "Retry failed: {{error}}"
+      "queueControlFailed": "Queue control failed: {{error}}"
     },
     "batch": {
       "import": "Batch Import",
       "importSuccess": "Successfully imported {{count}} download tasks",
       "importError": "Batch import failed: {{error}}",
-      "selectFile": "Select URL file",
-      "fileFormat": "Text file with one URL per line",
       "importSkipped": "skipped {{count}} invalid URLs"
     },
-    "clipboard": {
-      "detected": "URL detected in clipboard",
-      "accept": "Use this URL",
-      "dismiss": "Dismiss",
-      "monitoring": "Clipboard monitoring enabled"
-    },
     "statistics": {
-      "totalDownloaded": "Total Downloaded",
       "currentSpeed": "Current Speed",
-      "averageSpeed": "Average Speed",
       "timeRemaining": "Time Remaining",
-      "timeElapsed": "Time Elapsed",
       "activeDownloads": "Active Downloads",
       "completedDownloads": "Completed Downloads",
-      "failedDownloads": "Failed Downloads",
       "totalTasks": "Total tasks"
-    },
-    "filters": {
-      "all": "All",
-      "downloading": "Downloading",
-      "paused": "Paused",
-      "completed": "Completed",
-      "failed": "Failed"
     },
     "details": {
       "selectItem": "Please select a download item to view details",
@@ -135,29 +73,9 @@
       "noError": "No error message",
       "retryInfo": "Retry Info",
       "retryCount": "Retry Count",
-      "maxRetries": "Max Retries",
-      "lastRetryAt": "Last Retry At",
       "scheduledStart": "Scheduled Start",
       "notScheduled": "Not Scheduled",
-      "segments": "Segments",
-      "segmentCount": "{{count}} segments",
-      "segmentId": "Segment {{id}}",
-      "sizeRange": "Size Range",
-      "downloaded": "Downloaded",
-      "segmentProgress": "Segment Progress",
-      "proxy": "Proxy",
-      "noProxy": "No Proxy",
-      "noSegments": "No segment information",
       "nextRetryAt": "Next automatic retry"
-    },
-    "priority": {
-      "title": "Priority",
-      "lowest": "Lowest Priority",
-      "low": "Low",
-      "belowDefault": "Below Default",
-      "default": "Default",
-      "aboveDefault": "Above Default",
-      "high": "High"
     },
     "state": {
       "scheduled": "Scheduled",
@@ -197,13 +115,9 @@
     "retryPending": "Retrying in"
   },
   "settings": {
-    "title": "Settings",
     "general": "General",
-    "download": "Download",
     "proxy": "Proxy",
     "advanced": "Advanced",
-    "developer": "Developer",
-    "about": "About",
     "downloadPath": "Download Path",
     "selectPath": "Select Folder",
     "maxConcurrent": "Max Concurrent Downloads",
@@ -216,7 +130,6 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeAuto": "Auto",
     "systemTray": "Enable System Tray",
     "uiSettings": "UI Settings",
     "downloadSettings": "Download Settings",
@@ -232,8 +145,6 @@
     "maxRetryCount": "Max Retry Count",
     "retryInterval": "Retry Interval (seconds)",
     "proxySettings": "Proxy Settings",
-    "proxyVerificationInterval": "Proxy Verification Interval (hours)",
-    "proxyVerificationHelp": "How often to verify proxy health (1-168 hours)",
     "importExport": "Import/Export",
     "export": "Export Settings",
     "import": "Import Settings",
@@ -254,32 +165,7 @@
     "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins."
   },
   "proxy": {
-    "title": "Proxy Management",
-    "enabled": "Enable Proxy",
-    "addProxy": "Add Proxy",
-    "editProxy": "Edit Proxy",
-    "removeProxy": "Remove Proxy",
-    "testProxy": "Test Proxy",
-    "protocol": "Protocol",
-    "host": "Host",
-    "port": "Port",
-    "username": "Username",
-    "password": "Password",
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "testing": "Testing",
-      "failed": "Failed"
-    },
-    "health": "Health",
-    "latency": "Latency",
-    "successRate": "Success Rate",
-    "errors": {
-      "invalidHost": "Invalid host address",
-      "invalidPort": "Invalid port number",
-      "testFailed": "Proxy test failed",
-      "connectionFailed": "Connection failed"
-    }
+    "enabled": "Enable Proxy"
   },
   "captcha": {
     "title": "Verification needed",
@@ -289,89 +175,6 @@
     "openPage": "Open the page",
     "submit": "Submit",
     "decline": "Skip"
-  },
-  "format": {
-    "speed": "{{value}}/s",
-    "size": "{{value}}",
-    "time": {
-      "seconds": "{{count}} second",
-      "seconds_plural": "{{count}} seconds",
-      "minutes": "{{count}} minute",
-      "minutes_plural": "{{count}} minutes",
-      "hours": "{{count}} hour",
-      "hours_plural": "{{hours}} hours",
-      "days": "{{count}} day",
-      "days_plural": "{{count}} days"
-    },
-    "percentage": "{{value}}%"
-  },
-  "notifications": {
-    "downloadStarted": "Download started",
-    "downloadCompleted": "Download completed: {{filename}}",
-    "downloadFailed": "Download failed: {{filename}}",
-    "allDownloadsCompleted": "All downloads completed",
-    "proxyFailed": "All proxies failed, switched to direct connection"
-  },
-  "dialogs": {
-    "deleteConfirm": "Are you sure you want to delete this download?",
-    "deleteTitle": "Confirm Delete",
-    "clearCompletedConfirm": "Are you sure you want to clear all completed downloads?",
-    "clearCompletedTitle": "Clear Completed",
-    "exitConfirm": "There are active downloads. Are you sure you want to exit?",
-    "exitTitle": "Confirm Exit"
-  },
-  "scheduler": {
-    "scheduleDownload": "Schedule Download",
-    "selectDate": "Select Date",
-    "selectTime": "Select Time",
-    "schedule": "Schedule",
-    "scheduling": "Scheduling...",
-    "scheduledFor": "Scheduled for",
-    "cancelSchedule": "Cancel Schedule",
-    "scheduleHint": "The download will automatically start at the specified time.",
-    "retryDownload": "Retry Download",
-    "retryAttempt": "Retry attempt {{count}} of {{max}}",
-    "errors": {
-      "invalidDateTime": "Please select date and time",
-      "pastTime": "Scheduled time must be in the future",
-      "scheduleFailed": "Failed to schedule download"
-    }
-  },
-  "dev": {
-    "banner": {
-      "title": "Development Mode",
-      "description": "You are using development mode features. This mode is for development and testing only. Go to Settings > Developer to adjust settings.",
-      "usingMockTasks": "Using Mock Tasks",
-      "mockModeEnabled": "Mock Mode Enabled",
-      "autoProgressEnabled": "Auto Progress Update"
-    },
-    "settings": {
-      "notAvailable": "Developer Options Not Available",
-      "productionMode": "Developer options are only available in development environment",
-      "warningTitle": "Developer Options",
-      "warningDescription": "These settings are for development and testing purposes only. Modifying these settings may affect normal application operation.",
-      "mockMode": {
-        "title": "Mock Mode",
-        "description": "When enabled, all download commands will not actually execute but will be shown in the UI. This allows you to test the UI without actually downloading files.",
-        "enableLabel": "Enable Mock Mode (downloads will not execute)",
-        "enabledMessage": "Mock mode enabled - download commands will not actually execute, but will display normally in the UI"
-      },
-      "mockTasks": {
-        "title": "Mock Tasks",
-        "description": "Display default mock download tasks for testing various UI states (in progress, completed, failed, etc.).",
-        "enableLabel": "Use Mock Tasks",
-        "autoProgressLabel": "Auto Update Progress (simulate download progress)",
-        "loadButton": "Load Mock Tasks",
-        "clearButton": "Clear All Tasks"
-      },
-      "info": {
-        "title": "Usage Instructions",
-        "item1": "Mock Mode: Prevents actual downloads but allows testing UI interactions",
-        "item2": "Mock Tasks: Load default test data with various download states",
-        "item3": "Auto Progress: Mock tasks will automatically update progress like real downloads",
-        "item4": "These settings are stored locally in the browser and do not affect production"
-      }
-    }
   },
   "modules": {
     "title": "Site modules",

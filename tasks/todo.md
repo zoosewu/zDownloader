@@ -65,18 +65,14 @@
   - [x] 實機：拖上、拖下、取消執行中的任務後依新順序開始
 - [x] FR-061 磁碟空間：probe 後比較剩餘位元組與 `fs4::available_space`（目錄不存在時查最近的既有上層），不足即 `insufficientSpace { needed, available }`，不重試、不寫任何檔案；查不到空間時放行
   - [x] 測試用 fixture 宣稱 1 PiB 的檔案；實機錯誤分頁顯示「磁碟空間不足：需要 1024.00 TB，只剩 31.13 GB」
-- [ ] 整理
-  - [ ] `@mui/material` 升 v7 對齊 icons（context7 查 v6→v7 breaking changes）
-  - [ ] chunk 722 kB：桌面 app 從本機載入，拆分沒有實益 → 提高 `chunkSizeWarningLimit` 並註明原因
-  - [ ] 刪除沒用到的 i18n key（腳本掃描，動態 key 如 `downloads.state.${…}` 要保留）
-  - [ ] 移除過期的 todo 項目（`packageManager` 已存在）
+- [x] 整理
+  - [x] `@mui/material` 6.5 → 7.3.5，與 icons 對齊（程式沒用到 v7 移除的 API：Grid、深層 import、`onBackdropClick` 等）；實機逐頁檢查畫面
+  - [x] chunk：桌面 app 從本機載入，拆分沒有實益 → `chunkSizeWarningLimit: 1024` 並註明原因
+  - [x] 刪除 161 個沒用到的 i18n key（三語各剩 192 個；`t()` 全部是字面字串或 template，掃描可靠）；實機逐頁掃描沒有顯示成原始 key 的文字
+  - [x] `packageManager` 早已存在，移除過期項目
 
 ## 已知待辦（合併時發現）
 
 - `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`
-
-- `@mui/icons-material` v7 與 `@mui/material` v6 版本不一致
-- `package.json` 缺 `packageManager`
-- 正式建置 chunk 722 kB
 - [x] 代理匯入接受 `http://host:port`（其他 scheme 明確拒絕；pool 只支援 HTTP 代理）（2026-11-14）
 - [x] 自動重試等待中的任務顯示「等待重試 m:ss」，模組倒數也顯示剩餘時間（2026-11-14，實機確認倒數、重新排入、用完重試後回到「失敗」）
