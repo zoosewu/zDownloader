@@ -5,7 +5,7 @@ use crate::downloads::Downloads;
 use tauri::State;
 use zoo_core::proxy_pool::{ImportResult, ProxyInfo};
 
-/// Import `host:port` lines from a text file; `#` comments and blank lines are ignored.
+/// Import `host:port` (or `http://host:port`) lines from a text file; `#` comments and blank lines are ignored.
 #[tauri::command]
 pub async fn proxies_import(file_path: String, downloads: State<'_, Downloads>) -> CmdResult<ImportResult> {
     let text = std::fs::read_to_string(&file_path)

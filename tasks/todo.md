@@ -64,5 +64,5 @@
 - `@mui/icons-material` v7 與 `@mui/material` v6 版本不一致
 - `package.json` 缺 `packageManager`
 - 正式建置 chunk 722 kB
-- 代理匯入只接受 `host:port`，`http://host:port` 會被判為格式錯誤（2026-11-14 發現；常見的代理清單多半帶 scheme，可考慮接受）
-- 自動重試等待中的任務，表格顯示「失敗」（`failed` + `nextRetryAt`），可考慮顯示「等待重試」與倒數（2026-11-14 發現）
+- [x] 代理匯入接受 `http://host:port`（其他 scheme 明確拒絕；pool 只支援 HTTP 代理）（2026-11-14）
+- [x] 自動重試等待中的任務顯示「等待重試 m:ss」，模組倒數也顯示剩餘時間（2026-11-14，實機確認倒數、重新排入、用完重試後回到「失敗」）

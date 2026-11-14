@@ -61,7 +61,7 @@ export function displayName(task: Task): string {
   return task.finalPath?.split(/[\\/]/).pop() || task.name;
 }
 
-export function formatTaskForTable(task: Task, t: (key: string) => string): TableDisplayData {
+export function formatTaskForTable(task: Task, t: (key: string) => string, now = Date.now()): TableDisplayData {
   const percent = progressPercent(task);
   return {
     id: task.id,
@@ -70,13 +70,34 @@ export function formatTaskForTable(task: Task, t: (key: string) => string): Tabl
     progress: percent ?? 0,
     progressFormatted: percent !== null ? `${percent.toFixed(1)}%` : formatBytes(task.downloaded),
     speedFormatted: task.state === 'running' && task.speed > 0 ? formatSpeed(task.speed) : '--',
-    statusLabel: statusLabel(task, t),
+    statusLabel: statusLabel(task, t, now),
     remainingTimeFormatted: formatRemainingTime(calculateRemainingTime(task)),
   };
 }
 
-/** A running task shows what it is doing while it is not yet transferring. */
-export function statusLabel(task: Task, t: (key: string) => string): string {
+/** When a waiting task moves on by itself: a module's countdown or the next automatic retry. */
+export function deadline(task: Task): string | null {
+  if (task.state === 'running' && task.phase?.kind === 'waiting') return task.phase.until;
+  return task.state === 'failed' ? task.nextRetryAt : null;
+}
+
+/** "0:05", "12:34", "1:02:03". */
+function formatCountdown(seconds: number): string {
+  const s = Math.max(0, Math.ceil(seconds));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const [h, m] = [Math.floor(s / 3600), Math.floor((s % 3600) / 60)];
+  return h > 0 ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
+}
+
+/** A running task shows what it is doing while it is not yet transferring; waits show a countdown. */
+export function statusLabel(task: Task, t: (key: string) => string, now = Date.now()): string {
   const phase = task.state === 'running' ? task.phase : null;
-  return phase && phase.kind !== 'transferring' ? t(`downloads.phase.${phase.kind}`) : t(`downloads.state.${task.state}`);
+  const until = deadline(task);
+  const label =
+    task.state === 'failed' && until
+      ? t('downloads.retryPending')
+      : phase && phase.kind !== 'transferring'
+        ? t(`downloads.phase.${phase.kind}`)
+        : t(`downloads.state.${task.state}`);
+  return until ? `${label} ${formatCountdown((Date.parse(until) - now) / 1000)}` : label;
 }

@@ -86,11 +86,16 @@ impl ProxyInfo {
     }
 }
 
-/// Parse one `host:port` line.
+/// Parse one `host:port` line; an `http://` prefix is allowed (only HTTP proxies are supported).
 pub fn parse_proxy_line(line: &str) -> Result<ProxyInfo, String> {
-    let (host, port) = match line.split(':').collect::<Vec<_>>()[..] {
+    let trimmed = line.trim();
+    let addr = match trimmed.get(..7) {
+        Some(scheme) if scheme.eq_ignore_ascii_case("http://") => trimmed[7..].trim_end_matches('/'),
+        _ => trimmed,
+    };
+    let (host, port) = match addr.split(':').collect::<Vec<_>>()[..] {
         [host, port] => (host.trim(), port.trim()),
-        _ => return Err(format!("invalid format '{line}', expected 'host:port'")),
+        _ => return Err(format!("invalid format '{line}', expected 'host:port' or 'http://host:port'")),
     };
     if host.is_empty() {
         return Err("empty host".into());
@@ -146,7 +151,7 @@ impl ProxyPool {
         self.fallback_direct.store(on, Ordering::Relaxed);
     }
 
-    /// Add proxies from `host:port` lines; `#` comments and blank lines are ignored.
+    /// Add proxies from `host:port` (or `http://host:port`) lines; `#` comments and blank lines are ignored.
     pub fn import(&self, text: &str) -> ImportResult {
         let mut result = ImportResult::default();
         let mut st = self.state.lock().unwrap();
@@ -305,7 +310,11 @@ mod tests {
     fn parses_lines() {
         let p = parse_proxy_line("  proxy.example.com : 3128  ").unwrap();
         assert_eq!((p.host.as_str(), p.port), ("proxy.example.com", 3128));
-        for bad in ["invalid", "host:notaport", ":8080", "host:port:extra"] {
+        for line in ["http://1.2.3.4:8080", "HTTP://1.2.3.4:8080/"] {
+            let p = parse_proxy_line(line).unwrap();
+            assert_eq!((p.host.as_str(), p.port), ("1.2.3.4", 8080), "{line}");
+        }
+        for bad in ["invalid", "host:notaport", ":8080", "host:port:extra", "socks5://1.2.3.4:1080", "https://1.2.3.4:443"] {
             assert!(parse_proxy_line(bad).is_err(), "{bad}");
         }
     }

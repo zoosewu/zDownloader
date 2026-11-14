@@ -193,7 +193,8 @@
       "message": "「{{name}}」的新網址與已下載的內容不符，無法接著下載。",
       "restart": "從頭下載",
       "otherUrl": "換別的網址"
-    }
+    },
+    "retryPending": "等待重試"
   },
   "settings": {
     "title": "設定",

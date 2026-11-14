@@ -18,7 +18,8 @@ import type { TFunction } from 'i18next';
 import { errorText } from '../utils/errors';
 import type { Task, TaskState } from '../backend';
 import { useDownloadActions } from '../hooks/useDownloadActions';
-import { formatTaskForTable } from '../utils/downloadCalculations';
+import { useNow } from '../hooks/useNow';
+import { deadline, formatTaskForTable } from '../utils/downloadCalculations';
 import { formatRelativeTime } from '../utils/formatters';
 
 interface DownloadTableRowProps {
@@ -81,7 +82,10 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
   ({ task, isSelected, onClick, onActionError, columnWidths }) => {
     const { t } = useTranslation();
     const actions = useDownloadActions();
-    const displayData = formatTaskForTable(task, t);
+    const until = deadline(task);
+    const displayData = formatTaskForTable(task, t, useNow(until !== null));
+    // An automatic retry is coming: looks like a scheduled task, not a failure.
+    const shownState: TaskState = task.state === 'failed' && until ? 'scheduled' : task.state;
 
     const run = (action: Action) => (event: React.MouseEvent) => {
       event.stopPropagation(); // don't select the row
@@ -126,7 +130,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
               <LinearProgress
                 variant={task.total === null && task.state === 'running' ? 'indeterminate' : 'determinate'}
                 value={displayData.progress}
-                color={task.state === 'completed' ? 'success' : task.state === 'failed' ? 'error' : 'primary'}
+                color={shownState === 'completed' ? 'success' : shownState === 'failed' ? 'error' : 'primary'}
                 sx={{ height: 6, borderRadius: 3 }}
               />
             </Box>
@@ -142,9 +146,9 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
           <Tooltip title={statusTooltip(task, displayData.statusLabel, t)} arrow>
             <Chip
               label={displayData.statusLabel}
-              color={STATE_COLOR[task.state]}
+              color={STATE_COLOR[shownState]}
               size="small"
-              icon={STATE_ICON[task.state]}
+              icon={STATE_ICON[shownState]}
             />
           </Tooltip>
         </TableCell>

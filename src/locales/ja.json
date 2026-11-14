@@ -193,7 +193,8 @@
       "message": "「{{name}}」の新しい URL はダウンロード済みの内容と一致しないため、続行できません。",
       "restart": "最初からダウンロード",
       "otherUrl": "別の URL にする"
-    }
+    },
+    "retryPending": "再試行まで"
   },
   "settings": {
     "title": "設定",

@@ -42,10 +42,21 @@ describe('task name', () => {
 describe('task status', () => {
   test('a running task shows its phase until it transfers', () => {
     expect(statusLabel(task({ phase: { kind: 'resolving', module: 'k2s@official' } }), t)).toBe('downloads.phase.resolving');
-    expect(statusLabel(task({ phase: { kind: 'waiting', until: '2026-11-04T00:01:00Z', reason: null } }), t)).toBe('downloads.phase.waiting');
     expect(statusLabel(task({ phase: { kind: 'awaitingUser' } }), t)).toBe('downloads.phase.awaitingUser');
     expect(statusLabel(task({ phase: { kind: 'transferring' } }), t)).toBe('downloads.state.running');
     expect(statusLabel(task({ phase: null }), t)).toBe('downloads.state.running');
+  });
+
+  test('waiting tasks count down to when they move on by themselves', () => {
+    const now = Date.parse('2026-11-04T00:00:00Z');
+    expect(statusLabel(task({ phase: { kind: 'waiting', until: '2026-11-04T00:01:05Z', reason: null } }), t, now)).toBe(
+      'downloads.phase.waiting 1:05'
+    );
+    expect(statusLabel(task({ state: 'failed', nextRetryAt: '2026-11-04T00:00:12Z' }), t, now)).toBe('downloads.retryPending 0:12');
+    expect(statusLabel(task({ state: 'failed', nextRetryAt: '2026-11-04T01:02:03Z' }), t, now)).toBe('downloads.retryPending 1:02:03');
+    // Due but not yet picked up.
+    expect(statusLabel(task({ state: 'failed', nextRetryAt: '2026-11-03T23:59:00Z' }), t, now)).toBe('downloads.retryPending 0:00');
+    expect(statusLabel(task({ state: 'failed' }), t, now)).toBe('downloads.state.failed');
   });
 
   test('a stale phase on a stopped task is ignored', () => {
