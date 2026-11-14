@@ -45,3 +45,8 @@
 
 - 錯誤：逐頁掃描畫面時點了「批次匯入」，它會開系統的檔案選擇視窗。那個視窗在 app 外面、出現在使用者桌面上，CDP 也關不掉。
 - 規則：自動點擊前先看按鈕做什麼；會開系統對話框的（選檔案、選資料夾、儲存）不要點，改直接呼叫後端 command 或只檢查按鈕本身。
+
+## Tauri setup 不在 Tokio runtime 裡（2026-11-15）
+
+- 錯誤：在 `.setup()` 裡直接建立 interprocess 的 tokio named pipe listener，app 一啟動就 panic（`there is no reactor running`）。單元測試在 `#[tokio::test]` 裡跑，所以全部通過。
+- 規則：需要 Tokio reactor 的東西（tokio 的 socket、pipe、timer）一律放進 `tauri::async_runtime::spawn` 裡建立。啟動相關的改動一定要實際開 app 看 stderr，log 檔不會記 panic。

@@ -1,9 +1,9 @@
 // Zoo Downloader - Tauri shell over zoo-core
+mod browser_bridge;
 mod commands;
 mod downloads;
 mod models;
 mod site_modules;
-pub mod native_messaging;
 mod storage;
 mod utils;
 
@@ -140,15 +140,7 @@ pub fn run() {
             app.manage(downloads);
             downloads::forward_events(app.handle().clone());
 
-            // HTTP endpoint for the Chrome extension; DISABLE_NATIVE_MESSAGING_SERVER=1 turns it off.
-            if std::env::var("DISABLE_NATIVE_MESSAGING_SERVER").as_deref() != Ok("1") {
-                let handle = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    if let Err(e) = native_messaging::http_server::start_http_server(handle).await {
-                        log::warn!("Chrome extension HTTP server not started: {e}");
-                    }
-                });
-            }
+            browser_bridge::start(app.handle().clone());
 
             if let Err(e) = utils::tray::create_tray(app.handle()) {
                 log::warn!("Failed to create system tray: {e}");

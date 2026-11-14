@@ -39,8 +39,20 @@ pub async fn downloads_add(
     downloads: State<'_, Downloads>,
     settings: State<'_, SettingsState>,
 ) -> CmdResult<Task> {
-    let dir = target_dir(dir, &settings).await?;
-    let headers = headers.unwrap_or_default();
+    add(&downloads, &settings, url, filename, dir, start, headers.unwrap_or_default()).await
+}
+
+/// Every single download is added here: from the app and from the browser extension.
+pub async fn add(
+    downloads: &Downloads,
+    settings: &SettingsState,
+    url: String,
+    filename: Option<String>,
+    dir: Option<String>,
+    start: StartMode,
+    headers: Vec<(String, String)>,
+) -> CmdResult<Task> {
+    let dir = target_dir(dir, settings).await?;
     Ok(downloads.manager.add(AddRequest { url, filename, dir, start, headers }).await?)
 }
 

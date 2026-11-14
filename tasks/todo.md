@@ -55,7 +55,15 @@
     - [x] 刪除舊模組系統（Rust、`modules/`、deno_core 依賴、文件）
   - [ ] 4g 實機驗證與文件
     - [ ] 用真實 k2s 帳號錄製 cassette（免費流程的 `free_download_key`、等待欄位、登入 reCAPTCHA 頁的 site key 都是依文件推測）
-- [ ] Chrome 擴充重寫（native messaging）— 另排
+- [ ] 瀏覽器擴充重寫：規格 [browser-extension.md](../docs/architecture/browser-extension.md)（2026-11-15 確認）
+  - [x] 1 協定與 app 端（`browser_bridge`、host manifest 註冊；刪 HTTP 入口與 warp）
+    - [x] `zoo-native-host` lib：協定、socket 名稱、固定擴充 ID；錯誤碼 `invalidUrl` 改為 `invalid`（header、檔名無效也用它）
+    - [x] pipe：只有本人與 SYSTEM 可連（`D:P(A;;GA;;;OW)(A;;GA;;;SY)`），interprocess 預設已帶 first-instance 與拒絕遠端
+    - [x] 實機：以 pipe client 送 ping、帶 Cookie/Referer/UA 的 add（測試站確認 header、下載完成）、無 Cookie（403）、`../../evil.bat`（只留 basename）、CRLF 注入 Cookie（拒絕）、v2、亂碼；Chrome/Edge 登錄與 manifest 正確
+    - 註：登錄目前指向 debug 版 host（尚未存在），第 2 階段補上
+  - [ ] 2 `zoo-native-host`（轉送、啟動 app、pipe 擁有者檢查、打包）
+  - [ ] 3 擴充（右鍵、Cookie、接管下載、popup、圖示）
+  - [ ] 4 實機驗證（Edge 獨立 profile 自動跑；Chrome 由使用者載入確認）與文件
 
 ## 規格補完與整理（2026-11-14 計畫）
 
