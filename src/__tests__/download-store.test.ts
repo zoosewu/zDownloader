@@ -25,6 +25,7 @@ function task(id: string, rev: number, overrides: Partial<Task> = {}): Task {
     retryCount: 0,
     nextRetryAt: null,
     rev,
+    order: 1,
     ...overrides,
   };
 }

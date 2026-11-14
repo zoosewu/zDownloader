@@ -13,7 +13,7 @@ mod bindings;
 use commands::clipboard::get_clipboard_content;
 use commands::downloads::{
     downloads_add, downloads_cancel, downloads_clear_finished, downloads_import_batch,
-    downloads_list, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
+    downloads_list, downloads_move, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
     downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_update,
 };
 use commands::site_modules::{
@@ -56,6 +56,7 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             downloads_restart,
             downloads_update,
             downloads_remove,
+            downloads_move,
             downloads_pause_all,
             downloads_resume_all,
             downloads_clear_finished,

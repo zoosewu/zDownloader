@@ -24,6 +24,7 @@ export function useDownloadActions() {
         await backend.downloads.remove(id);
         removed(id);
       },
+      move: (id: TaskId, before: TaskId | null) => one(backend.downloads.move(id, before)),
       pauseAll: () => many(backend.downloads.pauseAll()),
       resumeAll: () => many(backend.downloads.resumeAll()),
       clearFinished: async () => (await backend.downloads.clearFinished()).forEach(removed),

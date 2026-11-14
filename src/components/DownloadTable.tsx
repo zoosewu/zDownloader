@@ -12,9 +12,13 @@ import {
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task } from '../backend';
 import DownloadTableRow from './DownloadTableRow';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
+import { useDownloadActions } from '../hooks/useDownloadActions';
+import { droppedBefore } from '../utils/downloadCalculations';
 
 interface DownloadTableProps {
   tasks: Task[];
@@ -53,6 +57,15 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) =
     (taskId: string) => selectTask(selectedRef.current === taskId ? null : taskId),
     [selectTask]
   );
+
+  // Drag a row to reorder; a short move first, so clicks still select.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const { move } = useDownloadActions();
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const before = droppedBefore(tasks.map((t) => t.id), String(active.id), String(over.id));
+    move(String(active.id), before).catch((error) => onActionError?.(error.message));
+  };
 
   // Handle resize start
   const handleResizeStart = (e: React.MouseEvent, column: ColumnKey) => {
@@ -174,18 +187,22 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) =
             {renderHeaderCell('timeRemaining', t('downloads.statistics.timeRemaining'), 'right')}
           </TableRow>
         </TableHead>
-        <TableBody>
-          {tasks.map((task) => (
-            <DownloadTableRow
-              key={task.id}
-              task={task}
-              isSelected={selectedTaskId === task.id}
-              onClick={handleRowClick}
-              onActionError={onActionError}
-              columnWidths={columnWidths}
-            />
-          ))}
-        </TableBody>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <TableBody>
+              {tasks.map((task) => (
+                <DownloadTableRow
+                  key={task.id}
+                  task={task}
+                  isSelected={selectedTaskId === task.id}
+                  onClick={handleRowClick}
+                  onActionError={onActionError}
+                  columnWidths={columnWidths}
+                />
+              ))}
+            </TableBody>
+          </SortableContext>
+        </DndContext>
       </Table>
     </TableContainer>
   );

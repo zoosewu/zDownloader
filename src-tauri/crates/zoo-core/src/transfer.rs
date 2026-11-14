@@ -20,7 +20,7 @@ use reqwest::{Response, StatusCode};
 use std::collections::{BTreeMap, VecDeque};
 use std::future::Future;
 use std::ops::Range;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -150,6 +150,13 @@ pub struct Ctx {
 /// Run the transfer to completion. Returns the final file path.
 pub async fn run(spec: &TransferSpec, ctx: &Ctx) -> Result<PathBuf, CoreError> {
     let probe = with_retry(spec.retry, &ctx.cancel, || probe(spec, ctx)).await?;
+    let remaining = match &probe {
+        Probe::Ranged(v) => v.size.map(|size| size.saturating_sub(ctx.progress.downloaded())),
+        Probe::Whole(response) => response.content_length(),
+    };
+    if let Some(needed) = remaining {
+        check_space(&spec.dir, needed)?;
+    }
     match probe {
         Probe::Ranged(validator) => match ranged(spec, ctx, validator).await {
             Err(SegmentError::RangeIgnored) => stream(spec, ctx, None).await,
@@ -163,6 +170,20 @@ pub async fn run(spec: &TransferSpec, ctx: &Ctx) -> Result<PathBuf, CoreError> {
                 return Err(no_ranges());
             }
             stream(spec, ctx, Some(response)).await
+        }
+    }
+}
+
+/// Fail early when `needed` more bytes will not fit. The directory may not exist yet: ask
+/// about the nearest one that does. If the disk cannot be asked, let the writes find out.
+fn check_space(dir: &Path, needed: u64) -> Result<(), CoreError> {
+    let Some(existing) = dir.ancestors().find(|d| d.is_dir()) else { return Ok(()) };
+    match fs4::available_space(existing) {
+        Ok(available) if available < needed => Err(CoreError::InsufficientSpace { needed, available }),
+        Ok(_) => Ok(()),
+        Err(e) => {
+            log::warn!("cannot read free space of {}: {e}", existing.display());
+            Ok(())
         }
     }
 }

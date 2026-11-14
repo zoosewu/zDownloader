@@ -1,5 +1,6 @@
 // What a failed task's error means, in the user's language.
 import type { CoreError } from '../backend';
+import { formatBytes } from './downloadCalculations';
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
@@ -11,6 +12,11 @@ export function errorText(error: CoreError | null, t: T): string {
       return error.detail.hint ? `${error.detail.message} (${error.detail.hint})` : error.detail.message;
     case 'http':
       return t('errors.core.http', { status: error.detail });
+    case 'insufficientSpace':
+      return t('errors.core.insufficientSpace', {
+        needed: formatBytes(error.detail.needed),
+        available: formatBytes(error.detail.available),
+      });
     case 'cancelled':
     case 'notFound':
       return t(`errors.core.${error.kind}`);

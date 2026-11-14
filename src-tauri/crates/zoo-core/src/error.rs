@@ -34,6 +34,9 @@ pub enum CoreError {
     /// downloaded. The partial data is kept; `restart` discards it.
     #[error("the new URL serves a different file: {0}")]
     SourceChanged(String),
+    /// The rest of the file does not fit on the disk; checked before anything is written.
+    #[error("not enough disk space: {needed} bytes needed, {available} available")]
+    InsufficientSpace { needed: u64, available: u64 },
 }
 
 impl CoreError {

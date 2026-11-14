@@ -442,7 +442,8 @@
       "cancelled": "Cancelled",
       "notFound": "Task not found",
       "invalid": "Invalid request",
-      "sourceChanged": "The new URL serves a different file"
+      "sourceChanged": "The new URL serves a different file",
+      "insufficientSpace": "Not enough disk space: {{needed}} needed, {{available}} free"
     }
   }
 }

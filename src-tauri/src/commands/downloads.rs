@@ -115,6 +115,13 @@ pub async fn downloads_remove(id: String, downloads: State<'_, Downloads>) -> Cm
     Ok(downloads.manager.remove(task_id(&id)?).await?)
 }
 
+/// Move a task in front of `before` (or to the end); queued tasks start in list order.
+#[tauri::command]
+pub async fn downloads_move(id: String, before: Option<String>, downloads: State<'_, Downloads>) -> CmdResult<Task> {
+    let before = before.as_deref().map(task_id).transpose()?;
+    Ok(downloads.manager.move_before(task_id(&id)?, before).await?)
+}
+
 #[tauri::command]
 pub async fn downloads_pause_all(downloads: State<'_, Downloads>) -> CmdResult<Vec<Task>> {
     Ok(downloads.manager.pause_all().await?)

@@ -111,6 +111,72 @@ async fn concurrency_limit_is_enforced_and_follows_config_changes() {
 }
 
 #[tokio::test]
+async fn moved_tasks_start_in_their_new_order_and_keep_it_after_restart() {
+    let fx = Fixture::start().await;
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let m = start(Config { max_concurrent: Some(1), ..config() }, store.path());
+
+    let mut ids = Vec::new();
+    for i in 0..4 {
+        let url = fx.url(&format!("/file/{}?delay_ms=5&n={i}", 256 * KB));
+        ids.push(m.add(req(url, dir.path(), StartMode::Now)).await.unwrap().id);
+    }
+    let [a, b, c, d] = ids[..] else { unreachable!() };
+    let moved = m.move_before(d, Some(b)).await.unwrap();
+    m.move_before(b, None).await.unwrap();
+    let order = |tasks: Vec<Task>| tasks.into_iter().map(|t| t.id).collect::<Vec<_>>();
+    assert_eq!(order(m.list().await.unwrap()), vec![a, d, c, b]);
+    assert!(moved.order < get(&m, c).await.order, "the moved task carries its new place");
+
+    let mut started = Vec::new();
+    for id in [a, d, c, b] {
+        started.push(wait_state(&m, id, TaskState::Completed).await.started_at.unwrap());
+    }
+    assert!(started.is_sorted(), "tasks start in queue order: {started:?}");
+
+    m.shutdown().await;
+    let m = start(config(), store.path());
+    assert_eq!(order(m.list().await.unwrap()), vec![a, d, c, b]);
+}
+
+#[tokio::test]
+async fn a_file_larger_than_the_free_space_fails_before_writing_anything() {
+    let fx = Fixture::start().await;
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let cfg = Config { auto_retry: AutoRetry { enabled: true, ..config().auto_retry }, ..config() };
+    let m = start(cfg, store.path());
+    let petabyte = 1u64 << 50;
+
+    let id = m.add(req(fx.url(&format!("/file/{petabyte}")), dir.path(), StartMode::Now)).await.unwrap().id;
+    let failed = wait_state(&m, id, TaskState::Failed).await;
+
+    let Some(CoreError::InsufficientSpace { needed, available }) = failed.error else { panic!("{:?}", failed.error) };
+    assert_eq!(needed, petabyte);
+    assert!(available < needed);
+    assert_eq!(failed.next_retry_at, None, "waiting will not free the space");
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0, "nothing written");
+}
+
+#[tokio::test]
+async fn repeated_moves_into_the_same_gap_keep_the_order() {
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let m = start(config(), store.path());
+    let mut ids = Vec::new();
+    for i in 0..3 {
+        ids.push(m.add(req(format!("http://127.0.0.1:9/{i}"), dir.path(), StartMode::Later)).await.unwrap().id);
+    }
+    // Squeeze into the gap after the first task over and over, until the keys run out of room.
+    for i in 0..200 {
+        m.move_before(ids[2], Some(ids[1])).await.unwrap();
+        ids.swap(1, 2);
+        let listed: Vec<_> = m.list().await.unwrap().into_iter().map(|t| t.id).collect();
+        assert_eq!(listed, ids, "after move {i}");
+    }
+    assert!(m.move_before(ids[0], Some(ids[0])).await.is_ok(), "moving before itself is a no-op");
+    assert!(m.move_before(TaskId::new(), None).await.is_err());
+}
+
+#[tokio::test]
 async fn pause_and_resume_continue_from_saved_progress() {
     let fx = Fixture::start().await;
     let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());

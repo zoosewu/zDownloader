@@ -18,6 +18,8 @@ import type { TFunction } from 'i18next';
 import { errorText } from '../utils/errors';
 import type { Task, TaskState } from '../backend';
 import { useDownloadActions } from '../hooks/useDownloadActions';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useNow } from '../hooks/useNow';
 import { deadline, formatTaskForTable } from '../utils/downloadCalculations';
 import { formatRelativeTime } from '../utils/formatters';
@@ -82,6 +84,10 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
   ({ task, isSelected, onClick, onActionError, columnWidths }) => {
     const { t } = useTranslation();
     const actions = useDownloadActions();
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: task.id,
+      attributes: { role: 'row' },
+    });
     const until = deadline(task);
     const displayData = formatTaskForTable(task, t, useNow(until !== null));
     // An automatic retry is coming: looks like a scheduled task, not a failure.
@@ -103,11 +109,18 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
 
     return (
       <TableRow
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
         hover
         selected={isSelected}
         onClick={() => onClick(task.id)}
+        style={{ transform: CSS.Translate.toString(transform), transition }}
         sx={{
           cursor: 'pointer',
+          position: 'relative',
+          zIndex: isDragging ? 1 : undefined,
+          opacity: isDragging ? 0.8 : undefined,
           '&.Mui-selected': { backgroundColor: 'action.selected' },
           '&.Mui-selected:hover': { backgroundColor: 'action.selected' },
         }}

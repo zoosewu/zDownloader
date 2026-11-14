@@ -442,7 +442,8 @@
       "cancelled": "已取消",
       "notFound": "找不到任務",
       "invalid": "無效的要求",
-      "sourceChanged": "新網址的檔案不一樣"
+      "sourceChanged": "新網址的檔案不一樣",
+      "insufficientSpace": "磁碟空間不足：需要 {{needed}}，只剩 {{available}}"
     }
   }
 }

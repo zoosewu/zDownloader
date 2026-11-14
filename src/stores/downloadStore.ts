@@ -51,10 +51,8 @@ export function mergeSnapshot(tasks: TaskMap, snapshot: Task[]): TaskMap {
 
 export const tasksByIdAtom = atom<TaskMap>({});
 
-/** All tasks, oldest first. */
-export const downloadTasksAtom = atom((get) =>
-  Object.values(get(tasksByIdAtom)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-);
+/** All tasks in list order, which is also the queue order. */
+export const downloadTasksAtom = atom((get) => Object.values(get(tasksByIdAtom)).sort((a, b) => a.order - b.order));
 
 export const activeDownloadsAtom = atom((get) =>
   get(downloadTasksAtom).filter((t) => t.state === 'running')

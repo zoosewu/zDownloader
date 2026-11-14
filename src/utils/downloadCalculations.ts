@@ -75,6 +75,15 @@ export function formatTaskForTable(task: Task, t: (key: string) => string, now =
   };
 }
 
+/**
+ * A row dragged onto another takes its place: the task it ends up in front of, or null for
+ * the end of the list.
+ */
+export function droppedBefore(ids: string[], dragged: string, target: string): string | null {
+  const [from, to] = [ids.indexOf(dragged), ids.indexOf(target)];
+  return to < from ? target : (ids[to + 1] ?? null);
+}
+
 /** When a waiting task moves on by itself: a module's countdown or the next automatic retry. */
 export function deadline(task: Task): string | null {
   if (task.state === 'running' && task.phase?.kind === 'waiting') return task.phase.until;

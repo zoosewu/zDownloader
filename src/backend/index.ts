@@ -114,6 +114,8 @@ export const backend = {
     /** Change the URL or headers of a task that is not running. */
     update: (id: TaskId, update: TaskUpdate) => call<Task>('downloads_update', { id, update }),
     remove: (id: TaskId) => call<null>('downloads_remove', { id }),
+    /** Move a task in front of `before` (or to the end); queued tasks start in list order. */
+    move: (id: TaskId, before: TaskId | null) => call<Task>('downloads_move', { id, before }),
     pauseAll: () => call<Task[]>('downloads_pause_all'),
     resumeAll: () => call<Task[]>('downloads_resume_all'),
     clearFinished: () => call<TaskId[]>('downloads_clear_finished'),

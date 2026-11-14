@@ -36,6 +36,7 @@ impl From<CoreError> for CommandError {
             CoreError::Invalid(_) => "invalid",
             CoreError::Resolve { .. } => "resolve",
             CoreError::SourceChanged(_) => "sourceChanged",
+            CoreError::InsufficientSpace { .. } => "insufficientSpace",
         };
         Self::new(code, e.to_string())
     }

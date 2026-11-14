@@ -100,6 +100,9 @@ pub struct Task {
     /// Increases with every change; of two copies of a task, the higher `rev` is newer.
     #[serde(default)]
     pub rev: u64,
+    /// Place in the list and the queue: queued tasks start lowest first. Unique per task.
+    #[serde(default)]
+    pub order: f64,
 }
 
 /// Steps of a running task. Resolution happens before every transfer; only site modules

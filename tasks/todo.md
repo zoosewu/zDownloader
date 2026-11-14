@@ -57,6 +57,20 @@
     - [ ] 用真實 k2s 帳號錄製 cassette（免費流程的 `free_download_key`、等待欄位、登入 reCAPTCHA 頁的 site key 都是依文件推測）
 - [ ] Chrome 擴充重寫（native messaging）— 另排
 
+## 規格補完與整理（2026-11-14 計畫）
+
+- [x] FR-012 佇列順序（使用者選「拖曳排序」）：`Task::order`（f64）決定列表與佇列順序，manager 的 `tasks` 維持依 order 排序，`pump` 不變
+  - [x] zoo-core `move_before(id, before)`：取前後鄰居中點，精度用完時全部重新編號；舊資料（order 皆 0）載入時依原順序編號
+  - [x] `downloads_move` + `src/backend`；表格以 `@dnd-kit/sortable` 拖曳整列（移動 5px 才開始，點擊選取與按鈕不受影響）
+  - [x] 實機：拖上、拖下、取消執行中的任務後依新順序開始
+- [x] FR-061 磁碟空間：probe 後比較剩餘位元組與 `fs4::available_space`（目錄不存在時查最近的既有上層），不足即 `insufficientSpace { needed, available }`，不重試、不寫任何檔案；查不到空間時放行
+  - [x] 測試用 fixture 宣稱 1 PiB 的檔案；實機錯誤分頁顯示「磁碟空間不足：需要 1024.00 TB，只剩 31.13 GB」
+- [ ] 整理
+  - [ ] `@mui/material` 升 v7 對齊 icons（context7 查 v6→v7 breaking changes）
+  - [ ] chunk 722 kB：桌面 app 從本機載入，拆分沒有實益 → 提高 `chunkSizeWarningLimit` 並註明原因
+  - [ ] 刪除沒用到的 i18n key（腳本掃描，動態 key 如 `downloads.state.${…}` 要保留）
+  - [ ] 移除過期的 todo 項目（`packageManager` 已存在）
+
 ## 已知待辦（合併時發現）
 
 - `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`

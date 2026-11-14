@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Task } from '../backend/bindings/Task';
 import { errorText } from '../utils/errors';
-import { displayName, statusLabel } from '../utils/downloadCalculations';
+import { displayName, droppedBefore, statusLabel } from '../utils/downloadCalculations';
 
 const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
 
@@ -27,6 +27,7 @@ function task(overrides: Partial<Task>): Task {
     retryCount: 0,
     nextRetryAt: null,
     rev: 1,
+    order: 1,
     ...overrides,
   };
 }
@@ -36,6 +37,16 @@ describe('task name', () => {
     expect(displayName(task({ name: 'a.bin', finalPath: 'C:\\dl\\a (1).bin' }))).toBe('a (1).bin');
     expect(displayName(task({ name: 'a.bin', finalPath: '/dl/a (1).bin' }))).toBe('a (1).bin');
     expect(displayName(task({ name: 'a.bin' }))).toBe('a.bin');
+  });
+});
+
+describe('drag to reorder', () => {
+  test('a dropped row takes the place of the row it lands on', () => {
+    const ids = ['a', 'b', 'c', 'd'];
+    expect(droppedBefore(ids, 'd', 'b')).toBe('b'); // up: a d b c
+    expect(droppedBefore(ids, 'a', 'c')).toBe('d'); // down: b c a d
+    expect(droppedBefore(ids, 'a', 'd')).toBeNull(); // to the end
+    expect(droppedBefore(ids, 'c', 'a')).toBe('a'); // to the front
   });
 });
 
@@ -75,6 +86,9 @@ describe('task status', () => {
     expect(errorText({ kind: 'http', detail: 404 }, t)).toBe('errors.core.http {"status":404}');
     expect(errorText({ kind: 'sourceChanged', detail: 'bytes 0-65535 differ' }, t)).toBe('errors.core.sourceChanged: bytes 0-65535 differ');
     expect(errorText({ kind: 'cancelled' }, t)).toBe('errors.core.cancelled');
+    expect(errorText({ kind: 'insufficientSpace', detail: { needed: 3 * 1024 ** 3, available: 512 * 1024 ** 2 } }, t)).toBe(
+      'errors.core.insufficientSpace {"needed":"3.00 GB","available":"512.00 MB"}'
+    );
     expect(errorText(null, t)).toBe('');
   });
 });

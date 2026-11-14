@@ -442,7 +442,8 @@
       "cancelled": "キャンセルされました",
       "notFound": "タスクが見つかりません",
       "invalid": "無効な要求",
-      "sourceChanged": "新しい URL のファイルが異なります"
+      "sourceChanged": "新しい URL のファイルが異なります",
+      "insufficientSpace": "ディスク容量が足りません：{{needed}} 必要、空きは {{available}}"
     }
   }
 }

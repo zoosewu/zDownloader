@@ -37,4 +37,8 @@ nextRetryAt: string | null,
 /**
  * Increases with every change; of two copies of a task, the higher `rev` is newer.
  */
-rev: number, };
+rev: number, 
+/**
+ * Place in the list and the queue: queued tasks start lowest first. Unique per task.
+ */
+order: number, };

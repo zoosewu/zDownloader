@@ -48,6 +48,7 @@ enum Cmd {
     Restart(TaskId, Reply<Task>),
     Update(TaskId, TaskUpdate, Reply<Task>),
     Remove(TaskId, Reply<()>),
+    MoveBefore(TaskId, Option<TaskId>, Reply<Task>),
     PauseAll(oneshot::Sender<Vec<Task>>),
     ResumeAll(oneshot::Sender<Vec<Task>>),
     ClearFinished(oneshot::Sender<Vec<TaskId>>),
@@ -75,6 +76,11 @@ impl DownloadManager {
     ) -> Result<Self, CoreError> {
         let store = JsonStore::new(store_dir.join("tasks.json"));
         let mut tasks: Vec<Task> = store.load()?.unwrap_or_default();
+        tasks.sort_by(|a, b| a.order.total_cmp(&b.order));
+        // Saved before tasks had an order (all zero): keep the saved sequence.
+        if tasks.windows(2).any(|w| w[0].order >= w[1].order) {
+            renumber(&mut tasks);
+        }
         let rev = tasks.iter().map(|t| t.rev).max().unwrap_or(0);
         for task in &mut tasks {
             task.speed = 0;
@@ -137,6 +143,10 @@ impl DownloadManager {
     pub async fn remove(&self, id: TaskId) -> Result<(), CoreError> {
         self.ask(|r| Cmd::Remove(id, r)).await?
     }
+    /// Move a task in front of `before`, or to the end. Queued tasks start in list order.
+    pub async fn move_before(&self, id: TaskId, before: Option<TaskId>) -> Result<Task, CoreError> {
+        self.ask(|r| Cmd::MoveBefore(id, before, r)).await?
+    }
     pub async fn pause_all(&self) -> Result<Vec<Task>, CoreError> {
         self.ask(Cmd::PauseAll).await
     }
@@ -170,6 +180,19 @@ impl DownloadManager {
         self.tx.send(make(reply)).map_err(|_| stopped())?;
         rx.await.map_err(|_| stopped())
     }
+}
+
+/// Number the tasks 1, 2, 3, ... in their current sequence. Returns the ids whose order changed.
+fn renumber(tasks: &mut [Task]) -> Vec<TaskId> {
+    let mut changed = Vec::new();
+    for (i, t) in tasks.iter_mut().enumerate() {
+        let order = (i + 1) as f64;
+        if t.order != order {
+            t.order = order;
+            changed.push(t.id);
+        }
+    }
+    changed
 }
 
 fn stopped() -> CoreError {
@@ -206,7 +229,7 @@ struct Actor {
     conn: Arc<dyn ConnectionSource>,
     resolver: Arc<dyn Resolver>,
     rate: Arc<RateLimiter>,
-    /// In insertion order, which is also the queue order.
+    /// Sorted by `Task::order`, which is also the queue order.
     tasks: Vec<Task>,
     jobs: HashMap<TaskId, Job>,
     store: JsonStore<Vec<Task>>,
@@ -273,6 +296,9 @@ impl Actor {
             Cmd::Remove(id, reply) => {
                 let _ = reply.send(self.remove(id));
             }
+            Cmd::MoveBefore(id, before, reply) => {
+                let _ = reply.send(self.move_before(id, before));
+            }
             Cmd::PauseAll(reply) => {
                 let ids = self.ids_where(|t| matches!(t.state, TaskState::Running | TaskState::Queued | TaskState::Scheduled));
                 let _ = reply.send(ids.into_iter().filter_map(|id| self.pause(id).ok()).collect());
@@ -336,12 +362,48 @@ impl Actor {
             retry_count: 0,
             next_retry_at: None,
             rev: self.rev,
+            order: self.tasks.last().map_or(1.0, |t| t.order + 1.0),
         };
         self.tasks.push(task.clone());
         self.emit(Event::Upserted(task.clone()));
         self.pump();
         self.wake_due();
         self.snapshot(task.id)
+    }
+
+    fn move_before(&mut self, id: TaskId, before: Option<TaskId>) -> Result<Task, CoreError> {
+        let from = self.tasks.iter().position(|t| t.id == id).ok_or(CoreError::NotFound)?;
+        if before == Some(id) {
+            return self.snapshot(id);
+        }
+        let task = self.tasks.remove(from);
+        let to = match before {
+            Some(b) => match self.tasks.iter().position(|t| t.id == b) {
+                Some(i) => i,
+                None => {
+                    self.tasks.insert(from, task);
+                    return Err(CoreError::NotFound);
+                }
+            },
+            None => self.tasks.len(),
+        };
+        let prev = to.checked_sub(1).map(|i| self.tasks[i].order);
+        let next = self.tasks.get(to).map(|t| t.order);
+        self.tasks.insert(to, task);
+        let order = match (prev, next) {
+            (Some(p), Some(n)) => p + (n - p) / 2.0,
+            (Some(p), None) => p + 1.0,
+            (None, Some(n)) => n - 1.0,
+            (None, None) => 1.0,
+        };
+        if prev.is_some_and(|p| order <= p) || next.is_some_and(|n| order >= n) {
+            // Out of room between the neighbours: space everything out again.
+            for changed in renumber(&mut self.tasks).into_iter().filter(|&c| c != id) {
+                let _ = self.set(changed, |_| {});
+            }
+            return self.set(id, |_| {});
+        }
+        self.set(id, |t| t.order = order)
     }
 
     fn pause(&mut self, id: TaskId) -> Result<Task, CoreError> {
