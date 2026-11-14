@@ -78,7 +78,7 @@ async function call<T>(command: string, args?: Record<string, unknown>): Promise
   }
 }
 
-/** Subscribe to a backend event; resolves to a no-op when events are unavailable (HTTP bridge). */
+/** Subscribe to a backend event; resolves to a no-op when events are unavailable (Tauri not ready). */
 async function subscribe<T>(name: string, handler: (payload: T) => void): Promise<UnlistenFn> {
   try {
     return await listen<T>(name, (event) => handler(event.payload));

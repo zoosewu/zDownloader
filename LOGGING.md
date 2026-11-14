@@ -48,8 +48,7 @@ tail -f zoo-downloader.log  # 即時查看日誌
 
 ### 前端（瀏覽器控制台）
 - Tauri API 初始化狀態
-- 環境變數設定（`VITE_DEV_MODE`, `VITE_TAURI_HTTP_URL`）
-- 每個 API 調用的參數和結果
+- API 呼叫失敗的錯誤（參數不記錄，可能含帳密）
 - 表單驗證過程
 - 錯誤堆疊追蹤
 

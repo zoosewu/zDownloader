@@ -24,7 +24,7 @@
   - [x] 1d Cargo 依賴（libloading、tracing-appender、headless_chrome）、examples/*.rs、modules/example-downloader；test-malicious 移到 tests/fixtures
   - [x] 1e 前端死碼（UrlInput、CredentialManager、ProgressBar、ScheduleDialog、CredentialRetryHandler+其測試、credentialError、api/scheduler、無效 atom、dev mock 層）
   - [x] 1f 文件：specs/004 狀態文件、CLAUDE.md 去重、重疊的模組文件
-  - 不做：i18n 未用 key（動態 key 難以可靠判定）、http_bridge 與 docker（待決策）、DownloadStatus 不可達變體（影響持久化資料，Phase 2 處理）
+  - 不做：i18n 未用 key（動態 key 難以可靠判定）、http_bridge 與 docker（2026-11-14 決定刪除，已刪）、DownloadStatus 不可達變體（影響持久化資料，Phase 2 處理）
 - [x] Phase 2 下載核心重建（已合併 main）— 分支 `rebuild/phase-2`，規格 `docs/architecture/phase-2-download-core.md`（已確認）
   - 範圍擴大：併入原 Phase 3（產生式契約、DownloadSync）+ 代理 + 自動重試/排程/限速/通知
   - [x] 2a workspace + zoo-core 骨架（naming、part_file、store、rate）
@@ -59,7 +59,6 @@
 
 ## 已知待辦（合併時發現）
 
-- `.env.development` 設 `VITE_DEV_MODE=true`：`pnpm tauri dev` 的視窗也會走 HTTP bridge（只支援 5 個 command），開發時大部分功能不能用。應改成只有瀏覽器開前端時才走 bridge（2026-11-12 發現，待決定）
 - `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`
 
 - `@mui/icons-material` v7 與 `@mui/material` v6 版本不一致

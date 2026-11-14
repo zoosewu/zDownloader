@@ -1,7 +1,6 @@
 // Zoo Downloader - Tauri shell over zoo-core
 mod commands;
 mod downloads;
-mod http_bridge;
 mod models;
 mod site_modules;
 pub mod native_messaging;
@@ -147,14 +146,6 @@ pub fn run() {
                     if let Err(e) = native_messaging::http_server::start_http_server(handle).await {
                         log::warn!("Chrome extension HTTP server not started: {e}");
                     }
-                });
-            }
-
-            // Development-only HTTP bridge for a browser-hosted frontend.
-            if std::env::var("TAURI_HTTP_BRIDGE").as_deref() == Ok("true") {
-                let handle = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    http_bridge::start_http_bridge(handle, 3030).await;
                 });
             }
 
