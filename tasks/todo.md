@@ -94,6 +94,9 @@
 
 ## 已知待辦（合併時發現）
 
+- [x] 擴充送出的任務帶瀏覽器 User-Agent 時，Google（YouTube）重置 HTTP/2 串流（`http2 error: stream error … protocol error`），自動重試用完後失敗。下載核心改為只用 HTTP/1.1（分段本來就該各用一條連線）；以一次性 reqwest 程式確認 h2 失敗、h1 成功，實機同一請求下載完成（2026-11-15）
+- [ ] 網站模組的 `fetch`（zoo-module）仍可能協商 HTTP/2，模組自訂瀏覽器 UA 連 Google 時可能遇到同樣問題（目前沒有這類模組）
+
 - [ ] 下載核心不讀 `Content-Disposition`：右鍵送出（沒帶檔名）的檔名取自網址（實機：伺服器給 `secret-3.bin`，存成 `secret.bin`）。接管下載不受影響（帶瀏覽器決定的檔名）
 
 - `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`

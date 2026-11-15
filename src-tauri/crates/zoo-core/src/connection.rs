@@ -31,8 +31,13 @@ pub trait ConnectionSource: Send + Sync {
 }
 
 /// Client settings shared by every adapter. No total timeout: bodies may stream for hours.
+///
+/// HTTP/1.1 only. Segments are meant to travel on separate connections, which HTTP/2 would fold
+/// into one; and Google's servers reset HTTP/2 streams from a client that sends a browser's
+/// User-Agent without a browser's HTTP/2 fingerprint (seen with tasks from the browser extension).
 pub fn client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
+        .http1_only()
         .connect_timeout(CONNECT_TIMEOUT)
         .read_timeout(READ_TIMEOUT)
         .user_agent(USER_AGENT)

@@ -12,7 +12,7 @@ thiserror = "2"
 tokio = { version = "1", features = ["sync", "time", "rt", "macros"] }
 url = "2.5"
 percent-encoding = "2"
-reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream", "http2"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 tokio-util = "0.7"
 uuid = { version = "1", features = ["v4", "serde"] }
