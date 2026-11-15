@@ -3,11 +3,7 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { useAtomValue } from 'jotai';
 import { useTranslation } from 'react-i18next';
-import {
-  activeDownloadsAtom,
-  downloadTasksAtom,
-  completedDownloadsAtom,
-} from '../stores/downloadStore';
+import { taskCountsAtom } from '../stores/downloadStore';
 
 /**
  * Footer - displays at the bottom of the app
@@ -15,13 +11,8 @@ import {
  */
 const Footer: React.FC = () => {
   const { t } = useTranslation();
-  const tasks = useAtomValue(downloadTasksAtom);
-  const activeDownloads = useAtomValue(activeDownloadsAtom);
-  const completedDownloads = useAtomValue(completedDownloadsAtom);
-
-  // Calculate total download speed
-  const totalSpeed = activeDownloads.reduce((sum, task) => sum + task.speed, 0);
-  const speedMBps = (totalSpeed / 1024 / 1024).toFixed(2);
+  const counts = useAtomValue(taskCountsAtom);
+  const speedMBps = (counts.speed / 1024 / 1024).toFixed(2);
 
   return (
     <Box
@@ -40,15 +31,15 @@ const Footer: React.FC = () => {
       {/* Left side - Download statistics */}
       <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
         <Typography variant="caption">
-          {t('downloads.statistics.totalTasks')}: <strong>{tasks.length}</strong>
+          {t('downloads.statistics.totalTasks')}: <strong>{counts.total}</strong>
         </Typography>
         <Typography variant="caption">
-          {t('downloads.statistics.activeDownloads')}: <strong>{activeDownloads.length}</strong>
+          {t('downloads.statistics.activeDownloads')}: <strong>{counts.running}</strong>
         </Typography>
         <Typography variant="caption">
-          {t('downloads.statistics.completedDownloads')}: <strong>{completedDownloads.length}</strong>
+          {t('downloads.statistics.completedDownloads')}: <strong>{counts.completed}</strong>
         </Typography>
-        {activeDownloads.length > 0 && (
+        {counts.running > 0 && (
           <Typography variant="caption">
             {t('downloads.statistics.currentSpeed')}: <strong>{speedMBps} MB/s</strong>
           </Typography>

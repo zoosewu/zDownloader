@@ -83,3 +83,9 @@
   - 實機驗證前 `cargo build --workspace --bins`，所有執行檔一起更新。
   - 長時間執行的功能（下載、輪詢），量「程序的私有記憶體」而不只 JS heap；增長時用 memory-infra 傾印看是哪個配置器，再用 `performance.getEntries()`、CSS 規則數、事件數逐一排除。
   - 用暫停／恢復這類開關做對照實驗，最快確認增長和哪個動作有關。
+
+## 量測方法要先驗證能抓到東西（2026-11-15）
+
+- 錯誤：用替換 `window.__TAURI_INTERNALS__.invoke` 的方式統計後端呼叫，得到「30 秒 0 次」，據此排除了 IPC。其實 Tauri API 模組早就拿走了原本的參考，包裝函式攔不到任何呼叫（剪貼簿輪詢當時每 400 ms 一次）。
+- 規則：新的量測手段先拿已知會發生的事件驗證（例如手動觸發一次），確定抓得到再下結論。IPC 請求用 PerformanceObserver 看 `ipc.localhost` 的 resource 項目；效能時間軸的 resource 緩衝只有 250 筆，滿了就不再記錄，不能讀舊紀錄。
+- 另外：app 執行中時 `cargo test` 會因 `zoo-module.exe` 被鎖而沒有跑任何測試，輸出只有一行 error；看到「0 組通過」要先確認是不是根本沒編譯。

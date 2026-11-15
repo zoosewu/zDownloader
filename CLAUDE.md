@@ -494,24 +494,24 @@ chmod +x .git/hooks/pre-commit
 
 #### State Management
 
-**downloadStore.ts** (`src/stores/downloadStore.ts`)
-- `selectedTaskIdAtom`: 當前選中的任務 ID
-- `selectedTaskAtom`: 當前選中的任務物件（派生 atom）
-- 自動響應 downloadTasksAtom 變化
+**downloadStore.ts** (`src/stores/downloadStore.ts`)：一份 `tasksByIdAtom`，元件只讀「最窄的 view」，每個 view 只在自己的值改變時通知：
+- `taskIdsAtom`：依佇列順序的 id（增刪、拖曳排序才變）— 表格
+- `taskAtom(id)`：單一任務（用 `useMemo` 建立）— 表格列
+- `taskCountsAtom`：各狀態數量與總速度 — 頁尾、`QueueControls`
+- `sourceChangedTasksAtom`：來源已變更的任務 — `SourceChangedPrompt`
+- `selectedTaskIdAtom` / `selectedTaskAtom`：選取的 id / 任務
 
-**useSelectedDownload.ts** (`src/hooks/useSelectedDownload.ts`)
-- `selectTask()`: 選擇任務
-- `clearSelection()`: 清除選擇
-- `toggleSelection()`: 切換選擇
-- `isSelected()`: 檢查任務是否被選中
-- 自動清除選擇當任務被刪除時
+**useSelectedDownload.ts**：`useSelectedDownload()` 只有 id 與選取操作；`useSelectedTask()` 回傳任務物件（只給詳細面板），任務被刪除時清除選取。
 
-### Performance Optimizations
+### 渲染與事件（2026-11-15 檢視）
 
-1. **React.memo**: DownloadTableRow 和 SegmentGridItem 使用 React.memo 避免不必要的重新渲染
-2. **Custom Comparison**: DownloadTableRow 使用自定義比較函數僅在關鍵屬性變更時更新
-3. **Jotai Atoms**: 使用細粒度的原子狀態管理，僅訂閱需要的數據
-4. **CSS Grid**: 使用原生 CSS Grid 而非 Flexbox 提升大量元素的性能
+進度每 250 ms 一次（數值沒變不送）。規則：**進度更新只重畫那一列會變的格子**，其他什麼都不重畫。
+- 不要讀整份任務清單或從它產生新陣列傳下去；要新的資料就在 store 加一個窄 view。
+- 傳給 memo 元件的 props 用基本型別或穩定參考（`useCallback`、atom 的值）；每次 render 新建的物件或函式會讓 memo 失效。`SortableContext` 的 `items` 要用 `taskIdsAtom` 的陣列。
+- 列分成「隨進度變化的格子」與只隨狀態變化的 `FilenameCell`、`StatusCell`、`ActionsCell`、`CreatedCell`。
+- 不輪詢：後端推事件（下載、剪貼簿 `clipboard-link`、模組、captcha）；分段圖在該任務變動時才重抓（節流 500 ms）。唯一的計時器是倒數顯示（`useNow`，只在有倒數的列）。
+- React 19 開發版會為每次 render 記 `performance.measure()`，沒有上限；`main.tsx` 在開發模式定期清除（曾讓 WebView 約 2.5 小時後當機）。
+- 驗證方式：在開發模式用 CDP 數 `performance.getEntriesByType('measure')` 的元件名稱（每秒、每個元件幾次）。
 5. **Sticky Header**: 表格頭部固定，改善大量下載時的用戶體驗
 
 ### Internationalization (i18n)

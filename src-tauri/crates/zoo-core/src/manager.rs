@@ -741,6 +741,10 @@ impl Actor {
             let total = job.progress.total();
             let speed = job.speed.sample(downloaded);
             if let Some(task) = self.tasks.iter_mut().find(|t| t.id == *id) {
+                // A stalled transfer (waiting, resolving, a slow server) sends nothing new.
+                if (task.downloaded, task.total, task.speed) == (downloaded, total, speed) {
+                    continue;
+                }
                 task.downloaded = downloaded;
                 task.total = total;
                 task.speed = speed;

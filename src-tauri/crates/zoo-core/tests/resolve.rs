@@ -221,6 +221,27 @@ async fn resolve_failures_fail_the_task_and_honour_retryability() {
 }
 
 #[tokio::test]
+async fn a_task_that_makes_no_progress_sends_no_progress_events() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let url = fx.url("/file/1000");
+    let m = start(config(), dir.path(), Scripted::hanging(&[0], move |_| Ok(expiring(url.clone()))));
+    let mut events = m.subscribe();
+    let id = m.add(req(dir.path(), None)).await.unwrap().id;
+    wait_until(&m, id, |t| matches!(t.phase, Some(Phase::Resolving { .. }))).await;
+
+    // Resolving forever: downloaded, total and speed stay the same for a second (4 ticks).
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let mut progress = 0;
+    while let Ok(event) = events.try_recv() {
+        if matches!(event, zoo_core::Event::Progress(_)) {
+            progress += 1;
+        }
+    }
+    assert_eq!(progress, 0, "unchanged numbers must not be sent");
+}
+
+#[tokio::test]
 async fn pausing_during_resolution_abandons_it() {
     let fx = Fixture::start().await;
     let dir = tempfile::tempdir().unwrap();

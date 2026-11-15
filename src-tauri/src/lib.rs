@@ -1,5 +1,6 @@
 // Zoo Downloader - Tauri shell over zoo-core
 mod browser_bridge;
+mod clipboard_watch;
 mod commands;
 mod downloads;
 mod models;
@@ -141,6 +142,7 @@ pub fn run() {
             downloads::forward_events(app.handle().clone());
 
             browser_bridge::start(app.handle().clone());
+            clipboard_watch::start(app.handle().clone());
 
             if let Err(e) = utils::tray::create_tray(app.handle()) {
                 log::warn!("Failed to create system tray: {e}");

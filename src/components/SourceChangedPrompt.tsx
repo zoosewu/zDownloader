@@ -5,22 +5,20 @@ import { Button, Dialog, DialogActions, DialogContent, DialogContentText, Dialog
 import { useAtomValue } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import type { Task, TaskId } from '../backend';
-import { downloadTasksAtom } from '../stores/downloadStore';
+import { sourceChangedTasksAtom } from '../stores/downloadStore';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import EditTaskDialog from './EditTaskDialog';
 
-const changed = (task: Task) => task.state === 'failed' && task.error?.kind === 'sourceChanged';
-
 export default function SourceChangedPrompt() {
   const { t } = useTranslation();
-  const tasks = useAtomValue(downloadTasksAtom);
+  const tasks = useAtomValue(sourceChangedTasksAtom);
   const actions = useDownloadActions();
   /** Failures already asked about: task id -> the revision that failed. */
   const [asked, setAsked] = useState<Record<TaskId, number>>({});
   const [editing, setEditing] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const current = tasks.find((task) => changed(task) && asked[task.id] !== task.rev) ?? null;
+  const current = tasks.find((task) => asked[task.id] !== task.rev) ?? null;
 
   const answer = (task: Task, action: () => Promise<unknown> | void) => async () => {
     setAsked((prev) => ({ ...prev, [task.id]: task.rev }));

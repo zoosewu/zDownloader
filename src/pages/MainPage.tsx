@@ -2,24 +2,15 @@
 import React from 'react';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useAtomValue } from 'jotai';
 import DownloadList from '../components/DownloadList';
 import { useNavigation } from '../hooks/useNavigation';
 import type { BatchResult } from '../backend';
-import {
-  activeDownloadsAtom,
-  pausedDownloadsAtom,
-  completedDownloadsAtom,
-} from '../stores/downloadStore';
 
 type Severity = 'success' | 'error' | 'info' | 'warning';
 
 const MainPage: React.FC = () => {
   const { t } = useTranslation();
   const { navigateTo } = useNavigation();
-  const activeDownloads = useAtomValue(activeDownloadsAtom);
-  const pausedDownloads = useAtomValue(pausedDownloadsAtom);
-  const completedDownloads = useAtomValue(completedDownloadsAtom);
 
   const [snackbar, setSnackbar] = React.useState<{ open: boolean; message: string; severity: Severity }>({
     open: false,
@@ -37,15 +28,16 @@ const MainPage: React.FC = () => {
     }
   };
 
-  const handleError = (error: string) => show(t('downloads.errors.queueControlFailed', { error }), 'error');
+  // Stable: it reaches every table row, and a new function each render would defeat their memo.
+  const handleError = React.useCallback(
+    (error: string) => setSnackbar({ open: true, message: t('downloads.errors.queueControlFailed', { error }), severity: 'error' }),
+    [t],
+  );
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <DownloadList
-          activeCount={activeDownloads.length}
-          pausedCount={pausedDownloads.length}
-          completedCount={completedDownloads.length}
           onControlError={handleError}
           onAddDownload={() => navigateTo('add-download')}
           onBatchImportSuccess={handleBatchImportSuccess}

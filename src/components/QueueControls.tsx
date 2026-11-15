@@ -7,22 +7,17 @@ import {
   DeleteSweep as ClearIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useAtomValue } from 'jotai';
 import { useDownloadActions } from '../hooks/useDownloadActions';
+import { taskCountsAtom } from '../stores/downloadStore';
 
 interface QueueControlsProps {
-  activeCount: number;
-  pausedCount: number;
-  completedCount: number;
   onControlError?: (error: string) => void;
 }
 
-const QueueControls: React.FC<QueueControlsProps> = ({
-  activeCount,
-  pausedCount,
-  completedCount,
-  onControlError,
-}) => {
+const QueueControls: React.FC<QueueControlsProps> = ({ onControlError }) => {
   const { t } = useTranslation();
+  const { running: activeCount, paused: pausedCount, completed: completedCount } = useAtomValue(taskCountsAtom);
   const actions = useDownloadActions();
   const [loading, setLoading] = React.useState<string | null>(null);
 

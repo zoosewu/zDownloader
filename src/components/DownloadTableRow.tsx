@@ -1,5 +1,6 @@
 // Download table row component - single row in the download table
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useAtomValue } from 'jotai';
 import { TableRow, TableCell, Chip, Box, LinearProgress, Tooltip, IconButton } from '@mui/material';
 import {
   CheckCircle as CompleteIcon,
@@ -16,7 +17,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { errorText } from '../utils/errors';
-import type { Task, TaskState } from '../backend';
+import type { Task, TaskId, TaskState } from '../backend';
+import { taskAtom } from '../stores/downloadStore';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -24,13 +26,13 @@ import { useNow } from '../hooks/useNow';
 import { deadline, formatTaskForTable } from '../utils/downloadCalculations';
 import { formatRelativeTime } from '../utils/formatters';
 
-interface DownloadTableRowProps {
-  task: Task;
+interface RowProps {
   isSelected: boolean;
   onClick: (taskId: string) => void;
   onActionError?: (message: string) => void;
   columnWidths?: Record<string, number>;
 }
+
 
 const STATE_COLOR: Record<TaskState, 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info'> = {
   scheduled: 'info',
@@ -80,10 +82,62 @@ const ACTION_ICON: Record<Action, React.ReactElement> = {
   remove: <RemoveIcon fontSize="small" />,
 };
 
-const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
-  ({ task, isSelected, onClick, onActionError, columnWidths }) => {
+// Cells that change only with the task's state, not its progress. Memoized on primitive
+// props so a progress tick skips them (with their tooltips and buttons) entirely.
+
+const widthSx = (width?: number) => (width ? { width, minWidth: width, maxWidth: width } : {});
+
+const FilenameCell = React.memo(({ name, width }: { name: string; width?: number }) => (
+  <TableCell sx={widthSx(width)}>
+    <Tooltip title={name} arrow placement="top-start">
+      <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
+    </Tooltip>
+  </TableCell>
+));
+
+const StatusCell = React.memo(
+  ({ label, state, tooltip, width }: { label: string; state: TaskState; tooltip: string; width?: number }) => (
+    <TableCell sx={widthSx(width)}>
+      <Tooltip title={tooltip} arrow>
+        <Chip label={label} color={STATE_COLOR[state]} size="small" icon={STATE_ICON[state]} />
+      </Tooltip>
+    </TableCell>
+  ),
+);
+
+const ActionsCell = React.memo(
+  ({ id, state, onActionError, width }: { id: TaskId; state: TaskState; onActionError?: (message: string) => void; width?: number }) => {
     const { t } = useTranslation();
     const actions = useDownloadActions();
+    const run = (action: Action) => (event: React.MouseEvent) => {
+      event.stopPropagation(); // don't select the row
+      actions[action](id).catch((error) => onActionError?.(error.message));
+    };
+    return (
+      <TableCell align="center" sx={widthSx(width)}>
+        {actionsFor(state).map((action) => (
+          <Tooltip key={action} title={t(`downloads.actions.${action}`)} arrow>
+            <IconButton size="small" onClick={run(action)} aria-label={t(`downloads.actions.${action}`)}>
+              {ACTION_ICON[action]}
+            </IconButton>
+          </Tooltip>
+        ))}
+      </TableCell>
+    );
+  },
+);
+
+const CreatedCell = React.memo(({ createdAt, width }: { createdAt: string; width?: number }) => (
+  <TableCell sx={widthSx(width)}>
+    <Tooltip title={createdAt} arrow>
+      <span>{formatRelativeTime(createdAt)}</span>
+    </Tooltip>
+  </TableCell>
+));
+
+const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
+  ({ task, isSelected, onClick, onActionError, columnWidths }) => {
+    const { t } = useTranslation();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: task.id,
       attributes: { role: 'row' },
@@ -93,19 +147,8 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
     // An automatic retry is coming: looks like a scheduled task, not a failure.
     const shownState: TaskState = task.state === 'failed' && until ? 'scheduled' : task.state;
 
-    const run = (action: Action) => (event: React.MouseEvent) => {
-      event.stopPropagation(); // don't select the row
-      actions[action](task.id).catch((error) => onActionError?.(error.message));
-    };
-
-    const getCellWidthStyle = (columnKey: string) =>
-      columnWidths
-        ? {
-            width: columnWidths[columnKey],
-            minWidth: columnWidths[columnKey],
-            maxWidth: columnWidths[columnKey],
-          }
-        : {};
+    const width = (columnKey: string) => columnWidths?.[columnKey];
+    const getCellWidthStyle = (columnKey: string) => widthSx(width(columnKey));
 
     return (
       <TableRow
@@ -125,13 +168,7 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
           '&.Mui-selected:hover': { backgroundColor: 'action.selected' },
         }}
       >
-        <TableCell sx={getCellWidthStyle('filename')}>
-          <Tooltip title={displayData.filename} arrow placement="top-start">
-            <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {displayData.filename}
-            </Box>
-          </Tooltip>
-        </TableCell>
+        <FilenameCell name={displayData.filename} width={width('filename')} />
 
         <TableCell align="right" sx={getCellWidthStyle('fileSize')}>
           {displayData.filesizeFormatted}
@@ -155,32 +192,16 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
           {displayData.speedFormatted}
         </TableCell>
 
-        <TableCell sx={getCellWidthStyle('status')}>
-          <Tooltip title={statusTooltip(task, displayData.statusLabel, t)} arrow>
-            <Chip
-              label={displayData.statusLabel}
-              color={STATE_COLOR[shownState]}
-              size="small"
-              icon={STATE_ICON[shownState]}
-            />
-          </Tooltip>
-        </TableCell>
+        <StatusCell
+          label={displayData.statusLabel}
+          state={shownState}
+          tooltip={statusTooltip(task, displayData.statusLabel, t)}
+          width={width('status')}
+        />
 
-        <TableCell align="center" sx={getCellWidthStyle('actions')}>
-          {actionsFor(task.state).map((action) => (
-            <Tooltip key={action} title={t(`downloads.actions.${action}`)} arrow>
-              <IconButton size="small" onClick={run(action)} aria-label={t(`downloads.actions.${action}`)}>
-                {ACTION_ICON[action]}
-              </IconButton>
-            </Tooltip>
-          ))}
-        </TableCell>
+        <ActionsCell id={task.id} state={task.state} onActionError={onActionError} width={width('actions')} />
 
-        <TableCell sx={getCellWidthStyle('createdAt')}>
-          <Tooltip title={task.createdAt} arrow>
-            <span>{formatRelativeTime(task.createdAt)}</span>
-          </Tooltip>
-        </TableCell>
+        <CreatedCell createdAt={task.createdAt} width={width('createdAt')} />
 
         <TableCell align="right" sx={getCellWidthStyle('timeRemaining')}>
           {displayData.remainingTimeFormatted}
@@ -200,6 +221,21 @@ const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(
     prev.columnWidths === next.columnWidths
 );
 
+TaskRow.displayName = 'TaskRow';
+
+interface DownloadTableRowProps extends RowProps {
+  id: TaskId;
+}
+
+/**
+ * One row, subscribed to its own task: a progress tick re-renders this row only. The table
+ * passes ids, never task objects.
+ */
+const DownloadTableRow: React.FC<DownloadTableRowProps> = React.memo(({ id, ...props }) => {
+  const task = useAtomValue(useMemo(() => taskAtom(id), [id]));
+  // Removed: the table drops the row on its next render.
+  return task ? <TaskRow task={task} {...props} /> : null;
+});
 DownloadTableRow.displayName = 'DownloadTableRow';
 
 function statusTooltip(task: Task, label: string, t: TFunction): string {

@@ -2,20 +2,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Divider, Button } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { useAtom } from 'jotai';
-import { downloadTasksAtom } from '../stores/downloadStore';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
 import QueueControls from './QueueControls';
 import BatchImportButton from './BatchImportButton';
-import { useSelectedDownload } from '../hooks/useSelectedDownload';
+import { useSelectedDownload, useSelectedTask } from '../hooks/useSelectedDownload';
 import type { BatchResult } from '../backend';
+
+/** The panel is the only part of the list that follows the selected task's progress. */
+const SelectedTaskPanel: React.FC = () => <DownloadDetailPanel task={useSelectedTask()} />;
 
 interface DownloadListProps {
   className?: string;
-  activeCount: number;
-  pausedCount: number;
-  completedCount: number;
   onControlError: (error: string) => void;
   onAddDownload: () => void;
   onBatchImportSuccess: (result: BatchResult) => void;
@@ -27,16 +25,12 @@ const DEFAULT_PANEL_HEIGHT = 300; // Default height for detail panel
 
 const DownloadList: React.FC<DownloadListProps> = ({
   className,
-  activeCount,
-  pausedCount,
-  completedCount,
   onControlError,
   onAddDownload,
   onBatchImportSuccess,
   onBatchImportError,
 }) => {
-  const [tasks] = useAtom(downloadTasksAtom);
-  const { selectedTask } = useSelectedDownload();
+  const { selectedTaskId } = useSelectedDownload();
   const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,12 +97,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
         }}
       >
         {/* Queue controls on the left */}
-        <QueueControls
-          activeCount={activeCount}
-          pausedCount={pausedCount}
-          completedCount={completedCount}
-          onControlError={onControlError}
-        />
+        <QueueControls onControlError={onControlError} />
 
         {/* Action buttons on the right */}
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -137,11 +126,11 @@ const DownloadList: React.FC<DownloadListProps> = ({
       >
 
         {/* Download Table */}
-        <DownloadTable tasks={tasks} onActionError={onControlError} />
+        <DownloadTable onActionError={onControlError} />
       </Box>
 
       {/* Resize Handle and Detail Panel - fixed at bottom */}
-      {selectedTask && (
+      {selectedTaskId && (
         <>
           <Divider
             onMouseDown={handleMouseDown}
@@ -176,7 +165,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
               backgroundColor: 'background.paper',
             }}
           >
-            <DownloadDetailPanel task={selectedTask} />
+            <SelectedTaskPanel />
           </Box>
         </>
       )}

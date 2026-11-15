@@ -1,5 +1,6 @@
 // Download state: one map of tasks by id, kept in sync with the backend by useDownloadSync.
 import { atom } from 'jotai';
+import { selectAtom } from 'jotai/utils';
 import type { DownloadEvent, Task, TaskId } from '../backend';
 
 export type TaskMap = Record<TaskId, Task>;
@@ -25,7 +26,8 @@ export function applyEvent(tasks: TaskMap, event: DownloadEvent): TaskMap {
       let next = tasks;
       for (const tick of event.data) {
         const task = next[tick.id];
-        if (!task) continue;
+        // Unchanged numbers keep the same object, so nothing showing this task re-renders.
+        if (!task || (task.downloaded === tick.downloaded && task.total === tick.total && task.speed === tick.speed)) continue;
         if (next === tasks) next = { ...tasks };
         next[tick.id] = { ...task, downloaded: tick.downloaded, total: tick.total, speed: tick.speed };
       }
@@ -51,19 +53,53 @@ export function mergeSnapshot(tasks: TaskMap, snapshot: Task[]): TaskMap {
 
 export const tasksByIdAtom = atom<TaskMap>({});
 
-/** All tasks in list order, which is also the queue order. */
-export const downloadTasksAtom = atom((get) => Object.values(get(tasksByIdAtom)).sort((a, b) => a.order - b.order));
+// Views of the store. Each one notifies its readers only when its own value changes: a
+// progress tick changes one task object and nothing else, so it re-renders that task's row
+// (and the footer's speed) instead of the whole page. Keep it that way: read the narrowest
+// view a component needs, never the whole map.
 
-export const activeDownloadsAtom = atom((get) =>
-  get(downloadTasksAtom).filter((t) => t.state === 'running')
-);
+const sameItems = <T>(a: readonly T[], b: readonly T[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
-export const pausedDownloadsAtom = atom((get) =>
-  get(downloadTasksAtom).filter((t) => t.state === 'paused')
-);
+/** Task ids in list order, which is also the queue order. Changes on add, remove and move. */
+export function orderedIds(tasks: TaskMap): TaskId[] {
+  return Object.values(tasks)
+    .sort((a, b) => a.order - b.order)
+    .map((t) => t.id);
+}
+export const taskIdsAtom = selectAtom(tasksByIdAtom, orderedIds, sameItems);
 
-export const completedDownloadsAtom = atom((get) =>
-  get(downloadTasksAtom).filter((t) => t.state === 'completed')
+/** One task (undefined once removed). A view per id; create it with useMemo. */
+export const taskAtom = (id: TaskId) => selectAtom(tasksByIdAtom, (tasks) => tasks[id]);
+
+export interface TaskCounts {
+  total: number;
+  running: number;
+  paused: number;
+  completed: number;
+  /** Bytes per second over all running tasks. */
+  speed: number;
+}
+export function countTasks(tasks: TaskMap): TaskCounts {
+  const counts: TaskCounts = { total: 0, running: 0, paused: 0, completed: 0, speed: 0 };
+  for (const t of Object.values(tasks)) {
+    counts.total++;
+    if (t.state === 'running') {
+      counts.running++;
+      counts.speed += t.speed;
+    } else if (t.state === 'paused') counts.paused++;
+    else if (t.state === 'completed') counts.completed++;
+  }
+  return counts;
+}
+const sameCounts = (a: TaskCounts, b: TaskCounts) =>
+  a.total === b.total && a.running === b.running && a.paused === b.paused && a.completed === b.completed && a.speed === b.speed;
+export const taskCountsAtom = selectAtom(tasksByIdAtom, countTasks, sameCounts);
+
+/** Tasks that failed because their source changed (the user is asked what to do). */
+export const sourceChangedTasksAtom = selectAtom(
+  tasksByIdAtom,
+  (tasks) => Object.values(tasks).filter((t) => t.state === 'failed' && t.error?.kind === 'sourceChanged'),
+  sameItems,
 );
 
 export const applyEventAtom = atom(null, (get, set, event: DownloadEvent) => {

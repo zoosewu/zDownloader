@@ -1,12 +1,12 @@
 // Segment grid: which parts of the file are done, being fetched, or waiting to retry.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Tooltip, Typography, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { backend, type SegmentMap, type Task } from '../backend';
 import { buildSegmentCells, type CellStatus } from '../utils/segments';
 import { formatBytes } from '../utils/downloadCalculations';
 
-const POLL_MS = 500;
+const MIN_GAP_MS = 500;
 
 export const CELL_COLOR: Record<CellStatus, string> = {
   pending: '#9e9e9e',
@@ -27,26 +27,38 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
   const [map, setMap] = useState<SegmentMap | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Poll while the task runs; otherwise one fetch per state change is enough.
+  // Event-driven: refetch when the task changes (its progress events included), at most every
+  // MIN_GAP_MS. A stalled or finished download sends no events, so nothing is fetched.
+  const idRef = useRef(task.id);
+  idRef.current = task.id;
+  const scheduled = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const lastFetch = useRef(0);
+  useEffect(
+    () => () => {
+      clearTimeout(scheduled.current);
+      scheduled.current = undefined; // StrictMode remounts: the next mount must schedule again
+    },
+    [],
+  );
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
+    // Throttle, not debounce: a fetch already scheduled runs with the latest id; rescheduling
+    // on every tick would postpone it forever while progress keeps coming.
+    if (scheduled.current) return;
+    const wait = Math.max(0, lastFetch.current + MIN_GAP_MS - Date.now());
+    scheduled.current = setTimeout(async () => {
+      scheduled.current = undefined;
+      lastFetch.current = Date.now();
+      const id = idRef.current;
       try {
-        const next = await backend.downloads.segments(task.id);
-        if (cancelled) return;
+        const next = await backend.downloads.segments(id);
+        if (id !== idRef.current) return; // another task was selected meanwhile
         setMap(next);
         setError(null);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (id === idRef.current) setError(e instanceof Error ? e.message : String(e));
       }
-    };
-    load();
-    const timer = task.state === 'running' ? setInterval(load, POLL_MS) : undefined;
-    return () => {
-      cancelled = true;
-      if (timer) clearInterval(timer);
-    };
-  }, [task.id, task.state, task.rev]);
+    }, wait);
+  }, [task.id, task.state, task.rev, task.downloaded]);
 
   const cells = useMemo(() => (map ? buildSegmentCells(map) : []), [map]);
 

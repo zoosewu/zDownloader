@@ -172,6 +172,8 @@ export const backend = {
     onDownloadEvent: (handler: (event: DownloadEvent) => void) => subscribe('download-event', handler),
     /** The backend dropped events; refetch the full list. */
     onResync: (handler: () => void) => subscribe<null>('downloads-resync', () => handler()),
+    /** A single http(s) link was copied (sent only while clipboard monitoring is enabled). */
+    onClipboardLink: (handler: (url: string) => void) => subscribe('clipboard-link', handler),
   },
 };
 

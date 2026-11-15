@@ -14,14 +14,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import type { Task } from '../backend';
+import { useAtomValue } from 'jotai';
 import DownloadTableRow from './DownloadTableRow';
+import { taskIdsAtom } from '../stores/downloadStore';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import { droppedBefore } from '../utils/downloadCalculations';
 
 interface DownloadTableProps {
-  tasks: Task[];
   onActionError?: (message: string) => void;
 }
 
@@ -42,8 +42,10 @@ const DEFAULT_COLUMN_WIDTHS: Record<ColumnKey, number> = {
  * Download table component with sticky header and resizable columns
  * Displays all download tasks in a tabular format
  */
-const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) => {
+const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   const { t } = useTranslation();
+  // Only the order: progress re-renders the row of that task, not the table.
+  const ids = useAtomValue(taskIdsAtom);
   const { selectedTaskId, selectTask } = useSelectedDownload();
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(DEFAULT_COLUMN_WIDTHS);
   const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
@@ -63,7 +65,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) =
   const { move } = useDownloadActions();
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
-    const before = droppedBefore(tasks.map((t) => t.id), String(active.id), String(over.id));
+    const before = droppedBefore(ids, String(active.id), String(over.id));
     move(String(active.id), before).catch((error) => onActionError?.(error.message));
   };
 
@@ -106,7 +108,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) =
   }, [resizingColumn]);
 
   // Empty state
-  if (tasks.length === 0) {
+  if (ids.length === 0) {
     return (
       <Box
         sx={{
@@ -188,13 +190,13 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ tasks, onActionError }) =
           </TableRow>
         </TableHead>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <TableBody>
-              {tasks.map((task) => (
+              {ids.map((id) => (
                 <DownloadTableRow
-                  key={task.id}
-                  task={task}
-                  isSelected={selectedTaskId === task.id}
+                  key={id}
+                  id={id}
+                  isSelected={selectedTaskId === id}
                   onClick={handleRowClick}
                   onActionError={onActionError}
                   columnWidths={columnWidths}
