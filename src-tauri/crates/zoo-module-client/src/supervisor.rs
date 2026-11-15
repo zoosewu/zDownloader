@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
+use tokio::process::{Child, ChildStderr, ChildStdin, Command};
 use tokio::sync::mpsc;
 use tokio::time::Instant;
 
@@ -224,7 +224,7 @@ struct Pending {
     waiters: HashMap<u64, mpsc::UnboundedSender<Reply>>,
 }
 
-async fn read_replies(stdout: ChildStdout, pending: Arc<Mutex<Pending>>) {
+async fn read_replies(stdout: impl tokio::io::AsyncRead + Unpin, pending: Arc<Mutex<Pending>>) {
     let mut lines = BufReader::new(stdout).lines();
     while let Ok(Some(line)) = lines.next_line().await {
         match serde_json::from_str::<Reply>(&line) {
@@ -239,7 +239,16 @@ async fn read_replies(stdout: ChildStdout, pending: Arc<Mutex<Pending>>) {
                     let _ = waiter.send(reply);
                 }
             }
-            Err(e) => log::warn!(target: "zoo_module", "unreadable line from module host: {e}"),
+            Err(e) => {
+                log::warn!(target: "zoo_module", "unreadable line from module host: {e}");
+                // A host newer than the app (a field this build does not know) would otherwise leave
+                // the call waiting until it times out. Fail it now, with the reason.
+                let id = serde_json::from_str::<serde_json::Value>(&line).ok().and_then(|v| v.get("id")?.as_u64());
+                if let Some(waiter) = id.and_then(|id| pending.lock().unwrap().waiters.remove(&id)) {
+                    let error = ModuleError::Crashed { message: format!("the module host sent a reply this app cannot read ({e}); update the app") };
+                    let _ = waiter.send(Reply::Failed { id: id.unwrap_or_default(), error });
+                }
+            }
         }
     }
     let mut pending = pending.lock().unwrap();
@@ -271,4 +280,40 @@ fn to_line(request: &Request) -> String {
 
 fn crashed(message: impl Into<String>) -> ModuleError {
     ModuleError::Crashed { message: message.into() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Reply lines from `host`, for a call registered as `id`; what that call receives.
+    async fn replies_for(id: u64, host: &str) -> Vec<Reply> {
+        let pending = Arc::new(Mutex::new(Pending { open: true, waiters: HashMap::new() }));
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        pending.lock().unwrap().waiters.insert(id, tx);
+        read_replies(host.as_bytes(), pending).await;
+        let mut got = Vec::new();
+        while let Some(reply) = rx.recv().await {
+            got.push(reply);
+        }
+        got
+    }
+
+    #[tokio::test]
+    async fn a_reply_this_build_cannot_read_fails_its_call_at_once() {
+        // A newer host adds a result field; deny_unknown_fields rejects the whole line.
+        let got = replies_for(7, "{\"type\":\"resolved\",\"id\":7,\"resolved\":{\"url\":\"https://x/\",\"fieldFromTheFuture\":1}}\n").await;
+        match got.as_slice() {
+            [Reply::Failed { id: 7, error: ModuleError::Crashed { message } }] => {
+                assert!(message.contains("fieldFromTheFuture") && message.contains("update the app"), "{message}")
+            }
+            other => panic!("expected one failure for call 7, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn garbage_without_an_id_is_only_logged() {
+        let got = replies_for(7, "not json\n{\"type\":\"resolved\",\"id\":7,\"resolved\":{\"url\":\"https://x/\"}}\n").await;
+        assert!(matches!(got.as_slice(), [Reply::Resolved { id: 7, .. }]), "{got:?}");
+    }
 }
