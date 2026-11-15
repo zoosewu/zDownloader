@@ -123,7 +123,7 @@ export default defineModule({
     - 可重試：Script、Timeout、Crashed；
     - 不可重試：Load、OutOfMemory。
 - 打包：
-  - `pnpm build:module-host` 以 release 模式建置 host，放到 `src-tauri/binaries/zoo-module-<triple>`。
+  - `pnpm build:sidecars`（原 `build:module-host`）以 release 模式建置 host，放到 `src-tauri/binaries/zoo-module-<triple>`。
   - `tauri build --config src-tauri/tauri.bundle.json` 加上 externalBin。這個設定不放在主設定，否則平常的 `cargo build` 會因為缺少這個檔案而失敗。
   - shell 在 app 執行檔旁尋找 `zoo-module(.exe)`。開發時用 `cargo build -p zoo-module` 產生在同一個 target 目錄。
   - captcha 的 UI 延到 4e，在那之前 captcha 一律視為使用者拒絕。

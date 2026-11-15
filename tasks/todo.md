@@ -55,7 +55,7 @@
     - [x] 刪除舊模組系統（Rust、`modules/`、deno_core 依賴、文件）
   - [ ] 4g 實機驗證與文件
     - [ ] 用真實 k2s 帳號錄製 cassette（免費流程的 `free_download_key`、等待欄位、登入 reCAPTCHA 頁的 site key 都是依文件推測）
-- [ ] 瀏覽器擴充重寫：規格 [browser-extension.md](../docs/architecture/browser-extension.md)（2026-11-15 確認）
+- [x] 瀏覽器擴充重寫：規格 [browser-extension.md](../docs/architecture/browser-extension.md)（2026-11-15 確認）
   - [x] 1 協定與 app 端（`browser_bridge`、host manifest 註冊；刪 HTTP 入口與 warp）
     - [x] `zoo-native-host` lib：協定、socket 名稱、固定擴充 ID；錯誤碼 `invalidUrl` 改為 `invalid`（header、檔名無效也用它）
     - [x] pipe：只有本人與 SYSTEM 可連（`D:P(A;;GA;;;OW)(A;;GA;;;SY)`），interprocess 預設已帶 first-instance 與拒絕遠端
@@ -71,7 +71,11 @@
     - [x] popup 的 ping 不啟動 app（host 對 `ping` 不 launch），只顯示「未開啟」
     - [x] 加 `notifications` 權限（右鍵失敗通知）
     - [x] vitest 24 項：manifest key 與 Rust `EXTENSION_ID` 一致、權限、語系完整、送出組成、無痕不讀 Cookie、選單只建立一次、每種不接管條件、成功取消並清除、失敗與逾時回退、回退後 60 秒內同網址不再送
-  - [ ] 4 實機驗證（Edge 獨立 profile 自動跑；Chrome 由使用者載入確認）與文件
+  - [x] 4 實機驗證（Edge 獨立 profile 自動跑；Chrome 由使用者載入確認）與文件
+    - [x] Edge 157 獨立 profile（`--disable-sync`、`--load-extension` 仍可用）以 CDP 驗證：popup 在 app 未開時顯示「未開啟」且不啟動 app；接管下載時 host 啟動 app，app 帶 Cookie/Referer/UA 下載完成、瀏覽器紀錄清除；右鍵處理函式（真 API）送出成功、badge ✓；關閉接管時留給瀏覽器；host 不在時回退給瀏覽器下載、錯誤碼 `notInstalled` 與中文訊息正確；通知 API 回 id、權限 granted
+    - [x] README 安裝步驟、review 標註 D-1..D-3 與 SEC-1
+    - [ ] 使用者：在 Chrome 開發人員模式載入 `browser-extension/` 並實際用右鍵選單一次（原生選單無法以 CDP 點選）；目視系統通知
+    - 發現：同時裝了 NDM 等下載管理器擴充時，兩者都會接管下載（NDM 也送了請求）；這類衝突只能由使用者擇一啟用
 
 ## 規格補完與整理（2026-11-14 計畫）
 
@@ -88,6 +92,8 @@
   - [x] `packageManager` 早已存在，移除過期項目
 
 ## 已知待辦（合併時發現）
+
+- [ ] 下載核心不讀 `Content-Disposition`：右鍵送出（沒帶檔名）的檔名取自網址（實機：伺服器給 `secret-3.bin`，存成 `secret.bin`）。接管下載不受影響（帶瀏覽器決定的檔名）
 
 - `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`
 - [x] 代理匯入接受 `http://host:port`（其他 scheme 明確拒絕；pool 只支援 HTTP 代理）（2026-11-14）

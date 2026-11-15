@@ -1,6 +1,6 @@
 # 瀏覽器擴充重寫規格
 
-- 狀態：已確認（2026-11-15）
+- 狀態：已完成（2026-11-15）
 - 修正：review D-1（無法載入）、D-2（native messaging 未接線）、D-3（content script 改每個頁面）、SEC-1 剩餘風險（任何擴充都能呼叫本機 HTTP 入口）；CAND-4 的「擴充只用 native messaging」
 - 已決定（2026-11-14）：功能為右鍵送出、附帶登入 Cookie、接管瀏覽器下載；支援 Chrome 與 Edge；先以開發人員模式載入，不上架
 

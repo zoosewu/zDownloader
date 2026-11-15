@@ -146,23 +146,15 @@ npm run tauri build
    - Enable/disable individual proxies
    - View proxy statistics
 
-### Chrome Extension Setup
+### Browser Extension (Chrome, Edge)
 
-1. **Install Extension**
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Enable "Developer mode" (top right)
-   - Click "Load unpacked"
-   - Select the `chrome-extension` folder from the Zoo Downloader directory
+1. **Open Zoo Downloader once.** On every start the app registers `zoo-native-host` with Chrome and Edge; there is nothing else to install.
+2. **Load the extension.** Open `chrome://extensions` (Edge: `edge://extensions`), turn on Developer mode, click *Load unpacked* and select the `browser-extension` folder.
+3. **Use it.**
+   - Right-click a link, image, video or audio → *Download with Zoo Downloader*. The site's cookies, Referer and User-Agent go along, so downloads that need a login work.
+   - With *Take over browser downloads* on (the default, in the extension popup), downloads the browser starts go to the app instead. If the app does not answer, the browser downloads as usual.
 
-2. **Verify Connection**
-   - Ensure Zoo Downloader application is running
-   - Extension icon should show green (connected)
-   - If red, check that HTTP server is running on port 45677
-
-3. **Use Extension**
-   - Browse any website
-   - Downloadable links will show ⬇️ icon
-   - Right-click any link → "Download with Zoo Downloader"
+Only this extension can reach the app (native messaging; no local HTTP port). Details: `browser-extension/README.md` and `docs/architecture/browser-extension.md`.
 
 ### Site Modules
 
@@ -250,11 +242,7 @@ zoo-downloader/
 │   ├── marketplace/              # The official marketplace shipped with the app (k2s)
 │   └── Cargo.toml
 │
-├── chrome-extension/             # Chrome extension
-│   ├── manifest.json             # Extension manifest
-│   ├── background.js             # Background service worker
-│   ├── content.js                # Content script
-│   └── popup.html                # Extension popup
+├── browser-extension/            # Chrome / Edge extension (MV3, native messaging)
 │
 └── package.json                  # Node.js dependencies
 ```

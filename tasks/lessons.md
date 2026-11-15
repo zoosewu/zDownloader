@@ -55,3 +55,13 @@
 
 - 錯誤：native messaging host 啟動 app 時把 stdio 設成 null，但 app 仍繼承了 host 自己的 stdin/stdout/stderr（瀏覽器的 pipe），呼叫端一直等到 app 結束。
 - 規則：要比自己活得久的子程序（啟動 app、daemon），在 Windows 上先把自己的 std handle 設為不可繼承（`SetHandleInformation(.., HANDLE_FLAG_INHERIT, 0)`）。測試時用「呼叫端是否在 host 結束後立刻返回」驗證，不只看回應內容。
+
+## 實機測試前重建所有 sidecar（2026-11-15）
+
+- 錯誤：改了 `zoo-native-host` 後只跑了 `cargo test`，實機測試用的 debug host 還是舊版，popup 的 ping 把 app 叫了起來，差點誤判成擴充的 bug。
+- 規則：實機驗證前 `cargo build` 所有會被執行的 binary（app、`zoo-module`、`zoo-native-host`），`cargo test` 不會更新它們。
+
+## 「獨立」瀏覽器 profile 會自動登入並同步（2026-11-15）
+
+- 錯誤：用新的 `--user-data-dir` 開 Edge，Edge 自動以使用者的帳號登入並同步，使用者的擴充（NDM、FDM）全部出現並搶走下載事件。在這種 profile 改擴充設定可能同步回使用者平常用的瀏覽器。
+- 規則：自動化用的 Chrome／Edge 一律加 `--disable-sync`，開好後先用 `chrome.management.getAll()` 確認只有預期的擴充；發現同步已發生就關掉並刪除 profile 重來，不要在裡面改任何設定。
