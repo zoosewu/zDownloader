@@ -7,6 +7,12 @@
       "version": "1.0.0",
       "source": "k2s",
       "description": "Keep2Share (k2s.cc)"
+    },
+    {
+      "id": "baidu",
+      "version": "1.0.0",
+      "source": "baidu",
+      "description": "百度网盘 (pan.baidu.com share links)"
     }
   ]
 }

@@ -1,0 +1,15 @@
+[
+  {
+    "name": "single-file",
+    "url": "https://pan.baidu.com/s/1NYF7FIdXZKEilWVGIsrihA?pwd=cdby",
+    "expect": {
+      "url": "https://*.baidupcs.com/file/*",
+      "filename": "qr256.rar"
+    }
+  },
+  {
+    "name": "wrong-code",
+    "url": "https://pan.baidu.com/s/1NYF7FIdXZKEilWVGIsrihA?pwd=zzzz",
+    "expect": { "error": "wrong extraction code" }
+  }
+]

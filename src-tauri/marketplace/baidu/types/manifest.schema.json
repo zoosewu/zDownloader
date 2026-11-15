@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zoo-downloader.dev/schemas/module-manifest-v1.json",
+  "title": "zoo-downloader site module manifest",
+  "description": "manifest.json of a zoo-downloader site module (apiVersion 1). The user sees name, description and the permissions before installing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "id", "name", "version", "urlPatterns", "permissions"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path or URL of this schema, for editor completion. Ignored by the app."
+    },
+    "apiVersion": {
+      "const": 1,
+      "description": "Version of the module API (zoo-module.d.ts) the module is written against."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+      "description": "Unique within its marketplace; lowercase letters, digits and '-'. Installed modules are identified as id@marketplace.",
+      "examples": ["k2s", "example-host"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Display name.",
+      "examples": ["Keep2Share"]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z.-]+)?$",
+      "description": "Semantic version (MAJOR.MINOR.PATCH).",
+      "examples": ["1.0.0"]
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "One or two sentences shown in the module list."
+    },
+    "author": { "type": "string", "maxLength": 100 },
+    "homepage": { "type": "string", "pattern": "^https?://", "description": "Where users can read about or report problems with the module." },
+    "entry": {
+      "type": "string",
+      "default": "dist/index.js",
+      "pattern": "^[^/\\\\][^\\\\]*\\.js$",
+      "description": "Relative path of the bundled single-file ES module."
+    },
+    "urlPatterns": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Share-page URLs this module resolves. '*' matches any run of characters; a host starting with '*.' also matches subdomains. Matching never runs module code.",
+      "items": {
+        "type": "string",
+        "pattern": "^https?://[^/]+/",
+        "examples": ["https://k2s.cc/file/*", "https://*.k2s.cc/file/*"]
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network"],
+      "description": "Everything the module may do beyond computing. Shown to the user for consent; asking for more in an update requires consent again.",
+      "properties": {
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowDomains"],
+          "properties": {
+            "allowDomains": {
+              "type": "array",
+              "uniqueItems": true,
+              "description": "Hosts fetch may reach. Each entry also covers its subdomains ('k2s.cc' covers 'api.k2s.cc'). No schemes, paths or ports. Private and local addresses are always blocked.",
+              "items": {
+                "type": "string",
+                "pattern": "^(\\*\\.)?[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$",
+                "examples": ["k2s.cc", "keep2share.cc"]
+              }
+            }
+          }
+        },
+        "credentials": {
+          "type": "array",
+          "description": "Account fields the user is asked for. The module only ever sees placeholders (zoo.credentials.placeholder).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "label"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_]+$",
+                "description": "Name used in zoo.credentials.placeholder(key).",
+                "examples": ["username", "password", "apiKey"]
+              },
+              "label": { "type": "string", "minLength": 1, "description": "Field label shown to the user." },
+              "secret": { "type": "boolean", "default": true, "description": "Mask the input (passwords, API keys)." },
+              "optional": { "type": "boolean", "default": false, "description": "The module works without it (e.g. free downloads); check zoo.credentials.has(key)." }
+            }
+          }
+        }
+      }
+    }
+  }
+}
