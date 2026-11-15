@@ -74,7 +74,8 @@
   - [x] 4 實機驗證（Edge 獨立 profile 自動跑；Chrome 由使用者載入確認）與文件
     - [x] Edge 157 獨立 profile（`--disable-sync`、`--load-extension` 仍可用）以 CDP 驗證：popup 在 app 未開時顯示「未開啟」且不啟動 app；接管下載時 host 啟動 app，app 帶 Cookie/Referer/UA 下載完成、瀏覽器紀錄清除；右鍵處理函式（真 API）送出成功、badge ✓；關閉接管時留給瀏覽器；host 不在時回退給瀏覽器下載、錯誤碼 `notInstalled` 與中文訊息正確；通知 API 回 id、權限 granted
     - [x] README 安裝步驟、review 標註 D-1..D-3 與 SEC-1
-    - [ ] 使用者：在 Chrome 開發人員模式載入 `browser-extension/` 並實際用右鍵選單一次（原生選單無法以 CDP 點選）；目視系統通知
+    - [ ] 使用者：在 Edge 開發人員模式載入 `browser-extension/` 並實際用右鍵選單一次（原生選單無法以 CDP 點選）；目視系統通知
+    - Chrome：使用者沒有安裝，視為與 Edge 相同（同一套 Chromium 擴充與 native messaging 實作；app 兩邊的登錄都寫了；已知差異只有 Chrome 正式版不接受 `--load-extension`，只影響自動化測試）
     - 發現：同時裝了 NDM 等下載管理器擴充時，兩者都會接管下載（NDM 也送了請求）；這類衝突只能由使用者擇一啟用
 
 ## 規格補完與整理（2026-11-14 計畫）
