@@ -61,6 +61,7 @@ impl Resolver for ModuleResolver {
                 headers: resolved.headers.into_iter().collect(),
                 filename: resolved.filename,
                 max_connections: resolved.max_connections.map(|n| n as usize),
+                max_segment_size: resolved.max_segment_size,
                 expires: true,
             })
         })

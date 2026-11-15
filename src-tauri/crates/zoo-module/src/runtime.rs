@@ -40,8 +40,10 @@ const SDK_SPECIFIER: &str = "zoo:sdk";
 const MAIN_SPECIFIER: &str = "zoo:main";
 
 const SHAPE_HINT: &str = "export default defineModule({ async resolve(url, zoo) { ... } })";
-const RESULT_HINT: &str =
-    "resolve must return { url, filename?, headers?, size?, maxConnections? } with an absolute http(s) url";
+const RESULT_HINT: &str = "resolve must return { url, filename?, headers?, size?, maxConnections?, maxSegmentSize? } \
+     with an absolute http(s) url";
+/// Smaller segments would cost one request per few KiB.
+const MIN_SEGMENT_SIZE: u64 = 64 * 1024;
 
 /// What a call does with the module.
 #[derive(Debug, Clone, Copy)]
@@ -207,6 +209,11 @@ fn validate(value: serde_json::Value) -> Result<Resolved, ModuleError> {
     let invalid = |message: String| ModuleError::Script { message, hint: Some(RESULT_HINT.into()), stack: None };
     let resolved: Resolved =
         serde_json::from_value(value).map_err(|e| invalid(format!("resolve returned an invalid result: {e}")))?;
+    if resolved.max_segment_size.is_some_and(|n| n < MIN_SEGMENT_SIZE) {
+        return Err(invalid(format!(
+            "resolve returned maxSegmentSize below {MIN_SEGMENT_SIZE} bytes; set it only to the largest range the site serves"
+        )));
+    }
     if resolved.max_connections == Some(0) {
         return Err(invalid("resolve returned maxConnections 0; use at least 1, or leave it out".into()));
     }

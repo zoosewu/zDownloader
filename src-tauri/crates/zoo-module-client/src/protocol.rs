@@ -68,6 +68,9 @@ pub struct Resolved {
     /// The most parallel connections the site tolerates for this download.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_connections: Option<u32>,
+    /// The largest byte range the site serves in one request.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_segment_size: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
@@ -188,6 +191,7 @@ mod tests {
                     headers: BTreeMap::from([("Referer".into(), "https://a".into())]),
                     size: Some(10),
                     max_connections: Some(2),
+                    max_segment_size: Some(4 << 20),
                 },
             },
             Reply::Failed { id: 2, error: ModuleError::Timeout { limit_ms: 5 } },

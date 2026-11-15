@@ -140,6 +140,7 @@ async fn invalid_results_are_rejected() {
         ("relative", "{ url: '/file' }"),
         ("scheme", "{ url: 'file:///etc/passwd' }"),
         ("typo", "{ url: 'https://x/', fileName: 'a' }"),
+        ("tiny-segments", "{ url: 'https://x/', maxSegmentSize: 1024 }"),
         ("nothing", "undefined"),
     ] {
         let m = module(&dir, name, &format!("export default {{ resolve() {{ return {result}; }} }};"));

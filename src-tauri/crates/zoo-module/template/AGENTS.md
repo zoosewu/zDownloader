@@ -51,8 +51,8 @@ starts requesting a page it did not request before; the test output tells you).
 - **No state between calls.** Every call starts fresh; cookies last for one call.
 - **Limits.** 30 seconds of work per call (countdowns and captchas excluded), 128 MB memory,
   16 MB per response.
-- **Result fields** are exactly `url`, `filename`, `headers`, `size`, `maxConnections`
-  (see `Resolved` in `types/zoo-module.d.ts`). Unknown fields are an error.
+- **Result fields** are exactly `url`, `filename`, `headers`, `size`, `maxConnections`,
+  `maxSegmentSize` (see `Resolved` in `types/zoo-module.d.ts`). Unknown fields are an error.
 
 ## Recipes
 
@@ -101,6 +101,9 @@ User-Agent on `fetch` and in the result:
 `return { url: dlink, headers: { 'User-Agent': 'netdisk;7.42.0.5;PC;PC-Windows;10.0.22631;WindowsBaiduYunGuanJia' } };`
 
 **Sites that punish parallel downloads**: `return { url, maxConnections: 1 };`
+
+**Sites that refuse large ranges** (403 for big `Range` requests, small ones work):
+`return { url, maxSegmentSize: 4 * 1024 * 1024 };`
 
 **Errors the user can act on**: `throw zoo.fail('file was deleted', { hint: 'ask the uploader for a new link' });`
 

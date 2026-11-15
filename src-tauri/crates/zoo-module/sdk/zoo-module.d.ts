@@ -49,6 +49,15 @@ declare module "zoo-module" {
      * connections (8 by default); sites that throttle or ban that need a lower number.
      */
     maxConnections?: number;
+    /**
+     * The largest byte range the site serves in one request, in bytes (at least 65536).
+     * Downloads fetch a file in ranges (10 MiB by default); sites that refuse larger ranges
+     * with 403 need this.
+     * @example
+     * // Baidu Netdisk refuses ranges over about 4 MiB for non-members.
+     * return { url: dlink, maxConnections: 4, maxSegmentSize: 4 * 1024 * 1024 };
+     */
+    maxSegmentSize?: number;
   }
 
   export interface SiteModule {
@@ -61,7 +70,7 @@ declare module "zoo-module" {
 
   /** `R` with any field `Resolved` does not have turned into an error message (the host rejects them). */
   type OnlyResolvedFields<R> = {
-    [K in keyof R]: K extends keyof Resolved ? R[K] : `'${K & string}' is not a Resolved field (url, filename, headers, size, maxConnections)`;
+    [K in keyof R]: K extends keyof Resolved ? R[K] : `'${K & string}' is not a Resolved field (url, filename, headers, size, maxConnections, maxSegmentSize)`;
   };
 
   /** Marks the default export as a site module and type-checks it. Returns `module` unchanged. */

@@ -68,7 +68,14 @@ impl Resolver for Scripted {
 }
 
 fn expiring(url: String) -> Source {
-    Source { url, headers: vec![("X-Token".into(), "t".into())], filename: None, max_connections: None, expires: true }
+    Source {
+        url,
+        headers: vec![("X-Token".into(), "t".into())],
+        filename: None,
+        max_connections: None,
+        max_segment_size: None,
+        expires: true,
+    }
 }
 
 fn start(cfg: Config, store: &Path, resolver: Arc<dyn Resolver>) -> DownloadManager {
@@ -251,6 +258,29 @@ async fn the_site_connection_limit_is_respected() {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert_eq!(most, 1, "one connection at a time");
+}
+
+#[tokio::test]
+async fn the_site_segment_limit_is_respected() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let size = 300 * KB;
+    let url = fx.url(&format!("/file/{size}"));
+    // Larger configured segments (64 KiB) than the site allows (16 KiB).
+    let resolver = Scripted::new(move |_| Ok(Source { max_segment_size: Some(16 * KB), ..expiring(url.clone()) }));
+    let m = start(config(), dir.path(), resolver);
+    let id = m.add(req(dir.path(), None)).await.unwrap().id;
+    let task = wait_until(&m, id, |t| t.state == TaskState::Completed).await;
+    assert_eq!(std::fs::read(task.final_path.unwrap()).unwrap(), expected(size));
+
+    let ranges: Vec<(u64, u64)> = fx
+        .requests()
+        .iter()
+        .filter_map(|r| r.range.as_deref()?.strip_prefix("bytes=")?.split_once('-').map(|(a, b)| (a.parse().unwrap(), b.parse().unwrap())))
+        .filter(|&(start, end)| (start, end) != (0, 0)) // the probe
+        .collect();
+    assert!(ranges.len() >= (size / (16 * KB)) as usize, "{} ranges", ranges.len());
+    assert!(ranges.iter().all(|&(start, end)| end - start < 16 * KB), "a range exceeded 16 KiB: {ranges:?}");
 }
 
 #[tokio::test]

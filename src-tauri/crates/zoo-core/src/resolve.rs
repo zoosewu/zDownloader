@@ -20,6 +20,8 @@ pub struct Source {
     pub filename: Option<String>,
     /// Upper bound on parallel connections (some sites throttle or ban more).
     pub max_connections: Option<usize>,
+    /// Upper bound on the bytes one request may ask for (some sites refuse larger ranges).
+    pub max_segment_size: Option<u64>,
     /// Whether the link was produced by resolution (and so may expire); a direct link
     /// is never re-resolved.
     pub expires: bool,
@@ -27,7 +29,7 @@ pub struct Source {
 
 impl Source {
     pub fn direct(url: &str) -> Self {
-        Self { url: url.to_string(), headers: Vec::new(), filename: None, max_connections: None, expires: false }
+        Self { url: url.to_string(), headers: Vec::new(), filename: None, max_connections: None, max_segment_size: None, expires: false }
     }
 }
 

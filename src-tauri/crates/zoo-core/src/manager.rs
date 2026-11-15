@@ -832,7 +832,7 @@ async fn run_job(
     msgs: &mpsc::UnboundedSender<JobMsg>,
 ) -> Result<PathBuf, CoreError> {
     let mut resolved_again = false;
-    let (connections, own_headers) = (spec.connections, std::mem::take(&mut spec.headers));
+    let (connections, segment_size, own_headers) = (spec.connections, spec.segment_size, std::mem::take(&mut spec.headers));
     loop {
         let report: resolve::PhaseReport = {
             let msgs = msgs.clone();
@@ -853,6 +853,7 @@ async fn run_job(
         spec.url = source.url;
         spec.headers = merge_headers(source.headers, &own_headers);
         spec.connections = source.max_connections.map_or(connections, |max| connections.min(max.max(1)));
+        spec.segment_size = source.max_segment_size.map_or(segment_size, |max| segment_size.min(max.max(1)));
         let _ = msgs.send(JobMsg::Phase(id, Phase::Transferring));
         let result = match transfer::probe_source(&spec, ctx).await {
             Ok(probed) => {
