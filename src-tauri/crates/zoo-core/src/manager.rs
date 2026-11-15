@@ -844,22 +844,39 @@ async fn run_job(
             _ = ctx.cancel.cancelled() => return Err(CoreError::Cancelled),
             source = resolver.resolve(&spec.origin, report) => source?,
         };
-        if let Some(suggested) = source.filename.as_deref().filter(|_| may_rename && !resolved_again) {
-            let name = naming::filename_for(Some(suggested), &spec.origin);
-            if name != spec.name {
-                spec.part_path = naming::part_path(&spec.dir, &name, &id.to_string());
-                spec.name = name.clone();
-                let _ = msgs.send(JobMsg::Renamed(id, name));
-            }
+        // The module's name, else the server's (Content-Disposition), else the URL's.
+        let may_name = may_rename && !resolved_again;
+        if let Some(suggested) = source.filename.as_deref().filter(|_| may_name) {
+            rename(&mut spec, id, suggested, msgs);
         }
+        let server_may_name = may_name && source.filename.is_none();
         spec.url = source.url;
         spec.headers = merge_headers(source.headers, &own_headers);
         spec.connections = source.max_connections.map_or(connections, |max| connections.min(max.max(1)));
         let _ = msgs.send(JobMsg::Phase(id, Phase::Transferring));
-        match transfer::run(&spec, ctx).await {
+        let result = match transfer::probe_source(&spec, ctx).await {
+            Ok(probed) => {
+                if let Some(suggested) = probed.filename.as_deref().filter(|_| server_may_name) {
+                    rename(&mut spec, id, suggested, msgs);
+                }
+                transfer::fetch(&spec, ctx, probed).await
+            }
+            Err(e) => Err(e),
+        };
+        match result {
             Err(CoreError::Http(401 | 403 | 410)) if source.expires && !resolved_again => resolved_again = true,
             other => return other,
         }
+    }
+}
+
+/// Give a task that has no data yet a better name; the actor updates the task to match.
+fn rename(spec: &mut TransferSpec, id: TaskId, suggested: &str, msgs: &mpsc::UnboundedSender<JobMsg>) {
+    let name = naming::filename_for(Some(suggested), &spec.origin);
+    if name != spec.name {
+        spec.part_path = naming::part_path(&spec.dir, &name, &id.to_string());
+        spec.name = name.clone();
+        let _ = msgs.send(JobMsg::Renamed(id, name));
     }
 }
 

@@ -18,6 +18,76 @@ pub fn filename_for(requested: Option<&str>, url: &str) -> String {
     sanitize(&raw)
 }
 
+/// The file name a `Content-Disposition` header proposes, unsanitized: `filename*` (RFC 6266 /
+/// RFC 8187, percent-encoded with a charset) wins over `filename`. Raw UTF-8 in a quoted
+/// `filename`, which servers send although the RFC says not to, is accepted.
+pub fn from_content_disposition(header: &[u8]) -> Option<String> {
+    let header = String::from_utf8_lossy(header);
+    let (mut plain, mut extended) = (None, None);
+    for param in split_params(&header).into_iter().skip(1) {
+        let Some((key, value)) = param.split_once('=') else { continue };
+        match key.trim().to_ascii_lowercase().as_str() {
+            "filename" => plain = Some(unquote(value.trim())),
+            "filename*" => extended = decode_extended(value.trim()),
+            _ => {}
+        }
+    }
+    extended.or(plain).filter(|name| !name.trim().is_empty())
+}
+
+/// Split on `;` outside quoted strings.
+fn split_params(header: &str) -> Vec<&str> {
+    let (mut parts, mut start, mut quoted, mut escaped) = (Vec::new(), 0, false, false);
+    for (i, c) in header.char_indices() {
+        match c {
+            _ if escaped => escaped = false,
+            '\\' if quoted => escaped = true,
+            '"' => quoted = !quoted,
+            ';' if !quoted => {
+                parts.push(&header[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&header[start..]);
+    parts
+}
+
+fn unquote(value: &str) -> String {
+    let Some(inner) = value.strip_prefix('"').map(|v| v.strip_suffix('"').unwrap_or(v)) else {
+        return value.to_string();
+    };
+    // Only \" and \\ are taken as escapes: servers put raw Windows paths in here, and their
+    // backslashes must survive for `sanitize` to cut the path down to its last component.
+    let mut out = String::with_capacity(inner.len());
+    let mut chars = inner.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek()) {
+            ('\\', Some(&next @ ('"' | '\\'))) => {
+                out.push(next);
+                chars.next();
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// `charset'language'percent-encoded`; UTF-8 and ISO-8859-1 are the charsets in use.
+fn decode_extended(value: &str) -> Option<String> {
+    let mut parts = value.splitn(3, '\'');
+    let (charset, _language, encoded) = (parts.next()?, parts.next()?, parts.next()?);
+    let bytes: Vec<u8> = percent_encoding::percent_decode_str(encoded).collect();
+    if charset.eq_ignore_ascii_case("utf-8") {
+        Some(String::from_utf8_lossy(&bytes).into_owned())
+    } else if charset.eq_ignore_ascii_case("iso-8859-1") {
+        Some(bytes.iter().map(|&b| b as char).collect())
+    } else {
+        None
+    }
+}
+
 fn last_path_segment(url: &str) -> Option<String> {
     let parsed = url::Url::parse(url).ok()?;
     let segment = parsed.path_segments()?.next_back().filter(|s| !s.is_empty())?;
@@ -160,5 +230,30 @@ mod tests {
         assert_eq!(available_path(dir.path(), "a.tar.gz"), dir.path().join("a.tar (2).gz"));
         std::fs::write(dir.path().join(".hidden"), b"x").unwrap();
         assert_eq!(available_path(dir.path(), ".hidden"), dir.path().join(".hidden (1)"));
+    }
+
+    #[test]
+    fn content_disposition_names() {
+        let name = |h: &str| from_content_disposition(h.as_bytes());
+        assert_eq!(name(r#"attachment; filename="a b.zip""#).as_deref(), Some("a b.zip"));
+        assert_eq!(name("attachment; filename=plain.bin").as_deref(), Some("plain.bin"));
+        assert_eq!(name(r#"attachment;filename="semi;colon \"q\".txt""#).as_deref(), Some(r#"semi;colon "q".txt"#));
+        // filename* wins, wherever it appears.
+        assert_eq!(
+            name(r#"attachment; filename*=UTF-8''%E4%B8%AD%E6%96%87.pdf; filename="fallback.pdf""#).as_deref(),
+            Some("中文.pdf")
+        );
+        assert_eq!(name("attachment; FILENAME*=iso-8859-1'en'caf%E9.txt").as_deref(), Some("café.txt"));
+        assert_eq!(name("attachment; filename=\"日本.txt\"").as_deref(), Some("日本.txt"));
+        // An unknown charset falls back to the plain name.
+        assert_eq!(name("attachment; filename*=koi8-r''%E1; filename=x.txt").as_deref(), Some("x.txt"));
+        assert_eq!(name("inline"), None);
+        assert_eq!(name(r#"attachment; filename="""#), None);
+    }
+
+    #[test]
+    fn content_disposition_names_are_still_sanitized_by_filename_for() {
+        let raw = from_content_disposition(br#"attachment; filename="..\..\evil.bat""#).unwrap();
+        assert_eq!(filename_for(Some(&raw), "https://h/x"), "evil.bat");
     }
 }

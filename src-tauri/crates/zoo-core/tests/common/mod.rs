@@ -10,6 +10,7 @@
 //!   status=CODE    always answer CODE with an empty body
 //!   delay_ms=D     sleep D ms before each 16 KiB chunk
 //!   alt            serve different bytes (see `alt_byte_at`): another file of the same size
+//!   disposition=V  send `Content-Disposition: V` (V percent-encoded in the query)
 //! Requests whose target is an absolute URL are recorded as proxied (the fixture doubles as
 //! a plain HTTP proxy for its own URLs).
 #![allow(dead_code)]
@@ -167,6 +168,9 @@ async fn handle(stream: TcpStream, state: Arc<Mutex<State>>) -> std::io::Result<
     };
 
     let mut head: Vec<(&str, String)> = vec![("ETag", etag), ("Accept-Ranges", "bytes".into())];
+    if let Some(value) = params.get("disposition") {
+        head.push(("Content-Disposition", percent_encoding::percent_decode_str(value).decode_utf8_lossy().into_owned()));
+    }
     if status == "206" {
         head.push(("Content-Range", format!("bytes {}-{}/{}", start, end - 1, size)));
     }

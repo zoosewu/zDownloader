@@ -270,7 +270,10 @@ mod tests {
         // The fake app is this test process, so it passes the owner check.
         let answer = bridge(socket, std::env::current_exe().unwrap()).forward(b"{ \"v\": 1,\n \"type\": \"ping\" }");
         assert_eq!(answer, "{\"ok\":true,\"name\":\"a.zip\"}");
-        assert_eq!(app.join().unwrap(), "{\"type\":\"ping\",\"v\":1}\n");
+        // One line; key order depends on serde_json features unified across the workspace.
+        let line = app.join().unwrap();
+        assert_eq!(line.matches('\n').count(), 1);
+        assert_eq!(serde_json::from_str::<Value>(&line).unwrap(), serde_json::json!({ "v": 1, "type": "ping" }));
     }
 
     #[cfg(windows)]

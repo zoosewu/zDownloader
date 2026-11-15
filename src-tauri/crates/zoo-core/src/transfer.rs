@@ -15,7 +15,7 @@ use crate::part_file::{PartFile, Previous, Validator};
 use crate::rate::RateLimiter;
 use crate::task::ActiveRange;
 use futures_util::StreamExt;
-use reqwest::header::{CONTENT_RANGE, ETAG, LAST_MODIFIED, RANGE};
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_RANGE, ETAG, LAST_MODIFIED, RANGE};
 use reqwest::{Response, StatusCode};
 use std::collections::{BTreeMap, VecDeque};
 use std::future::Future;
@@ -149,7 +149,25 @@ pub struct Ctx {
 
 /// Run the transfer to completion. Returns the final file path.
 pub async fn run(spec: &TransferSpec, ctx: &Ctx) -> Result<PathBuf, CoreError> {
-    let probe = with_retry(spec.retry, &ctx.cancel, || probe(spec, ctx)).await?;
+    let probed = probe_source(spec, ctx).await?;
+    fetch(spec, ctx, probed).await
+}
+
+/// What the first request learned about the source.
+pub struct Probed {
+    probe: Probe,
+    /// The server's file name (`Content-Disposition`), unsanitized.
+    pub filename: Option<String>,
+}
+
+/// The first request, retried like any other. The caller may rename the spec before `fetch`.
+pub async fn probe_source(spec: &TransferSpec, ctx: &Ctx) -> Result<Probed, CoreError> {
+    with_retry(spec.retry, &ctx.cancel, || probe(spec, ctx)).await
+}
+
+/// Fetch the missing bytes and finalize the file.
+pub async fn fetch(spec: &TransferSpec, ctx: &Ctx, probed: Probed) -> Result<PathBuf, CoreError> {
+    let probe = probed.probe;
     let remaining = match &probe {
         Probe::Ranged(v) => v.size.map(|size| size.saturating_sub(ctx.progress.downloaded())),
         Probe::Whole(response) => response.content_length(),
@@ -198,8 +216,14 @@ enum Probe {
     Whole(Response),
 }
 
-async fn probe(spec: &TransferSpec, ctx: &Ctx) -> Result<Probe, CoreError> {
+async fn probe(spec: &TransferSpec, ctx: &Ctx) -> Result<Probed, CoreError> {
     let (lease, response) = send(ctx, spec, Some("bytes=0-0".into())).await?;
+    let filename = response.headers().get(CONTENT_DISPOSITION).and_then(|v| crate::naming::from_content_disposition(v.as_bytes()));
+    let probe = probe_kind(spec, ctx, lease, response).await?;
+    Ok(Probed { probe, filename })
+}
+
+async fn probe_kind(spec: &TransferSpec, ctx: &Ctx, lease: Lease, response: Response) -> Result<Probe, CoreError> {
     let header = |name| response.headers().get(name).and_then(|v| v.to_str().ok()).map(str::to_string);
     let validator =
         |size| Validator { url: spec.origin.clone(), size, etag: header(ETAG), last_modified: header(LAST_MODIFIED) };

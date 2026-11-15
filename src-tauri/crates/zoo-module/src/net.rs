@@ -325,6 +325,10 @@ impl Net {
             .cookie_provider(jar.clone())
             // A proxy would resolve names itself, out of the Policy's sight.
             .no_proxy()
+            // Like the download core: Google resets HTTP/2 streams from clients whose
+            // User-Agent claims a browser (modules may set one). Explicit, because workspace
+            // feature unification can turn HTTP/2 on in dev builds.
+            .http1_only()
             .dns_resolver(Arc::new(PolicyResolver(policy.clone())))
             .connect_timeout(Duration::from_secs(15))
             .user_agent(USER_AGENT)

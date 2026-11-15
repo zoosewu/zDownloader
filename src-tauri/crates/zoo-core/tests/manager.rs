@@ -355,6 +355,35 @@ async fn add_rejects_bad_urls_and_sanitizes_names() {
 }
 
 #[tokio::test]
+async fn the_server_names_the_file_unless_the_user_did() {
+    let fx = Fixture::start().await;
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let m = start(config(), store.path());
+    let size = 200 * KB;
+    let url = |disposition: &str| fx.url(&format!("/file/{size}?disposition={disposition}"));
+
+    // filename* wins; ranged (multi-connection) download, so the renamed part file is the one written.
+    let named = url("attachment%3B%20filename%3D%22plain.bin%22%3B%20filename*%3DUTF-8''%25E5%25A0%25B1%25E5%2591%258A.bin");
+    let task = m.add(req(named, dir.path(), StartMode::Now)).await.unwrap();
+    assert_eq!(task.name, size.to_string(), "named after the URL until the server answers");
+    let done = wait_state(&m, task.id, TaskState::Completed).await;
+    assert_eq!(done.name, "報告.bin");
+    assert_eq!(done.final_path.as_deref(), Some(dir.path().join("報告.bin").as_path()));
+    assert_downloaded(&done, size);
+
+    // A traversal attempt is cut down to a plain name in the download folder.
+    let evil = m.add(req(url("attachment%3B%20filename%3D%22..%5C..%5Cevil.bat%22"), dir.path(), StartMode::Now)).await.unwrap();
+    assert_eq!(wait_state(&m, evil.id, TaskState::Completed).await.final_path, Some(dir.path().join("evil.bat")));
+
+    // A name the user chose stays.
+    let mut mine = req(url("attachment%3B%20filename%3D%22server.bin%22"), dir.path(), StartMode::Now);
+    mine.filename = Some("mine.bin".into());
+    let mine = m.add(mine).await.unwrap();
+    assert_eq!(wait_state(&m, mine.id, TaskState::Completed).await.name, "mine.bin");
+    assert_eq!(part_files(dir.path()), 0);
+}
+
+#[tokio::test]
 async fn revisions_increase_with_every_change_and_survive_restart() {
     let fx = Fixture::start().await;
     let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
