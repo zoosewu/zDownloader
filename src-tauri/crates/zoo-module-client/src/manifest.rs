@@ -24,6 +24,14 @@ pub struct Manifest {
     #[serde(default = "default_entry")]
     pub entry: String,
     pub url_patterns: Vec<String>,
+    /// Narrows `urlPatterns`: a URL must also match this regular expression (Rust `regex`
+    /// syntax, no lookaround or backreferences).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url_regex: Option<String>,
+    /// A copied link may start downloading without the add-download page, when the user allows
+    /// it. Leave it off for sites that usually ask for a captcha.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub auto_start: bool,
     pub permissions: Permissions,
 }
 
@@ -91,6 +99,9 @@ impl Manifest {
             let ok = rest.and_then(|r| r.split_once('/')).is_some_and(|(host, _)| !host.is_empty());
             check(ok, || format!("urlPatterns {pattern:?}: start with http(s)://host/, e.g. https://example.com/file/*"))?;
         }
+        if let Some(regex) = &m.url_regex {
+            url_regex(regex).map_err(|e| format!("manifest.json: urlRegex: {e}"))?;
+        }
         check(unique(&m.permissions.network.allow_domains), || "allowDomains: duplicate entries".into())?;
         for domain in &m.permissions.network.allow_domains {
             check(is_domain(domain), || {
@@ -104,6 +115,18 @@ impl Manifest {
         }
         Ok(manifest)
     }
+}
+
+/// Longest `urlRegex` accepted; the compiled program is capped too, so no manifest can make
+/// matching slow or large (the `regex` crate matches in linear time).
+const MAX_URL_REGEX: usize = 1000;
+
+/// Compile a `urlRegex`.
+pub fn url_regex(source: &str) -> Result<regex::Regex, String> {
+    if source.len() > MAX_URL_REGEX {
+        return Err(format!("at most {MAX_URL_REGEX} characters"));
+    }
+    regex::RegexBuilder::new(source).size_limit(1 << 20).build().map_err(|e| e.to_string())
 }
 
 /// Whether `url` matches a `urlPatterns` entry. Scheme, host and the rest are compared apart:
@@ -236,5 +259,14 @@ mod tests {
 
         assert!(Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 2")).unwrap_err().contains("apiVersion"));
         assert!(Manifest::parse(&minimal.replace("\"id\"", "\"className\": \"X\", \"id\"")).is_err(), "unknown fields fail");
+        assert!(!m.auto_start && m.url_regex.is_none());
+
+        let with = |field: &str| minimal.replace("\"id\"", &format!("{field}, \"id\""));
+        let m = Manifest::parse(&with(r#""autoStart": true, "urlRegex": "^https://x\\.com/[0-9]+$""#)).unwrap();
+        assert!(m.auto_start && m.url_regex.is_some());
+        assert!(Manifest::parse(&with(r#""urlRegex": "(""#)).unwrap_err().contains("urlRegex"));
+        assert!(Manifest::parse(&with(r#""urlRegex": "(?=x)""#)).unwrap_err().contains("urlRegex"), "no lookaround");
+        let long = format!(r#""urlRegex": "{}""#, "a".repeat(MAX_URL_REGEX + 1));
+        assert!(Manifest::parse(&with(&long)).unwrap_err().contains("urlRegex"));
     }
 }

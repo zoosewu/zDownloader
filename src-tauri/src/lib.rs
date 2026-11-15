@@ -20,7 +20,7 @@ use commands::downloads::{
 use commands::site_modules::{
     captcha_answer, captcha_open_window, captcha_pending, modules_add_source, modules_cancel_install, modules_install,
     modules_list, modules_move, modules_plan_install, modules_refresh, modules_remove, modules_remove_source,
-    modules_set_credentials, modules_set_enabled, modules_sources,
+    modules_set_auto_start, modules_set_credentials, modules_set_enabled, modules_sources,
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
 use commands::settings::{
@@ -84,6 +84,7 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             modules_cancel_install,
             modules_remove,
             modules_set_enabled,
+            modules_set_auto_start,
             modules_move,
             modules_set_credentials,
             captcha_pending,

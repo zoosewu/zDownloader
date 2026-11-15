@@ -57,6 +57,7 @@ fn manager(dir: &TempDir, site: &Server) -> (DownloadManager, Arc<ModuleResolver
     resolver.set_modules(vec![InstalledModule {
         module: module_allowing(dir, "share", MODULE, &["127.0.0.1"]),
         url_patterns: vec![format!("http://{}/page/*", site.addr)],
+        url_regex: None,
         limits: Limits::default(),
     }]);
     let store = dir.path().join("store");

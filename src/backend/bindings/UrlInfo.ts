@@ -13,4 +13,9 @@ module: InstalledInfo | null,
 /**
  * Worth offering as a download: a module resolves it or it names a common file type.
  */
-downloadable: boolean, };
+downloadable: boolean, 
+/**
+ * When copied, download it at once instead of opening the add-download page: the
+ * app-wide switch is on and the resolving module allows it.
+ */
+autoStart: boolean, };

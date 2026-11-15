@@ -3,12 +3,13 @@
   "apiVersion": 1,
   "id": "baidu",
   "name": "百度网盘",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Downloads single files shared on Baidu Netdisk (pan.baidu.com/s/...?pwd=...). Needs your login cookies: the file is saved to /zoo-downloader in your netdisk first, and files saved there more than 8 hours ago are deleted on later downloads.",
   "urlPatterns": [
     "https://pan.baidu.com/s/*",
     "https://pan.baidu.com/share/init*"
   ],
+  "autoStart": true,
   "permissions": {
     "network": {
       "allowDomains": ["baidu.com"]

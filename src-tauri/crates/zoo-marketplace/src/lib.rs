@@ -19,7 +19,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use zoo_core::store::JsonStore;
-use zoo_module_client::manifest::{Manifest, Permissions};
+use zoo_module_client::manifest::{url_regex, Manifest, Permissions};
 use zoo_module_client::resolver::InstalledModule;
 use zoo_module_client::{Grants, Limits, ModuleRef, Secret};
 
@@ -137,6 +137,9 @@ pub struct InstalledInfo {
     pub description: Option<String>,
     pub homepage: Option<String>,
     pub enabled: bool,
+    /// Copied links this module resolves may start without the add-download page (only while
+    /// the app-wide switch is on too). The manifest's `autoStart` unless the user changed it.
+    pub auto_start: bool,
     pub trust: Trust,
     /// Read in place from a local folder (development).
     pub local: bool,
@@ -219,6 +222,9 @@ struct InstalledRecord {
     id: String,
     marketplace: String,
     enabled: bool,
+    /// The user's choice; `None` follows the manifest.
+    #[serde(default)]
+    auto_start: Option<bool>,
     manifest: Manifest,
     /// What the user consented to.
     granted: Permissions,
@@ -460,6 +466,7 @@ impl Marketplace {
                 id: id.clone(),
                 marketplace: marketplace.clone(),
                 enabled: true,
+                auto_start: None,
                 granted: manifest.permissions.clone(),
                 manifest,
                 dir,
@@ -469,7 +476,12 @@ impl Marketplace {
             };
             match st.installed.iter_mut().find(|m| m.key() == summary.key) {
                 Some(existing) => {
-                    *existing = InstalledRecord { enabled: existing.enabled, installed_at: existing.installed_at, ..record };
+                    *existing = InstalledRecord {
+                        enabled: existing.enabled,
+                        auto_start: existing.auto_start,
+                        installed_at: existing.installed_at,
+                        ..record
+                    };
                 }
                 None => st.installed.push(record),
             }
@@ -503,6 +515,14 @@ impl Marketplace {
     pub fn set_enabled(&self, key: &str, enabled: bool) -> Result<(), MarketError> {
         self.change(|st| {
             find(st, key)?.enabled = enabled;
+            Ok(())
+        })
+    }
+
+    /// Whether copied links this module resolves start at once.
+    pub fn set_auto_start(&self, key: &str, auto_start: bool) -> Result<(), MarketError> {
+        self.change(|st| {
+            find(st, key)?.auto_start = Some(auto_start);
             Ok(())
         })
     }
@@ -610,6 +630,7 @@ impl Marketplace {
             description: m.manifest.description.clone(),
             homepage: m.manifest.homepage.clone(),
             enabled: m.enabled,
+            auto_start: m.auto_start.unwrap_or(m.manifest.auto_start),
             trust: st.sources.iter().find(|s| s.name == m.marketplace).map_or(Trust::Community, |s| s.trust),
             local: m.local,
             url_patterns: m.manifest.url_patterns.clone(),
@@ -628,7 +649,7 @@ impl Marketplace {
         st.installed
             .iter()
             .filter(|m| m.enabled)
-            .map(|m| {
+            .filter_map(|m| {
                 let key = m.key();
                 let allowed = m.effective();
                 let credentials = allowed
@@ -642,15 +663,24 @@ impl Marketplace {
                         }
                     })
                     .collect();
-                InstalledModule {
+                // Checked when the manifest was read; a failure here must not widen the match.
+                let url_regex = match m.manifest.url_regex.as_deref().map(url_regex).transpose() {
+                    Ok(regex) => regex,
+                    Err(e) => {
+                        log::warn!("{key}: urlRegex: {e}");
+                        return None;
+                    }
+                };
+                Some(InstalledModule {
                     module: ModuleRef {
                         id: key,
                         entry: m.dir.join(&m.manifest.entry),
                         grants: Grants { allow_domains: allowed.allow_domains, credentials },
                     },
                     url_patterns: m.manifest.url_patterns.clone(),
+                    url_regex,
                     limits: Limits::default(),
-                }
+                })
             })
             .collect()
     }

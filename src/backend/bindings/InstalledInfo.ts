@@ -7,7 +7,12 @@ export type InstalledInfo = {
 /**
  * `id@marketplace`.
  */
-key: string, id: string, marketplace: string, name: string, version: string, description: string | null, homepage: string | null, enabled: boolean, trust: Trust, 
+key: string, id: string, marketplace: string, name: string, version: string, description: string | null, homepage: string | null, enabled: boolean, 
+/**
+ * Copied links this module resolves may start without the add-download page (only while
+ * the app-wide switch is on too). The manifest's `autoStart` unless the user changed it.
+ */
+autoStart: boolean, trust: Trust, 
 /**
  * Read in place from a local folder (development).
  */

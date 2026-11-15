@@ -75,6 +75,8 @@ struct Module {
     version: &'static str,
     domains: Vec<&'static str>,
     credentials: Vec<&'static str>,
+    /// Extra manifest fields.
+    extra: serde_json::Value,
     code: String,
 }
 
@@ -85,21 +87,23 @@ impl Module {
             version,
             domains: domains.to_vec(),
             credentials: vec![],
+            extra: json!({}),
             code: format!("export default {{ async resolve(url) {{ return {{ url, filename: 'v{version}' }}; }} }};"),
         }
     }
 
     fn manifest(&self) -> String {
         let credentials: Vec<_> = self.credentials.iter().map(|k| json!({ "key": k, "label": k })).collect();
-        json!({
+        let mut manifest = json!({
             "apiVersion": 1,
             "id": self.id,
             "name": "Demo host",
             "version": self.version,
             "urlPatterns": ["https://demo.example/f/*"],
             "permissions": { "network": { "allowDomains": self.domains }, "credentials": credentials },
-        })
-        .to_string()
+        });
+        manifest.as_object_mut().unwrap().extend(self.extra.as_object().unwrap().clone());
+        manifest.to_string()
     }
 }
 
@@ -266,6 +270,31 @@ async fn credentials_order_enabling_and_removal() {
     assert!(!data.path().join("modules/zoo/demo").exists());
     market.remove_source("zoo").unwrap();
     assert!(market.installed().is_empty() && market.sources().is_empty());
+}
+
+#[tokio::test]
+async fn the_module_proposes_auto_start_and_the_user_decides() {
+    let site = Site::start().await;
+    let module = Module { extra: json!({ "autoStart": true, "urlRegex": "^https://demo\\.example/f/[0-9]+$" }), ..Module::demo("1.0.0", &[]) };
+    site.publish(&module);
+    let (data, secrets) = (tempfile::tempdir().unwrap(), Arc::new(MemorySecrets::default()));
+    let market = open(data.path(), &secrets);
+    market.add_source(&site.catalog_url()).await.unwrap();
+    market.install(market.plan_install("demo@zoo").await.unwrap()).unwrap();
+    assert!(market.installed()[0].auto_start, "the manifest's choice");
+
+    let resolver = &market.resolver_modules()[0];
+    assert!(resolver.matches("https://demo.example/f/123"));
+    assert!(resolver.matches("https://demo.example/f/123#top"), "the fragment is ignored");
+    assert!(!resolver.matches("https://demo.example/f/abc"), "urlRegex narrows urlPatterns");
+    assert!(!resolver.matches("https://other.example/f/123"));
+
+    market.set_auto_start("demo@zoo", false).unwrap();
+    site.publish(&Module { version: "1.0.1", ..module });
+    market.refresh().await;
+    market.install(market.plan_install("demo@zoo").await.unwrap()).unwrap();
+    assert!(!market.installed()[0].auto_start, "the user's choice survives an update");
+    assert!(!open(data.path(), &secrets).installed()[0].auto_start, "and a restart");
 }
 
 #[tokio::test]

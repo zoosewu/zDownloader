@@ -6,7 +6,6 @@ import type { AppSettings } from '../backend';
 const defaultSettings: AppSettings = {
   language: 'zh-TW',
   theme: 'dark',
-  autoStart: false,
   defaultDownloadDir: '',  // Will be set from backend
   maxConcurrentDownloads: null,  // unlimited
   segmentSizeMb: 10,
@@ -17,6 +16,7 @@ const defaultSettings: AppSettings = {
   proxyFallbackDirect: true,
   proxyVerificationIntervalHours: 24,
   enableClipboardMonitoring: true,
+  clipboardAutoStart: false,
   enableNotifications: true,
   enableSystemTray: true,
   autoRetryEnabled: true,

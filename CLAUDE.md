@@ -509,6 +509,7 @@ chmod +x .git/hooks/pre-commit
 - 不要讀整份任務清單或從它產生新陣列傳下去；要新的資料就在 store 加一個窄 view。
 - 傳給 memo 元件的 props 用基本型別或穩定參考（`useCallback`、atom 的值）；每次 render 新建的物件或函式會讓 memo 失效。`SortableContext` 的 `items` 要用 `taskIdsAtom` 的陣列。
 - 列分成「隨進度變化的格子」與只隨狀態變化的 `FilenameCell`、`StatusCell`、`ActionsCell`、`CreatedCell`。
+- 剪貼簿：`clipboard-link` → `urls_inspect`。`autoStart` 由後端決定：總開關 `clipboardAutoStart`（預設關，關閉時一律不自動開始）且模組的分項開關（預設取 manifest 的 `autoStart`，使用者可覆寫）都開才直接加入下載，否則跳到新增下載頁。模組的網址比對是 `urlPatterns` 加選填的 `urlRegex`（兩者都要符合），不執行模組程式。
 - 不輪詢：後端推事件（下載、剪貼簿 `clipboard-link`、模組、captcha）；分段圖在該任務變動時才重抓（節流 500 ms）。唯一的計時器是倒數顯示（`useNow`，只在有倒數的列）。
 - React 19 開發版會為每次 render 記 `performance.measure()`，沒有上限；`main.tsx` 在開發模式定期清除（曾讓 WebView 約 2.5 小時後當機）。
 - 驗證方式：在開發模式用 CDP 數 `performance.getEntriesByType('measure')` 的元件名稱（每秒、每個元件幾次）。

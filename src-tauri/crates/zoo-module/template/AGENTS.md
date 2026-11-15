@@ -51,6 +51,11 @@ starts requesting a page it did not request before; the test output tells you).
 - **No state between calls.** Every call starts fresh; cookies last for one call.
 - **Limits.** 30 seconds of work per call (countdowns and captchas excluded), 128 MB memory,
   16 MB per response.
+- **Which URLs.** `urlPatterns` (`*` wildcards) decide which links reach the module; list
+  every host form. When a wildcard is too broad, add `urlRegex` (Rust regex syntax: no
+  lookaround or backreferences): a URL must match both. Matching never runs module code.
+- **`autoStart`.** `true` lets a copied link start downloading without the add-download page,
+  when the user allows it. Leave it out for sites that usually ask for a captcha or a wait.
 - **Result fields** are exactly `url`, `filename`, `headers`, `size`, `maxConnections`,
   `maxSegmentSize` (see `Resolved` in `types/zoo-module.d.ts`). Unknown fields are an error.
 

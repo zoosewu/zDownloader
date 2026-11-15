@@ -58,6 +58,17 @@
         "examples": ["https://k2s.cc/file/*", "https://*.k2s.cc/file/*"]
       }
     },
+    "urlRegex": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional. Narrows urlPatterns: a URL must also match this regular expression (Rust regex syntax: no lookaround or backreferences). The fragment is removed first.",
+      "examples": ["^https://k2s\\.cc/file/[0-9a-f]{13}(/|$)"]
+    },
+    "autoStart": {
+      "type": "boolean",
+      "default": false,
+      "description": "A copied link may start downloading at once instead of opening the add-download page, when the user allows it. Leave false for sites that usually ask for a captcha."
+    },
     "permissions": {
       "type": "object",
       "additionalProperties": false,

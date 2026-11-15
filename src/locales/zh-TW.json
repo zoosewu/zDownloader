@@ -123,8 +123,8 @@
     "maxConcurrent": "最大同時下載數",
     "maxConcurrentHelp": "留空表示無限制",
     "maxThreads": "每個下載的最大執行緒數",
-    "autoStart": "自動開始下載",
     "clipboardMonitor": "監控剪貼簿",
+    "clipboardAutoStart": "複製連結時，模組允許的直接開始下載",
     "notifications": "啟用通知",
     "language": "語言",
     "theme": "主題",
@@ -181,6 +181,7 @@
     "installed": {
       "title": "已安裝",
       "checkOnStart": "啟動時檢查更新",
+      "autoStart": "複製這個網站的連結時直接開始下載",
       "empty": "尚未安裝任何模組。到「瀏覽」安裝，或在「來源」新增模組市集。",
       "local": "本機",
       "update": "更新到 {{version}}",

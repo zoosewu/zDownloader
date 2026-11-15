@@ -153,6 +153,8 @@ export const backend = {
     cancelInstall: (key: string) => call<null>('modules_cancel_install', { key }),
     remove: (key: string) => call<null>('modules_remove', { key }),
     setEnabled: (key: string, enabled: boolean) => call<null>('modules_set_enabled', { key, enabled }),
+    /** Copied links this module resolves start at once (only with `clipboardAutoStart` on). */
+    setAutoStart: (key: string, autoStart: boolean) => call<null>('modules_set_auto_start', { key, autoStart }),
     /** Move to `index` in the priority order. */
     move: (key: string, index: number) => call<null>('modules_move', { key, index }),
     /** `null` deletes a stored value. */

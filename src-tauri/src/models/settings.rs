@@ -10,7 +10,6 @@ pub struct AppSettings {
     // General settings
     pub language: String, // "zh-TW" | "en" | "ja"
     pub theme: Theme,
-    pub auto_start: bool,
 
     // Download settings
     pub default_download_dir: PathBuf,
@@ -29,6 +28,10 @@ pub struct AppSettings {
 
     // UI settings
     pub enable_clipboard_monitoring: bool,
+    /// Copied links start downloading at once when their module allows it (each module has
+    /// its own switch). Off: every copied link opens the add-download page.
+    #[serde(default)]
+    pub clipboard_auto_start: bool,
     pub enable_notifications: bool,
     pub enable_system_tray: bool,
 
@@ -69,7 +72,6 @@ impl Default for AppSettings {
         Self {
             language: "zh-TW".to_string(),
             theme: Theme::Dark,
-            auto_start: false,
             default_download_dir: dirs::download_dir().unwrap_or_else(|| PathBuf::from(".")),
             max_concurrent_downloads: None,
             segment_size_mb: 10,
@@ -80,6 +82,7 @@ impl Default for AppSettings {
             proxy_fallback_direct: true,
             proxy_verification_interval_hours: 24,
             enable_clipboard_monitoring: true,
+            clipboard_auto_start: false,
             enable_notifications: true,
             enable_system_tray: true,
             auto_retry_enabled: true,

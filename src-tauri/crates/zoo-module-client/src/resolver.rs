@@ -16,7 +16,16 @@ use crate::supervisor::{Interaction, Supervisor};
 pub struct InstalledModule {
     pub module: ModuleRef,
     pub url_patterns: Vec<String>,
+    /// The manifest's `urlRegex`: a URL must match it too.
+    pub url_regex: Option<regex::Regex>,
     pub limits: Limits,
+}
+
+impl InstalledModule {
+    pub fn matches(&self, url: &str) -> bool {
+        let url = url.split('#').next().unwrap_or(url);
+        self.url_patterns.iter().any(|p| url_matches(p, url)) && self.url_regex.as_ref().is_none_or(|r| r.is_match(url))
+    }
 }
 
 pub struct ModuleResolver {
@@ -40,7 +49,7 @@ impl ModuleResolver {
     /// The module that would resolve `url`, if any.
     pub fn module_for(&self, url: &str) -> Option<InstalledModule> {
         let modules = self.modules.read().unwrap();
-        modules.iter().find(|m| m.url_patterns.iter().any(|p| url_matches(p, url))).cloned()
+        modules.iter().find(|m| m.matches(url)).cloned()
     }
 }
 

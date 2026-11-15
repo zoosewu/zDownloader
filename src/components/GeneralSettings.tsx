@@ -190,6 +190,17 @@ export default function GeneralSettings() {
               label={t('settings.clipboardMonitor')}
             />
             <FormControlLabel
+              sx={{ pl: 4 }}
+              disabled={!settings.enableClipboardMonitoring}
+              control={
+                <Switch
+                  checked={settings.clipboardAutoStart}
+                  onChange={(e) => setSettings({ ...settings, clipboardAutoStart: e.target.checked })}
+                />
+              }
+              label={t('settings.clipboardAutoStart')}
+            />
+            <FormControlLabel
               control={
                 <Switch
                   checked={settings.enableNotifications}
@@ -206,15 +217,6 @@ export default function GeneralSettings() {
                 />
               }
               label={t('settings.systemTray') || 'Enable System Tray'}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.autoStart}
-                  onChange={(e) => setSettings({ ...settings, autoStart: e.target.checked })}
-                />
-              }
-              label={t('settings.autoStart')}
             />
           </Stack>
         </Box>

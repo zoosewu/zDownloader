@@ -6,6 +6,8 @@ use tauri::State;
 use ts_rs::TS;
 use zoo_marketplace::InstalledInfo;
 
+use crate::commands::error::CmdResult;
+use crate::commands::settings::SettingsState;
 use crate::site_modules::SiteModules;
 
 /// File types worth offering as a download when their URL shows up on the clipboard.
@@ -23,15 +25,20 @@ pub struct UrlInfo {
     pub module: Option<InstalledInfo>,
     /// Worth offering as a download: a module resolves it or it names a common file type.
     pub downloadable: bool,
+    /// When copied, download it at once instead of opening the add-download page: the
+    /// app-wide switch is on and the resolving module allows it.
+    pub auto_start: bool,
 }
 
 #[tauri::command]
-pub fn urls_inspect(url: String, modules: State<'_, SiteModules>) -> UrlInfo {
+pub async fn urls_inspect(url: String, modules: State<'_, SiteModules>, settings: State<'_, SettingsState>) -> CmdResult<UrlInfo> {
     let module = modules.resolver.module_for(&url).and_then(|m| modules.market.installed().into_iter().find(|i| i.key == m.module.id));
-    inspect(&url, module)
+    let allowed = settings.settings.lock().await.clipboard_auto_start;
+    Ok(inspect(&url, module, allowed))
 }
 
-fn inspect(url: &str, module: Option<InstalledInfo>) -> UrlInfo {
+/// `auto_start_allowed`: the app-wide switch; without it nothing starts by itself.
+fn inspect(url: &str, module: Option<InstalledInfo>, auto_start_allowed: bool) -> UrlInfo {
     let filename = match tauri::Url::parse(url) {
         Ok(parsed) if matches!(parsed.scheme(), "http" | "https") => {
             let name = zoo_core::naming::filename_for(None, parsed.as_str());
@@ -43,7 +50,8 @@ fn inspect(url: &str, module: Option<InstalledInfo>) -> UrlInfo {
         .as_deref()
         .and_then(|name| name.rsplit_once('.'))
         .is_some_and(|(_, ext)| DOWNLOAD_TYPES.contains(&ext.to_ascii_lowercase().as_str()));
-    UrlInfo { downloadable: module.is_some() || known_type, filename, module }
+    let auto_start = auto_start_allowed && module.as_ref().is_some_and(|m| m.auto_start);
+    UrlInfo { downloadable: module.is_some() || known_type, filename, module, auto_start }
 }
 
 #[cfg(test)]
@@ -52,11 +60,11 @@ mod tests {
 
     #[test]
     fn file_urls_name_their_file() {
-        let info = inspect("https://cdn.example/files/My%20Movie.MKV?token=1", None);
+        let info = inspect("https://cdn.example/files/My%20Movie.MKV?token=1", None, true);
         assert_eq!(info.filename.as_deref(), Some("My Movie.MKV"));
         assert!(info.downloadable);
 
-        let page = inspect("https://example.com/watch.php?v=1", None);
+        let page = inspect("https://example.com/watch.php?v=1", None, true);
         assert_eq!(page.filename.as_deref(), Some("watch.php"));
         assert!(!page.downloadable, "a web page is not offered as a download");
     }
@@ -64,14 +72,14 @@ mod tests {
     #[test]
     fn urls_without_a_file_name_have_none() {
         for url in ["https://example.com/", "https://example.com/share/abc", "https://example.com/.hidden", "ftp://x/a.zip", "not a url"] {
-            let info = inspect(url, None);
+            let info = inspect(url, None, true);
             assert_eq!((info.filename, info.downloadable), (None, false), "{url}");
         }
     }
 
     #[test]
     fn serializes_camel_case() {
-        let json = serde_json::to_value(inspect("https://x/a.zip", None)).unwrap();
-        assert_eq!(json, serde_json::json!({ "filename": "a.zip", "module": null, "downloadable": true }));
+        let json = serde_json::to_value(inspect("https://x/a.zip", None, true)).unwrap();
+        assert_eq!(json, serde_json::json!({ "filename": "a.zip", "module": null, "downloadable": true, "autoStart": false }));
     }
 }

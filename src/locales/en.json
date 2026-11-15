@@ -123,8 +123,8 @@
     "maxConcurrent": "Max Concurrent Downloads",
     "maxConcurrentHelp": "Leave empty for unlimited",
     "maxThreads": "Max Threads per Download",
-    "autoStart": "Auto-start Downloads",
     "clipboardMonitor": "Monitor Clipboard",
+    "clipboardAutoStart": "Start copied links at once when their module allows it",
     "notifications": "Enable Notifications",
     "language": "Language",
     "theme": "Theme",
@@ -181,6 +181,7 @@
     "installed": {
       "title": "Installed",
       "checkOnStart": "Check for updates on start",
+      "autoStart": "Start copied links from this site at once",
       "empty": "No modules installed. Install one from Browse, or add a marketplace under Sources.",
       "local": "Local",
       "update": "Update to {{version}}",

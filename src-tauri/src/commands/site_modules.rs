@@ -88,6 +88,14 @@ pub fn modules_set_enabled(key: String, enabled: bool, app: AppHandle, modules: 
     Ok(())
 }
 
+/// Whether copied links the module resolves start at once (with the app-wide switch on).
+#[tauri::command]
+pub fn modules_set_auto_start(key: String, auto_start: bool, app: AppHandle, modules: State<'_, SiteModules>) -> CmdResult<()> {
+    modules.market.set_auto_start(&key, auto_start)?;
+    changed(&app, &modules);
+    Ok(())
+}
+
 /// Move a module to `index` in the priority order (the first matching module resolves).
 #[tauri::command]
 pub fn modules_move(key: String, index: usize, app: AppHandle, modules: State<'_, SiteModules>) -> CmdResult<()> {

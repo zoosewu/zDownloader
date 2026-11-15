@@ -1,4 +1,5 @@
-// Open the add-download page when a download link is copied. The backend watches the
+// Open the add-download page when a download link is copied, or start it at once when the
+// backend says so (app-wide switch on and the module allows it). The backend watches the
 // clipboard (OS change notifications, no polling) and sends copied links as events while
 // monitoring is enabled in settings.
 import { useEffect } from 'react';
@@ -15,7 +16,17 @@ export function useClipboard(tauriReady: boolean = false) {
     backend.events
       .onClipboardLink(async (url) => {
         try {
-          if ((await backend.urls.inspect(url)).downloadable) navigateTo('add-download', { url });
+          const info = await backend.urls.inspect(url);
+          if (!info.downloadable) return;
+          if (info.autoStart) {
+            try {
+              await backend.downloads.add({ url, start: { mode: 'now' } });
+              return;
+            } catch {
+              // Could not add it: let the user see the link and the reason on the add page.
+            }
+          }
+          navigateTo('add-download', { url });
         } catch {
           // Not a URL the backend understands: ignore it.
         }

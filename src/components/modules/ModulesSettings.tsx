@@ -166,6 +166,17 @@ function Installed({
               </Tooltip>
               <Switch checked={m.enabled} onChange={run(() => backend.modules.setEnabled(m.key, !m.enabled))} />
             </Box>
+            <FormControlLabel
+              sx={{ mt: 0.5 }}
+              control={
+                <Switch size="small" checked={m.autoStart} onChange={run(() => backend.modules.setAutoStart(m.key, !m.autoStart))} />
+              }
+              label={
+                <Typography variant="body2" color={settings.clipboardAutoStart ? 'text.primary' : 'text.secondary'}>
+                  {t('modules.installed.autoStart')}
+                </Typography>
+              }
+            />
             {m.needsConsent && (
               <Alert
                 severity="warning"

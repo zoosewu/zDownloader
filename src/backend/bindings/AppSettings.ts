@@ -2,11 +2,16 @@
 import type { SpeedLimitMode } from "./SpeedLimitMode";
 import type { Theme } from "./Theme";
 
-export type AppSettings = { language: string, theme: Theme, autoStart: boolean, defaultDownloadDir: string, maxConcurrentDownloads: number | null, segmentSizeMb: number, threadCount: number, speedLimitMode: SpeedLimitMode, speedLimitKbps: number | null, enableProxy: boolean, 
+export type AppSettings = { language: string, theme: Theme, defaultDownloadDir: string, maxConcurrentDownloads: number | null, segmentSizeMb: number, threadCount: number, speedLimitMode: SpeedLimitMode, speedLimitKbps: number | null, enableProxy: boolean, 
 /**
  * When every proxy is unusable, connect directly instead of failing.
  */
-proxyFallbackDirect: boolean, proxyVerificationIntervalHours: number, enableClipboardMonitoring: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
+proxyFallbackDirect: boolean, proxyVerificationIntervalHours: number, enableClipboardMonitoring: boolean, 
+/**
+ * Copied links start downloading at once when their module allows it (each module has
+ * its own switch). Off: every copied link opens the add-download page.
+ */
+clipboardAutoStart: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
 /**
  * User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
  */
