@@ -54,7 +54,8 @@
     - [x] `urls_inspect` 取代 `detect_url` 與 `modules_match`
     - [x] 刪除舊模組系統（Rust、`modules/`、deno_core 依賴、文件）
   - [ ] 4g 實機驗證與文件
-    - [ ] 用真實 k2s 帳號錄製 cassette（免費流程的 `free_download_key`、等待欄位、登入 reCAPTCHA 頁的 site key 都是依文件推測）
+    - [x] 免費流程以真實網站錄製（2026-11-15，使用者在終端機回答驗證碼）：錯誤碼 31 → 驗證碼（答錯再 31、換新圖）→ `free_download_key` + `time_wait: 30` → 連結在 `*.filestore.app`（支援 Range、附 Content-Disposition）。模組推測的流程完全正確，不需修改
+    - [ ] 用真實 k2s 帳號錄製登入、登入 reCAPTCHA 頁、premium 連結（使用者暫緩）
 - [x] 瀏覽器擴充重寫：規格 [browser-extension.md](../docs/architecture/browser-extension.md)（2026-11-15 確認）
   - [x] 1 協定與 app 端（`browser_bridge`、host manifest 註冊；刪 HTTP 入口與 warp）
     - [x] `zoo-native-host` lib：協定、socket 名稱、固定擴充 ID；錯誤碼 `invalidUrl` 改為 `invalid`（header、檔名無效也用它）

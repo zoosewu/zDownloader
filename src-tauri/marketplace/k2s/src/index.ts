@@ -4,9 +4,11 @@
 // `auth_token`. Free downloads go: getUrl -> captcha (30) -> getUrl with the answer, which
 // hands out a free_download_key and a countdown -> wait -> getUrl with the key -> link.
 //
-// Unverified against the live site: the shape of the free flow (where the key and the
-// countdown appear) and the reCAPTCHA page for logins. The cassettes in tests/ follow the
-// documentation; record them again with a real account before trusting them.
+// The free flow is recorded from the live site (tests/cassettes/free.json, 2026-11-15): getUrl
+// without an answer says errorCode 31, a wrong answer says 31 again, the right one returns
+// free_download_key with time_wait 30, and the link is on *.filestore.app.
+// Still unverified: everything with an account (login, its reCAPTCHA page, premium links).
+// Those cassettes follow the documentation; record them with a real account before trusting them.
 
 import { defineModule, type Zoo } from 'zoo-module';
 

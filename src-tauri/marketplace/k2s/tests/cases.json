@@ -9,10 +9,10 @@
   },
   {
     "name": "free",
-    "url": "https://k2s.cc/file/a4b8776255578/holiday.mp4",
+    "url": "https://k2s.cc/file/113ad9f68926a/My%20Lovable%20Demon%20v1.0.6.rar",
     "expect": {
-      "url": "https://*.keep2share.cc/*/holiday.mp4*",
-      "filename": "holiday.mp4"
+      "url": "https://*.filestore.app/*?temp_url_expires=*",
+      "filename": "My Lovable Demon v1.0.6.rar"
     }
   },
   {
