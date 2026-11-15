@@ -65,3 +65,8 @@
 
 - 錯誤：用新的 `--user-data-dir` 開 Edge，Edge 自動以使用者的帳號登入並同步，使用者的擴充（NDM、FDM）全部出現並搶走下載事件。在這種 profile 改擴充設定可能同步回使用者平常用的瀏覽器。
 - 規則：自動化用的 Chrome／Edge 一律加 `--disable-sync`，開好後先用 `chrome.management.getAll()` 確認只有預期的擴充；發現同步已發生就關掉並刪除 profile 重來，不要在裡面改任何設定。
+
+## 反引號在 shell 雙引號裡會被執行（2026-11-15）
+
+- 錯誤：用 `node -e "..."` 和 `perl -0pi -e "..."` 寫入含 Markdown／Rust 文件註解的文字，裡面的反引號被 bash 當成指令替換，內容被吃掉（`Content-Disposition`、`fetch` 變成空字串）。和先前反斜線被吃是同一類問題。
+- 規則：要寫入的內容含反引號、反斜線或 `$` 時，一律用 Write／Edit，或先用 Write 寫成腳本檔再執行；不要把這類內容塞進 shell 字串。改完用 grep 確認關鍵字還在。

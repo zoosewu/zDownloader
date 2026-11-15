@@ -11,7 +11,7 @@
 - [x] 彙整：HTML 報告 `%TEMP%\architecture-review-20261030-171712.html`（8 候選 + 重建藍圖 + Top recommendation）
 - [x] 檢視結果入庫：`docs/architecture/review-2026-10-30.{md,html}`、`GLOSSARY.md`、CLAUDE.md 指引
 - [x] 新需求記錄：ADR-0001 網站模組 marketplace（方向已接受，細節待設計）
-- [ ] 與使用者逐項 grilling，決定處理順序
+- [x] 與使用者逐項 grilling，決定處理順序（依 Phase 0–4 與擴充重寫逐步處理完畢；2026-11-15 檢視紀錄全面同步，剩餘項目見紀錄開頭）
 
 ## 建議階段（待確認）
 
@@ -93,6 +93,8 @@
   - [x] `packageManager` 早已存在，移除過期項目
 
 ## 已知待辦（合併時發現）
+
+- [x] 架構檢視紀錄全面同步（2026-11-15）：75 列標上現況與證據（測試名稱、檔案）；刪除測試早已不存在型別的 `api-serialization.test.ts`
 
 - [x] 擴充送出的任務帶瀏覽器 User-Agent 時，Google（YouTube）重置 HTTP/2 串流（`http2 error: stream error … protocol error`），自動重試用完後失敗。下載核心改為只用 HTTP/1.1（分段本來就該各用一條連線）；以一次性 reqwest 程式確認 h2 失敗、h1 成功，實機同一請求下載完成（2026-11-15）
 - [x] 網站模組的 `fetch`（zoo-module）也明確只用 HTTP/1.1（workspace feature 合併會讓開發版開啟 HTTP/2，打包版不會；改成兩邊一致）（2026-11-15）
