@@ -1,0 +1,60 @@
+{
+  "extName": {
+    "message": "Zoo Downloader"
+  },
+  "extDescription": {
+    "message": "Send downloads to the Zoo Downloader app."
+  },
+  "menuDownload": {
+    "message": "Download with Zoo Downloader"
+  },
+  "takeover": {
+    "message": "Take over browser downloads"
+  },
+  "takeoverLimit": {
+    "message": "Downloads created by submitting a form may fail in the app; turn this off and download again in the browser."
+  },
+  "statusChecking": {
+    "message": "Checking…"
+  },
+  "statusConnected": {
+    "message": "Connected"
+  },
+  "statusNotRunning": {
+    "message": "Zoo Downloader is not open"
+  },
+  "statusNotInstalled": {
+    "message": "Zoo Downloader not found: install it and open it once"
+  },
+  "statusVersion": {
+    "message": "Update the extension or the app: versions do not match"
+  },
+  "statusError": {
+    "message": "Cannot reach Zoo Downloader"
+  },
+  "error_notInstalled": {
+    "message": "Zoo Downloader not found: install it and open it once."
+  },
+  "error_appNotRunning": {
+    "message": "Zoo Downloader could not be started."
+  },
+  "error_unsupportedVersion": {
+    "message": "Update the extension or the app: versions do not match."
+  },
+  "error_invalid": {
+    "message": "Zoo Downloader refused the download: $DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "error_internal": {
+    "message": "Zoo Downloader: $DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  }
+}

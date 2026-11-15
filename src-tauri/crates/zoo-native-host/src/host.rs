@@ -65,20 +65,25 @@ impl Bridge {
     /// Forward one request and return the JSON answer for the extension. Always answers.
     pub fn forward(&self, request: &[u8]) -> String {
         // Re-encoding guarantees a single line.
-        let line = match serde_json::from_slice::<Value>(request) {
-            Ok(value) => value.to_string(),
+        let value = match serde_json::from_slice::<Value>(request) {
+            Ok(value) => value,
             Err(e) => return error(ErrorCode::Internal, format!("bad request: {e}")),
         };
-        let stream = match self.connect() {
+        // A ping only asks whether the app runs (the popup); it must not start it.
+        let may_start = value.get("type").and_then(Value::as_str) != Some("ping");
+        let stream = match self.connect(may_start) {
             Ok(stream) => stream,
             Err(answer) => return answer,
         };
-        exchange(&stream, &line).unwrap_or_else(|e| error(ErrorCode::Internal, format!("no answer from Zoo Downloader: {e}")))
+        exchange(&stream, &value.to_string()).unwrap_or_else(|e| error(ErrorCode::Internal, format!("no answer from Zoo Downloader: {e}")))
     }
 
-    fn connect(&self) -> Result<Stream, String> {
+    fn connect(&self, may_start: bool) -> Result<Stream, String> {
         if let Ok(stream) = Stream::connect(self.socket.clone()) {
             return self.verified(stream);
+        }
+        if !may_start {
+            return Err(error(ErrorCode::AppNotRunning, "Zoo Downloader is not running"));
         }
         launch(&self.app).map_err(|e| error(ErrorCode::AppNotRunning, format!("cannot start {}: {e}", self.app.display())))?;
         let deadline = Instant::now() + self.wait;
@@ -282,7 +287,7 @@ mod tests {
     #[test]
     fn reports_a_missing_app() {
         let answer: Value =
-            serde_json::from_str(&bridge(unique_socket(), PathBuf::from("no-such-dir/zoo-downloader.exe")).forward(b"{\"v\":1,\"type\":\"ping\"}"))
+            serde_json::from_str(&bridge(unique_socket(), PathBuf::from("no-such-dir/zoo-downloader.exe")).forward(ADD))
                 .unwrap();
         assert_eq!(answer["code"], "appNotRunning");
     }
@@ -292,10 +297,22 @@ mod tests {
     fn gives_up_when_the_started_app_never_listens() {
         let started = Instant::now();
         let answer: Value =
-            serde_json::from_str(&bridge(unique_socket(), PathBuf::from(r"C:\Windows\System32\whoami.exe")).forward(b"{\"v\":1,\"type\":\"ping\"}"))
+            serde_json::from_str(&bridge(unique_socket(), PathBuf::from(r"C:\Windows\System32\whoami.exe")).forward(ADD))
                 .unwrap();
         assert_eq!(answer["code"], "appNotRunning");
         assert!(started.elapsed() >= Duration::from_millis(500));
+    }
+
+    const ADD: &[u8] = b"{\"v\":1,\"type\":\"add\",\"url\":\"https://a/\"}";
+
+    #[test]
+    fn a_ping_never_starts_the_app() {
+        // An existing app that is not running: a ping must answer at once instead of starting it.
+        let started = Instant::now();
+        let app = std::env::current_exe().unwrap();
+        let answer: Value = serde_json::from_str(&bridge(unique_socket(), app).forward(b"{\"v\":1,\"type\":\"ping\"}")).unwrap();
+        assert_eq!(answer["code"], "appNotRunning");
+        assert!(started.elapsed() < Duration::from_millis(200));
     }
 
     #[test]

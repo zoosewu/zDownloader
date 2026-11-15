@@ -1,0 +1,60 @@
+{
+  "extName": {
+    "message": "Zoo Downloader"
+  },
+  "extDescription": {
+    "message": "把下載交給 Zoo Downloader。"
+  },
+  "menuDownload": {
+    "message": "用 Zoo Downloader 下載"
+  },
+  "takeover": {
+    "message": "接管瀏覽器下載"
+  },
+  "takeoverLimit": {
+    "message": "送出表單才產生的下載可能在 app 中失敗，請關閉此選項後在瀏覽器重新下載。"
+  },
+  "statusChecking": {
+    "message": "檢查中…"
+  },
+  "statusConnected": {
+    "message": "已連線"
+  },
+  "statusNotRunning": {
+    "message": "Zoo Downloader 未開啟"
+  },
+  "statusNotInstalled": {
+    "message": "找不到 Zoo Downloader：請安裝並開啟一次"
+  },
+  "statusVersion": {
+    "message": "擴充與 app 版本不合，請更新"
+  },
+  "statusError": {
+    "message": "無法連到 Zoo Downloader"
+  },
+  "error_notInstalled": {
+    "message": "找不到 Zoo Downloader：請安裝並開啟一次。"
+  },
+  "error_appNotRunning": {
+    "message": "無法啟動 Zoo Downloader。"
+  },
+  "error_unsupportedVersion": {
+    "message": "擴充與 app 版本不合，請更新。"
+  },
+  "error_invalid": {
+    "message": "Zoo Downloader 拒絕這個下載：$DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "error_internal": {
+    "message": "Zoo Downloader：$DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  }
+}

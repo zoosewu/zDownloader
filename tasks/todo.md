@@ -66,7 +66,11 @@
     - [x] `pnpm build:sidecars` 取代 `build:module-host`，`externalBin` 加入 host
     - [x] 實機（以 node 模擬瀏覽器啟動 host）：錯誤 origin 拒絕；app 未開時啟動它並回應（約 0.5 秒），host 結束後 app 繼續執行；之後約 10 ms
     - 修正：app 繼承 host 的 std handle（瀏覽器的 pipe）會讓呼叫端一直等，啟動前改為不可繼承
-  - [ ] 3 擴充（右鍵、Cookie、接管下載、popup、圖示）
+  - [x] 3 擴充（右鍵、Cookie、接管下載、popup、圖示）
+    - [x] `browser-extension/`：MV3、`src/core.js` 注入 `chrome`、三語 `_locales`、app 圖示產生 16/32/48/128；刪除 `chrome-extension/`
+    - [x] popup 的 ping 不啟動 app（host 對 `ping` 不 launch），只顯示「未開啟」
+    - [x] 加 `notifications` 權限（右鍵失敗通知）
+    - [x] vitest 24 項：manifest key 與 Rust `EXTENSION_ID` 一致、權限、語系完整、送出組成、無痕不讀 Cookie、選單只建立一次、每種不接管條件、成功取消並清除、失敗與逾時回退、回退後 60 秒內同網址不再送
   - [ ] 4 實機驗證（Edge 獨立 profile 自動跑；Chrome 由使用者載入確認）與文件
 
 ## 規格補完與整理（2026-11-14 計畫）

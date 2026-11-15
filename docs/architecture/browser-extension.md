@@ -79,7 +79,7 @@ Zoo Downloader（shell 的 browser_bridge 模組）
 MV3，純 JavaScript ES module（不需建置），可測的邏輯放在獨立模組，用 vitest 加 chrome API 假物件測試。
 
 - `manifest.json`：
-  - `permissions`：`nativeMessaging`、`contextMenus`、`downloads`、`cookies`、`storage`
+  - `permissions`：`nativeMessaging`、`contextMenus`、`downloads`、`cookies`、`storage`、`notifications`
   - `host_permissions`：`<all_urls>`（讀 Cookie 需要）
   - 無 `content_scripts`
   - 固定 `key`
@@ -97,7 +97,7 @@ MV3，純 JavaScript ES module（不需建置），可測的邏輯放在獨立�
     - 其他擴充發起的下載（`byExtensionId`）；
     - 這次是使用者對 app 失敗後回退的同一個網址（避免循環）。
   - 限制（寫在 popup 說明裡）：POST 表單產生的下載，app 用 GET 重抓可能失敗。這種下載會在 app 裡顯示錯誤，使用者可以關掉接管後重試。
-- **Popup**：兩列，一列是連線狀態（ping 結果：已連線、app 未安裝、版本不合），一列是「接管瀏覽器下載」開關（`chrome.storage.local`，預設開）。
+- **Popup**：兩列，一列是連線狀態（ping 結果：已連線、app 未開啟、app 未安裝、版本不合；ping 不會啟動 app），一列是「接管瀏覽器下載」開關（`chrome.storage.local`，預設開）。
 
 ## app 端
 

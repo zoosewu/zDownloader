@@ -1,0 +1,60 @@
+{
+  "extName": {
+    "message": "Zoo Downloader"
+  },
+  "extDescription": {
+    "message": "ダウンロードを Zoo Downloader に送ります。"
+  },
+  "menuDownload": {
+    "message": "Zoo Downloader でダウンロード"
+  },
+  "takeover": {
+    "message": "ブラウザのダウンロードを引き継ぐ"
+  },
+  "takeoverLimit": {
+    "message": "フォーム送信で始まるダウンロードはアプリで失敗することがあります。その場合はオフにしてブラウザで再度ダウンロードしてください。"
+  },
+  "statusChecking": {
+    "message": "確認中…"
+  },
+  "statusConnected": {
+    "message": "接続済み"
+  },
+  "statusNotRunning": {
+    "message": "Zoo Downloader は起動していません"
+  },
+  "statusNotInstalled": {
+    "message": "Zoo Downloader が見つかりません：インストールして一度起動してください"
+  },
+  "statusVersion": {
+    "message": "拡張機能とアプリのバージョンが合いません。更新してください"
+  },
+  "statusError": {
+    "message": "Zoo Downloader に接続できません"
+  },
+  "error_notInstalled": {
+    "message": "Zoo Downloader が見つかりません：インストールして一度起動してください。"
+  },
+  "error_appNotRunning": {
+    "message": "Zoo Downloader を起動できませんでした。"
+  },
+  "error_unsupportedVersion": {
+    "message": "拡張機能とアプリのバージョンが合いません。更新してください。"
+  },
+  "error_invalid": {
+    "message": "Zoo Downloader がダウンロードを拒否しました：$DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "error_internal": {
+    "message": "Zoo Downloader：$DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+:root {
+  color-scheme: light dark;
+  --muted: #9e9e9e;
+  --ok: #2e7d32;
+  --bad: #c62828;
+}
+body {
+  margin: 0;
+  padding: 8px 12px;
+  min-width: 240px;
+  font: 13px system-ui, sans-serif;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+label.row {
+  justify-content: space-between;
+  cursor: pointer;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.dot.ok {
+  background: var(--ok);
+}
+.dot.bad {
+  background: var(--bad);
+}

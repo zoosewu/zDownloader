@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/__tests__/setup.ts'],
-    include: ['src/**/__tests__/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}', 'browser-extension/test/**/*.test.js'],
     exclude: ['node_modules', 'dist', 'src-tauri'],
     // @mui/icons-material v7 ESM directory-imports @mui/material/utils (v6); inline so the alias below applies
     server: { deps: { inline: [/@mui\//] } },
