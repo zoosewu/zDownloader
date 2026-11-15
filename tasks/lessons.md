@@ -75,3 +75,11 @@
 
 - 錯誤：k2s 的真實錄製檔直接 commit，下載連結的參數裡有使用者的公開 IPv6（`client_ip`）、k2s 給這台電腦的識別碼、下載編號與簽章，要靠事後 amend 清除。
 - 規則：真實網站的錄製（cassette、HAR、log）在 commit 前先掃一遍可識別的值：IP、使用者／裝置 ID、國碼、簽章、Set-Cookie。用腳本換成假值，再重播確認測試仍通過；只比對網址格式的測試不受影響。
+
+## 長時間實機測試要量記憶體，不只看功能（2026-11-15）
+
+- 錯誤：百度下載在開發模式跑了約 2.5 小時後，WebView 渲染程序當掉，畫面卡住；JS heap 和 DOM 都很穩定，問題藏在 React 19 開發版無上限的 performance.measure 紀錄裡。同一次又忘了重新 build app，舊 app 讀不懂新 host 的回應，乾等 60 秒逾時。
+- 規則：
+  - 實機驗證前 `cargo build --workspace --bins`，所有執行檔一起更新。
+  - 長時間執行的功能（下載、輪詢），量「程序的私有記憶體」而不只 JS heap；增長時用 memory-infra 傾印看是哪個配置器，再用 `performance.getEntries()`、CSS 規則數、事件數逐一排除。
+  - 用暫停／恢復這類開關做對照實驗，最快確認增長和哪個動作有關。
