@@ -105,3 +105,14 @@
 - `D:/rust_env/target/zoo-downloader` 會長到上百 GB（2026-11-12 達 175 GB、D 槽滿），需要時清 `debug/incremental` 或 `cargo clean`
 - [x] 代理匯入接受 `http://host:port`（其他 scheme 明確拒絕；pool 只支援 HTTP 代理）（2026-11-14）
 - [x] 自動重試等待中的任務顯示「等待重試 m:ss」，模組倒數也顯示剩餘時間（2026-11-14，實機確認倒數、重新排入、用完重試後回到「失敗」）
+
+## 百度網盤模組（2026-11-15）
+
+- [x] 調查：不需要 TLS 指紋偽裝；網頁版連結加密 → 改用「轉存到使用者網盤 + 客戶端 locatedownload」；下載只認 netdisk UA、不需 Cookie；非會員每段 ≤ 約 4 MiB、≤ 4 連線、約 70 KiB/s；連結 8 小時有效，檔案刪除後仍可用
+- [x] 下載核心：`Resolved.maxSegmentSize`（SDK、host 驗證 ≥ 64 KiB、zoo-core 依此縮小分段）
+- [x] 官方模組 `marketplace/baidu`：單一檔案分享、提取碼取自 `?pwd=`、轉存到 `/zoo-downloader`（8 小時內同檔沿用）、每次執行清掉轉存超過 8 小時的檔案；錄製檔已移除帳號資料
+- [x] 實機：app 內安裝模組、設定 Cookie，下載 1.35 GB 檔案 3 小時以上，4 連線、每段 4 MiB、約 46–70 KiB/s
+- [x] 實機發現並修正：舊 app 讀不懂新 host 回應時乾等 60 秒 → 立刻失敗；React 19 開發版 performance.measure 無上限累積 → 開發模式定期清除
+- [ ] 尚未驗證：下載超過 8 小時、連結過期時的自動重新解析（目前這個下載會跑到接近 8 小時）
+- [ ] 多檔案／資料夾分享（需要「一個連結展開成多個任務」）
+- 使用者：測試結束後在百度網頁登出一次，讓貼在對話裡的 BDUSS 失效
