@@ -1,9 +1,9 @@
 // Basic info tab: URL, file path, size and timestamps.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Button, Chip, Link } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import type { Task } from '../backend';
+import { backend, type Task } from '../backend';
 import { formatBytes } from '../utils/downloadCalculations';
 import { formatAbsoluteTime } from '../utils/formatters';
 import PropertyList from './PropertyList';
@@ -15,6 +15,7 @@ const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
   const [editing, setEditing] = useState(false);
   const { categories } = useCategories();
   const inCategories = categories.filter((c) => task.tags.includes(c.id));
+  const moduleName = useModuleName(task.module, task.url);
 
   return (
     <Box sx={{ p: 1.5, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -22,6 +23,10 @@ const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
         <PropertyList
           items={[
             { label: t('downloads.details.url'), value: <Link href={task.url} target="_blank" rel="noreferrer" underline="hover">{task.url}</Link> },
+            {
+              label: t('downloads.details.module'),
+              value: moduleName ?? task.module ?? t('downloads.details.directDownload'),
+            },
             { label: t('downloads.details.filePath'), value: task.finalPath ?? `${task.dir}\\${task.name}`, mono: true },
             {
               label: t('downloads.details.fileSize'),
@@ -53,5 +58,25 @@ const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
     </Box>
   );
 };
+
+/**
+ * Name of the module that resolved the task (`key`, `id@marketplace`). Tasks from before the
+ * module was recorded have none: the module that handles the URL now is shown instead.
+ */
+function useModuleName(key: string | null, url: string): string | null {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    setName(null);
+    let current = true;
+    const lookup = key
+      ? backend.modules.list().then((all) => all.find((m) => m.key === key)?.name ?? null)
+      : backend.urls.inspect(url).then((info) => info.module?.name ?? null);
+    lookup.then((n) => current && setName(n)).catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [key, url]);
+  return name;
+}
 
 export default BasicInfoTab;

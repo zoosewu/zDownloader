@@ -356,6 +356,7 @@ impl Actor {
             id: TaskId::new(),
             tags: self.cfg.categories.tags(&req.url, &name),
             custom_tags: false,
+            module: None,
             name,
             custom_name: req.filename.is_some(),
             url: req.url,
@@ -662,7 +663,12 @@ impl Actor {
         match msg {
             // A stopping job's phase is no longer what the user sees.
             JobMsg::Phase(id, phase) if self.jobs.get(&id).is_some_and(|j| j.stop.is_none()) => {
-                let _ = self.set(id, |t| t.phase = Some(phase));
+                let _ = self.set(id, |t| {
+                    if let Phase::Resolving { module: Some(module) } = &phase {
+                        t.module = Some(module.clone());
+                    }
+                    t.phase = Some(phase);
+                });
             }
             JobMsg::Renamed(id, name) => {
                 let dir = self.tasks.iter().find(|t| t.id == id).map(|t| t.dir.clone());

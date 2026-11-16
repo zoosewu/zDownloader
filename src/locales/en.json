@@ -61,7 +61,7 @@
     "details": {
       "selectItem": "Please select a download item to view details",
       "basicInfo": "Basic Info",
-      "segmentVisualization": "Segment Visualization",
+      "segmentVisualization": "Blocks",
       "errorInfo": "Error Info",
       "advancedInfo": "Advanced Info",
       "url": "Download URL",
@@ -75,7 +75,9 @@
       "retryCount": "Retry Count",
       "scheduledStart": "Scheduled Start",
       "notScheduled": "Not Scheduled",
-      "nextRetryAt": "Next automatic retry"
+      "nextRetryAt": "Next automatic retry",
+      "module": "Site module",
+      "directDownload": "Direct download"
     },
     "state": {
       "scheduled": "Scheduled",

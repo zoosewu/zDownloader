@@ -27,7 +27,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`settings-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 2, maxWidth: 960 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 2, maxWidth: 960, mx: 'auto' }}>{children}</Box>}
     </div>
   );
 }

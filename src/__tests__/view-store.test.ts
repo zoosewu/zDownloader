@@ -34,6 +34,7 @@ function task(id: string, order: number, overrides: Partial<Task> = {}): Task {
     order,
     tags: [],
     customTags: false,
+    module: null,
     ...overrides,
   };
 }

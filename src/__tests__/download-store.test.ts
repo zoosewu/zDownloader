@@ -38,6 +38,7 @@ function task(id: string, rev: number, overrides: Partial<Task> = {}): Task {
     order: 1,
     tags: [],
     customTags: false,
+    module: null,
     ...overrides,
   };
 }

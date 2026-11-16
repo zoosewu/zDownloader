@@ -61,7 +61,7 @@
     "details": {
       "selectItem": "請選擇一個下載項目以查看詳細資訊",
       "basicInfo": "基本資訊",
-      "segmentVisualization": "分段視覺化",
+      "segmentVisualization": "下載區塊",
       "errorInfo": "錯誤資訊",
       "advancedInfo": "進階資訊",
       "url": "下載網址",
@@ -75,7 +75,9 @@
       "retryCount": "已重試次數",
       "scheduledStart": "排程開始時間",
       "notScheduled": "未排程",
-      "nextRetryAt": "下次自動重試"
+      "nextRetryAt": "下次自動重試",
+      "module": "解析模組",
+      "directDownload": "直接下載"
     },
     "state": {
       "scheduled": "已排程",

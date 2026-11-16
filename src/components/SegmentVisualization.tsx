@@ -1,6 +1,7 @@
 // Segment grid: which parts of the file are done, being fetched, or waiting to retry.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Tooltip, Typography, Stack } from '@mui/material';
+import { Box, Typography, Stack } from '@mui/material';
+import SegmentCanvas from './SegmentCanvas';
 import { useTranslation } from 'react-i18next';
 import { backend, type SegmentMap, type Task } from '../backend';
 import { buildSegmentCells, type CellStatus } from '../utils/segments';
@@ -80,7 +81,7 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
 
   return (
     <Box sx={{ p: 1.5 }}>
-      <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
         {LEGEND.map((status) => (
           <Stack key={status} direction="row" spacing={0.5} alignItems="center">
             <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: CELL_COLOR[status] }} />
@@ -89,27 +90,13 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
         ))}
       </Stack>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 12px)', gap: '2px', maxHeight: 220, overflowY: 'auto' }}>
-        {cells.map((cell) => (
-          <Tooltip
-            key={cell.index}
-            arrow
-            title={`#${cell.index + 1} · ${formatBytes(cell.start)} – ${formatBytes(cell.end)} · ${Math.floor(cell.done * 100)}% · ${t(`downloads.segments.${cell.status}`)}`}
-          >
-            <Box
-              data-status={cell.status}
-              sx={{
-                width: 12,
-                height: 12,
-                borderRadius: '2px',
-                backgroundColor: CELL_COLOR[cell.status],
-                transition: 'transform 0.1s',
-                '&:hover': { transform: 'scale(1.3)' },
-              }}
-            />
-          </Tooltip>
-        ))}
-      </Box>
+      <SegmentCanvas
+        cells={cells}
+        colors={CELL_COLOR}
+        describe={(cell) =>
+          `#${cell.index + 1} · ${formatBytes(cell.start)} – ${formatBytes(cell.end)} · ${Math.floor(cell.done * 100)}% · ${t(`downloads.segments.${cell.status}`)}`
+        }
+      />
     </Box>
   );
 };

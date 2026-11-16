@@ -61,7 +61,7 @@
     "details": {
       "selectItem": "詳細を表示するにはダウンロード項目を選択してください",
       "basicInfo": "基本情報",
-      "segmentVisualization": "セグメント可視化",
+      "segmentVisualization": "ブロック",
       "errorInfo": "エラー情報",
       "advancedInfo": "詳細情報",
       "url": "ダウンロードURL",
@@ -75,7 +75,9 @@
       "retryCount": "再試行回数",
       "scheduledStart": "予定開始時刻",
       "notScheduled": "スケジュール未設定",
-      "nextRetryAt": "次の自動再試行"
+      "nextRetryAt": "次の自動再試行",
+      "module": "サイトモジュール",
+      "directDownload": "直接ダウンロード"
     },
     "state": {
       "scheduled": "予約済み",

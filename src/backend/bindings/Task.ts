@@ -49,4 +49,8 @@ tags: Array<string>,
 /**
  * The user set `tags` by hand; category rules no longer change them.
  */
-customTags: boolean, };
+customTags: boolean, 
+/**
+ * The site module that resolved the URL (`id@marketplace`); `None` for a direct download.
+ */
+module: string | null, };

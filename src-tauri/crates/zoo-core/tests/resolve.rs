@@ -113,6 +113,7 @@ async fn downloads_what_the_resolver_returns() {
 
     assert_eq!(task.url, SHARE_PAGE, "the task keeps the page the user gave");
     assert_eq!(task.name, "movie.bin", "the module's name is used");
+    assert_eq!(task.module.as_deref(), Some("test@local"), "the module that resolved it is kept");
     assert_eq!(task.phase, None);
     assert_eq!(std::fs::read(task.final_path.unwrap()).unwrap(), expected(200_000));
     assert_eq!(*resolver.seen.lock().unwrap(), vec![SHARE_PAGE.to_string()]);

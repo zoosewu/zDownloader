@@ -110,6 +110,9 @@ pub struct Task {
     /// The user set `tags` by hand; category rules no longer change them.
     #[serde(default)]
     pub custom_tags: bool,
+    /// The site module that resolved the URL (`id@marketplace`); `None` for a direct download.
+    #[serde(default)]
+    pub module: Option<String>,
 }
 
 /// Steps of a running task. Resolution happens before every transfer; only site modules
