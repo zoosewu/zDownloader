@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>zoo-downloader（24 px 以下）</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+  </defs>
+  <!-- 小尺寸：磚貼滿、箭桿實心、托盤加粗 -->
+  <rect width="256" height="256" rx="48" fill="url(#tile)"/>
+  <g fill="#fff">
+    <rect x="106" y="36" width="44" height="100" rx="8"/>
+    <path d="M78 130h100a8 8 0 0 1 6 13.3l-50 54.4a8 8 0 0 1-11.8 0l-50-54.4A8 8 0 0 1 78 130z"/>
+  </g>
+  <path d="M48 168v28a22 22 0 0 0 22 22h116a22 22 0 0 0 22-22v-28" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

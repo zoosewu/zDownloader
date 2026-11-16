@@ -37,6 +37,7 @@ pnpm exec tsc --noEmit              # 型別檢查
 pnpm build                          # 生產建置
 cd src-tauri && cargo build -p zoo-module  # 開發時的網站模組 host（app 在自己的執行檔旁尋找它）
 cd src-tauri && cargo build -p zoo-native-host  # 開發時的瀏覽器擴充 host（app 啟動時把它註冊到 Chrome、Edge）
+pwsh scripts/make-icon.ps1          # 由 src-tauri/icons/source/*.svg 重新產生 app、擴充、favicon 圖示（需要 Edge）
 pnpm build:sidecars                 # 打包用的 release zoo-module 與 zoo-native-host（tauri build --config src-tauri/tauri.bundle.json 會自動執行）
 ```
 
