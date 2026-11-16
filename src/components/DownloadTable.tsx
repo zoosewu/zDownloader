@@ -15,7 +15,8 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAtomValue } from 'jotai';
 import DownloadTableRow from './DownloadTableRow';
-import { taskIdsAtom } from '../stores/downloadStore';
+import { visibleTaskIdsAtom, viewAtom, canReorder } from '../stores/viewStore';
+import TaskCategoryMenu, { type MenuAnchor } from './TaskCategoryMenu';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import { droppedBefore } from '../utils/downloadCalculations';
@@ -43,9 +44,17 @@ const DEFAULT_COLUMN_WIDTHS: Record<ColumnKey, number> = {
  */
 const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   const { t } = useTranslation();
-  // Only the order: progress re-renders the row of that task, not the table.
-  const ids = useAtomValue(taskIdsAtom);
+  // Only the order of the shown tasks: progress re-renders the row of that task, not the table.
+  const ids = useAtomValue(visibleTaskIdsAtom);
+  const sortable = canReorder(useAtomValue(viewAtom));
   const { selectedTaskId, selectTask } = useSelectedDownload();
+  const [menu, setMenu] = useState<MenuAnchor | null>(null);
+  const handleContextMenu = useCallback((id: string, x: number, y: number) => setMenu({ id, x, y }), []);
+
+  // A selected task that leaves the view (finished, moved to another category) is deselected.
+  useEffect(() => {
+    if (selectedTaskId && !ids.includes(selectedTaskId)) selectTask(null);
+  }, [ids, selectedTaskId, selectTask]);
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(DEFAULT_COLUMN_WIDTHS);
   const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
   const startXRef = useRef<number>(0);
@@ -63,7 +72,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const { move } = useDownloadActions();
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
+    if (!sortable || !over || active.id === over.id) return;
     const before = droppedBefore(ids, String(active.id), String(over.id));
     move(String(active.id), before).catch((error) => onActionError?.(error.message));
   };
@@ -188,6 +197,8 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
                   isSelected={selectedTaskId === id}
                   onClick={handleRowClick}
                   onActionError={onActionError}
+                  onContextMenu={handleContextMenu}
+                  sortable={sortable}
                   columnWidths={columnWidths}
                 />
               ))}
@@ -195,6 +206,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
           </SortableContext>
         </DndContext>
       </Table>
+      {menu && <TaskCategoryMenu anchor={menu} onClose={() => setMenu(null)} onError={onActionError} />}
     </TableContainer>
   );
 };

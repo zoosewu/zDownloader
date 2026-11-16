@@ -122,6 +122,12 @@ pub async fn downloads_update(id: String, update: TaskUpdate, downloads: State<'
     Ok(downloads.manager.update(task_id(&id)?, update).await?)
 }
 
+/// Put a task in exactly these categories; their rules no longer change it.
+#[tauri::command]
+pub async fn downloads_set_tags(id: String, tags: Vec<String>, downloads: State<'_, Downloads>) -> CmdResult<Task> {
+    Ok(downloads.manager.set_tags(task_id(&id)?, tags).await?)
+}
+
 #[tauri::command]
 pub async fn downloads_remove(id: String, downloads: State<'_, Downloads>) -> CmdResult<()> {
     Ok(downloads.manager.remove(task_id(&id)?).await?)

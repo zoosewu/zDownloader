@@ -250,5 +250,50 @@
       "sourceChanged": "新網址的檔案不一樣",
       "insufficientSpace": "磁碟空間不足：需要 {{needed}}，只剩 {{available}}"
     }
+  },
+  "sidebar": {
+    "status": "狀態",
+    "categories": "分類",
+    "collapse": "收合側邊欄",
+    "expand": "展開側邊欄",
+    "views": {
+      "all": "全部",
+      "running": "下載中",
+      "waiting": "等待中",
+      "paused": "已暫停",
+      "completed": "已完成",
+      "failed": "失敗",
+      "cancelled": "已取消"
+    }
+  },
+  "categories": {
+    "add": "新增分類",
+    "edit": "編輯分類",
+    "delete": "刪除分類",
+    "confirmDelete": "刪除「{{name}}」？下載任務不會被刪除，只會移出這個分類。",
+    "name": "名稱",
+    "rules": "自動加入的規則",
+    "matchAll": "全部符合",
+    "matchAny": "任一符合",
+    "addRule": "新增規則",
+    "removeRule": "移除規則",
+    "kind": {
+      "extension": "副檔名",
+      "host": "網站",
+      "contains": "包含文字",
+      "regex": "Regex"
+    },
+    "target": {
+      "filename": "檔名",
+      "url": "網址"
+    },
+    "placeholder": {
+      "extension": "mp4, mkv, avi",
+      "host": "k2s.cc, pan.baidu.com",
+      "contains": "1080p",
+      "regex": "\\[\\d{3,4}p\\]"
+    },
+    "help": "規則在新增下載時套用（網站模組的連結會在取得檔名後再判斷一次）。已存在的下載不會變動；在下載上按右鍵可手動調整分類。沒有規則的分類只能手動加入。",
+    "none": "尚未建立分類"
   }
 }

@@ -51,6 +51,10 @@ export type { Task } from './bindings/Task';
 export type { TaskId } from './bindings/TaskId';
 export type { TaskState } from './bindings/TaskState';
 export type { TaskUpdate } from './bindings/TaskUpdate';
+export type { Category } from './bindings/Category';
+export type { Matching } from './bindings/Matching';
+export type { Rule } from './bindings/Rule';
+export type { Target } from './bindings/Target';
 export type { Theme } from './bindings/Theme';
 
 export class BackendError extends Error {
@@ -111,6 +115,8 @@ export const backend = {
     retry: (id: TaskId) => call<Task>('downloads_retry', { id }),
     /** Discard the partial data and download from the start. */
     restart: (id: TaskId) => call<Task>('downloads_restart', { id }),
+    /** Put the task in exactly these categories; their rules no longer change it. */
+    setTags: (id: TaskId, tags: string[]) => call<Task>('downloads_set_tags', { id, tags }),
     /** Change the URL or headers of a task that is not running. */
     update: (id: TaskId, update: TaskUpdate) => call<Task>('downloads_update', { id, update }),
     remove: (id: TaskId) => call<null>('downloads_remove', { id }),

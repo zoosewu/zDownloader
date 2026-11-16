@@ -8,6 +8,7 @@ import { useNavigation } from '../hooks/useNavigation';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
 import QueueControls from './QueueControls';
+import Sidebar from './Sidebar';
 import BatchImportButton from './BatchImportButton';
 import { useSelectedDownload, useSelectedTask } from '../hooks/useSelectedDownload';
 import type { BatchResult } from '../backend';
@@ -77,17 +78,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
   }, [isDragging]);
 
   return (
-    <Box
-      ref={containerRef}
-      className={className}
-      sx={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-      }}
-    >
+    <Box className={className} sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
       <Box
         sx={{
@@ -115,16 +106,10 @@ const DownloadList: React.FC<DownloadListProps> = ({
         </Tooltip>
       </Box>
 
-      {/* Scrollable Content Area - DownloadTable */}
-      <Box
-        sx={{
-          flex: 1,
-          overflow: 'hidden',
-          minHeight: 120,
-        }}
-      >
-
-        {/* Download Table */}
+      <Box sx={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <Sidebar />
+      <Box ref={containerRef} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <Box sx={{ flex: 1, overflow: 'hidden', minHeight: 120 }}>
         <DownloadTable onActionError={onControlError} />
       </Box>
 
@@ -155,6 +140,8 @@ const DownloadList: React.FC<DownloadListProps> = ({
           </Box>
         </>
       )}
+      </Box>
+      </Box>
     </Box>
   );
 };

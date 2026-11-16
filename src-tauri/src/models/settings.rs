@@ -47,6 +47,11 @@ pub struct AppSettings {
     /// Look for module updates when the app starts (never installs them).
     #[serde(default = "default_true")]
     pub check_module_updates: bool,
+
+    // Categories
+    /// The user's categories, in sidebar order; their rules tag new downloads.
+    #[serde(default)]
+    pub categories: Vec<zoo_core::Category>,
 }
 
 fn default_true() -> bool {
@@ -90,6 +95,7 @@ impl Default for AppSettings {
             retry_interval_secs: 5,
             user_agent: None,
             check_module_updates: true,
+            categories: Vec::new(),
         }
     }
 }
@@ -113,7 +119,25 @@ impl AppSettings {
             },
             transfer_retry: Default::default(),
             user_agent: self.user_agent.clone().filter(|ua| !ua.trim().is_empty()),
+            categories: self.classifier(),
         }
+    }
+
+    /// Saved settings were checked (`settings_update`); a hand-edited file may not be, so a
+    /// broken category is left out instead of failing the rest.
+    fn classifier(&self) -> zoo_core::Classifier {
+        zoo_core::Classifier::new(&self.categories).unwrap_or_else(|e| {
+            log::warn!("categories: {e}");
+            let mut usable: Vec<zoo_core::Category> = Vec::new();
+            for c in &self.categories {
+                let mut with = usable.clone();
+                with.push(c.clone());
+                if zoo_core::Classifier::new(&with).is_ok() {
+                    usable = with;
+                }
+            }
+            zoo_core::Classifier::new(&usable).unwrap_or_default()
+        })
     }
 }
 

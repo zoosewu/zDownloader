@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAtomValue } from 'jotai';
 import { useDownloadActions } from '../hooks/useDownloadActions';
-import { taskCountsAtom } from '../stores/downloadStore';
+import { viewCountsAtom } from '../stores/viewStore';
 
 interface QueueControlsProps {
   onControlError?: (error: string) => void;
@@ -17,7 +17,11 @@ interface QueueControlsProps {
 
 const QueueControls: React.FC<QueueControlsProps> = ({ onControlError }) => {
   const { t } = useTranslation();
-  const { running: activeCount, paused: pausedCount, completed: completedCount } = useAtomValue(taskCountsAtom);
+  // Counts without the speed: a progress tick must not re-render the toolbar.
+  const counts = useAtomValue(viewCountsAtom);
+  const activeCount = counts.running + counts.waiting;
+  const pausedCount = counts.paused + counts.failed;
+  const completedCount = counts.completed + counts.cancelled;
   const actions = useDownloadActions();
   const [loading, setLoading] = React.useState<string | null>(null);
 

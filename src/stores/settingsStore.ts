@@ -24,6 +24,7 @@ const defaultSettings: AppSettings = {
   retryIntervalSecs: 5,
   userAgent: null,
   checkModuleUpdates: true,
+  categories: [],
 };
 
 // Settings atom

@@ -1,5 +1,6 @@
 //! Data that crosses the zoo-core interface: tasks, events, requests, configuration.
 
+use crate::category::Classifier;
 use crate::error::CoreError;
 use crate::transfer::RetryPolicy;
 use chrono::{DateTime, Utc};
@@ -103,6 +104,12 @@ pub struct Task {
     /// Place in the list and the queue: queued tasks start lowest first. Unique per task.
     #[serde(default)]
     pub order: f64,
+    /// Ids of the user categories the task is in (see `category`).
+    #[serde(default)]
+    pub tags: Vec<String>,
+    /// The user set `tags` by hand; category rules no longer change them.
+    #[serde(default)]
+    pub custom_tags: bool,
 }
 
 /// Steps of a running task. Resolution happens before every transfer; only site modules
@@ -207,6 +214,8 @@ pub struct Config {
     pub transfer_retry: RetryPolicy,
     /// User-Agent for requests that do not set one; `None` means zoo-downloader's own.
     pub user_agent: Option<String>,
+    /// Tags new tasks; tags of categories that no longer exist are dropped.
+    pub categories: Classifier,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -227,6 +236,7 @@ impl Default for Config {
             auto_retry: AutoRetry { enabled: true, max_attempts: 3, interval: Duration::from_secs(30) },
             transfer_retry: RetryPolicy::default(),
             user_agent: None,
+            categories: Classifier::default(),
         }
     }
 }

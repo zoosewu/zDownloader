@@ -49,6 +49,7 @@ enum Cmd {
     Update(TaskId, TaskUpdate, Reply<Task>),
     Remove(TaskId, Reply<()>),
     MoveBefore(TaskId, Option<TaskId>, Reply<Task>),
+    SetTags(TaskId, Vec<String>, Reply<Task>),
     PauseAll(oneshot::Sender<Vec<Task>>),
     ResumeAll(oneshot::Sender<Vec<Task>>),
     ClearFinished(oneshot::Sender<Vec<TaskId>>),
@@ -83,6 +84,7 @@ impl DownloadManager {
         }
         let rev = tasks.iter().map(|t| t.rev).max().unwrap_or(0);
         for task in &mut tasks {
+            task.tags.retain(|tag| cfg.categories.ids().any(|id| id == tag));
             task.speed = 0;
             task.phase = None;
             if matches!(task.state, TaskState::Running | TaskState::Queued) {
@@ -138,6 +140,10 @@ impl DownloadManager {
     /// Change the URL or headers of a task that is not running (pause it first).
     pub async fn update(&self, id: TaskId, update: TaskUpdate) -> Result<Task, CoreError> {
         self.ask(|r| Cmd::Update(id, update, r)).await?
+    }
+    /// Put a task in exactly these categories, in any state. Category rules stop changing it.
+    pub async fn set_tags(&self, id: TaskId, tags: Vec<String>) -> Result<Task, CoreError> {
+        self.ask(|r| Cmd::SetTags(id, tags, r)).await?
     }
     /// Drop the task from the list. Partial data is deleted; a finished file is kept.
     pub async fn remove(&self, id: TaskId) -> Result<(), CoreError> {
@@ -299,6 +305,9 @@ impl Actor {
             Cmd::MoveBefore(id, before, reply) => {
                 let _ = reply.send(self.move_before(id, before));
             }
+            Cmd::SetTags(id, tags, reply) => {
+                let _ = reply.send(self.set_tags(id, tags));
+            }
             Cmd::PauseAll(reply) => {
                 let ids = self.ids_where(|t| matches!(t.state, TaskState::Running | TaskState::Queued | TaskState::Scheduled));
                 let _ = reply.send(ids.into_iter().filter_map(|id| self.pause(id).ok()).collect());
@@ -324,6 +333,7 @@ impl Actor {
             Cmd::UpdateConfig(cfg) => {
                 self.rate.set_rate(cfg.speed_limit);
                 self.cfg = cfg;
+                self.drop_unknown_tags();
                 self.pump();
             }
             Cmd::SetConnection(conn) => self.conn = conn,
@@ -341,9 +351,12 @@ impl Actor {
             StartMode::At(at) => (TaskState::Scheduled, Some(at)),
         };
         self.rev += 1;
+        let name = naming::filename_for(req.filename.as_deref(), &req.url);
         let task = Task {
             id: TaskId::new(),
-            name: naming::filename_for(req.filename.as_deref(), &req.url),
+            tags: self.cfg.categories.tags(&req.url, &name),
+            custom_tags: false,
+            name,
             custom_name: req.filename.is_some(),
             url: req.url,
             dir: req.dir,
@@ -369,6 +382,31 @@ impl Actor {
         self.pump();
         self.wake_due();
         self.snapshot(task.id)
+    }
+
+    fn set_tags(&mut self, id: TaskId, mut tags: Vec<String>) -> Result<Task, CoreError> {
+        if let Some(unknown) = tags.iter().find(|tag| !self.cfg.categories.ids().any(|id| id == tag.as_str())) {
+            return Err(CoreError::Invalid(format!("no category {unknown:?}")));
+        }
+        tags.dedup();
+        self.set(id, |t| {
+            t.tags = tags;
+            t.custom_tags = true;
+        })
+    }
+
+    /// After categories were deleted.
+    fn drop_unknown_tags(&mut self) {
+        let stale: Vec<TaskId> = self
+            .tasks
+            .iter()
+            .filter(|t| t.tags.iter().any(|tag| !self.cfg.categories.ids().any(|id| id == tag)))
+            .map(|t| t.id)
+            .collect();
+        for id in stale {
+            let categories = self.cfg.categories.clone();
+            let _ = self.set(id, |t| t.tags.retain(|tag| categories.ids().any(|id| id == tag)));
+        }
     }
 
     fn move_before(&mut self, id: TaskId, before: Option<TaskId>) -> Result<Task, CoreError> {
@@ -631,7 +669,14 @@ impl Actor {
                 if let (Some(job), Some(dir)) = (self.jobs.get_mut(&id), dir) {
                     job.part_path = naming::part_path(&dir, &name, &id.to_string());
                 }
-                let _ = self.set(id, |t| t.name = name);
+                let categories = &self.cfg.categories;
+                let tags = self.tasks.iter().find(|t| t.id == id && !t.custom_tags).map(|t| categories.tags(&t.url, &name));
+                let _ = self.set(id, |t| {
+                    t.name = name;
+                    if let Some(tags) = tags {
+                        t.tags = tags;
+                    }
+                });
             }
             _ => {}
         }

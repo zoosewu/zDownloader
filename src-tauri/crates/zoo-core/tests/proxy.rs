@@ -19,6 +19,7 @@ fn config() -> Config {
         auto_retry: AutoRetry { enabled: false, max_attempts: 0, interval: Duration::from_millis(10) },
         transfer_retry: RetryPolicy { max_attempts: 4, base_delay: Duration::from_millis(5), max_delay: Duration::from_millis(10) },
         user_agent: None,
+        categories: Default::default(),
     }
 }
 

@@ -27,6 +27,7 @@ fn config() -> Config {
         auto_retry: AutoRetry { enabled: false, max_attempts: 3, interval: Duration::from_millis(50) },
         transfer_retry: RetryPolicy { max_attempts: 2, base_delay: Duration::from_millis(10), max_delay: Duration::from_millis(20) },
         user_agent: None,
+        categories: Default::default(),
     }
 }
 
@@ -320,4 +321,42 @@ async fn resolved_headers_can_replace_the_user_agent() {
     let agents: Vec<_> = requests.iter().map(|r| r.headers.get("user-agent").cloned()).collect();
     assert!(agents.iter().all(|ua| ua.as_deref() == Some("netdisk;7.42.0.5;PC")), "{agents:?}");
     assert!(requests.iter().all(|r| r.headers.get("referer").map(String::as_str) == Some("https://share.example/")));
+}
+
+fn categories(ids: &[&str]) -> zoo_core::Classifier {
+    use zoo_core::category::{Category, Matching, Rule};
+    let rules = |id: &str| match id {
+        "share" => vec![Rule::Host { values: vec!["share.example".into()] }],
+        "bin" => vec![Rule::Extension { values: vec!["bin".into()] }],
+        _ => vec![],
+    };
+    let all: Vec<Category> =
+        ids.iter().map(|id| Category { id: id.to_string(), name: id.to_string(), matching: Matching::Any, rules: rules(id) }).collect();
+    zoo_core::Classifier::new(&all).unwrap()
+}
+
+#[tokio::test]
+async fn categories_follow_the_rules_until_the_user_sets_them() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let url = fx.url("/file/1000");
+    let resolver = Scripted::new(move |_| Ok(Source { filename: Some("movie.bin".into()), ..expiring(url.clone()) }));
+    let m = start(Config { categories: categories(&["share", "bin", "manual"]), ..config() }, dir.path(), resolver);
+
+    let auto = m.add(req(dir.path(), None)).await.unwrap();
+    assert_eq!(auto.tags, ["share"], "the share page has no file name yet");
+    let auto = wait_until(&m, auto.id, |t| t.state == TaskState::Completed).await;
+    assert_eq!(auto.tags, ["share", "bin"], "named by the module: the rules run again");
+
+    let manual = m.add(AddRequest { start: StartMode::Later, ..req(dir.path(), None) }).await.unwrap();
+    assert!(matches!(m.set_tags(manual.id, vec!["nope".into()]).await, Err(CoreError::Invalid(_))));
+    let set = m.set_tags(manual.id, vec!["manual".into()]).await.unwrap();
+    assert!(set.custom_tags);
+    m.resume(manual.id).await.unwrap();
+    let manual = wait_until(&m, manual.id, |t| t.state == TaskState::Completed).await;
+    assert_eq!(manual.tags, ["manual"], "the user's choice stays");
+
+    m.update_config(Config { categories: categories(&["share"]), ..config() });
+    wait_until(&m, auto.id, |t| t.tags == ["share"]).await;
+    wait_until(&m, manual.id, |t| t.tags.is_empty()).await;
 }

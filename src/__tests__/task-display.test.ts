@@ -28,6 +28,8 @@ function task(overrides: Partial<Task>): Task {
     nextRetryAt: null,
     rev: 1,
     order: 1,
+    tags: [],
+    customTags: false,
     ...overrides,
   };
 }

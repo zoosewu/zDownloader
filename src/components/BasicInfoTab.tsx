@@ -1,6 +1,6 @@
 // Basic info tab: URL, file path, size and timestamps.
 import React, { useState } from 'react';
-import { Box, Button, Link } from '@mui/material';
+import { Box, Button, Chip, Link } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '../backend';
@@ -8,10 +8,13 @@ import { formatBytes } from '../utils/downloadCalculations';
 import { formatAbsoluteTime } from '../utils/formatters';
 import PropertyList from './PropertyList';
 import EditTaskDialog, { editable } from './EditTaskDialog';
+import { useCategories } from '../hooks/useCategories';
 
 const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
+  const { categories } = useCategories();
+  const inCategories = categories.filter((c) => task.tags.includes(c.id));
 
   return (
     <Box sx={{ p: 1.5, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -28,6 +31,16 @@ const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
             task.startedAt && { label: t('downloads.details.startedAt'), value: formatAbsoluteTime(task.startedAt) },
             task.state === 'completed' &&
               task.finishedAt && { label: t('downloads.details.completedAt'), value: formatAbsoluteTime(task.finishedAt) },
+            inCategories.length > 0 && {
+              label: t('sidebar.categories'),
+              value: (
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                  {inCategories.map((c) => (
+                    <Chip key={c.id} label={c.name} variant="outlined" />
+                  ))}
+                </Box>
+              ),
+            },
           ]}
         />
       </Box>

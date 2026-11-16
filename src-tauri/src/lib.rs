@@ -15,7 +15,7 @@ use commands::clipboard::get_clipboard_content;
 use commands::downloads::{
     downloads_add, downloads_cancel, downloads_clear_finished, downloads_import_batch,
     downloads_list, downloads_move, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
-    downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_update,
+    downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_set_tags, downloads_update,
 };
 use commands::site_modules::{
     captcha_answer, captcha_open_window, captcha_pending, modules_add_source, modules_cancel_install, modules_install,
@@ -56,6 +56,7 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             downloads_retry,
             downloads_restart,
             downloads_update,
+            downloads_set_tags,
             downloads_remove,
             downloads_move,
             downloads_pause_all,

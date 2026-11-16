@@ -4,6 +4,7 @@
 //! `DownloadManager` plus the data types in `task`.
 //! Design: docs/architecture/phase-2-download-core.md
 
+pub mod category;
 pub mod connection;
 pub mod error;
 pub mod manager;
@@ -16,6 +17,7 @@ pub mod store;
 pub mod task;
 pub mod transfer;
 
+pub use category::{Category, Classifier};
 pub use error::CoreError;
 pub use manager::DownloadManager;
 pub use resolve::{Resolver, Source};

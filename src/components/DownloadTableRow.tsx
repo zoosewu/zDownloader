@@ -30,6 +30,10 @@ interface RowProps {
   isSelected: boolean;
   onClick: (taskId: string) => void;
   onActionError?: (message: string) => void;
+  /** Right click: the categories menu. */
+  onContextMenu?: (taskId: string, x: number, y: number) => void;
+  /** Drag to reorder (only where the whole queue is shown). */
+  sortable?: boolean;
   columnWidths?: Record<string, number>;
 }
 
@@ -136,11 +140,12 @@ const CreatedCell = React.memo(({ createdAt, width }: { createdAt: string; width
 ));
 
 const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
-  ({ task, isSelected, onClick, onActionError, columnWidths }) => {
+  ({ task, isSelected, onClick, onActionError, onContextMenu, sortable = true, columnWidths }) => {
     const { t } = useTranslation();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: task.id,
       attributes: { role: 'row' },
+      disabled: !sortable,
     });
     const until = deadline(task);
     const displayData = formatTaskForTable(task, t, useNow(until !== null));
@@ -158,6 +163,10 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
         hover
         selected={isSelected}
         onClick={() => onClick(task.id)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onContextMenu?.(task.id, e.clientX, e.clientY);
+        }}
         style={{ transform: CSS.Translate.toString(transform), transition }}
         sx={{
           cursor: 'pointer',
@@ -218,6 +227,8 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
     prev.isSelected === next.isSelected &&
     prev.onClick === next.onClick &&
     prev.onActionError === next.onActionError &&
+    prev.onContextMenu === next.onContextMenu &&
+    prev.sortable === next.sortable &&
     prev.columnWidths === next.columnWidths
 );
 

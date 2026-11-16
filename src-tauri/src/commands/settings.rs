@@ -34,6 +34,7 @@ pub fn load_settings_from_file() -> AppSettings {
 
 /// Save, remember and apply `new`.
 async fn replace(new: AppSettings, state: &SettingsState, downloads: &Downloads) -> CmdResult<AppSettings> {
+    zoo_core::Classifier::new(&new.categories)?;
     store().save(&new)?;
     *state.settings.lock().await = new.clone();
     downloads.apply(&new);

@@ -250,5 +250,50 @@
       "sourceChanged": "新しい URL のファイルが異なります",
       "insufficientSpace": "ディスク容量が足りません：{{needed}} 必要、空きは {{available}}"
     }
+  },
+  "sidebar": {
+    "status": "状態",
+    "categories": "カテゴリ",
+    "collapse": "サイドバーを折りたたむ",
+    "expand": "サイドバーを展開",
+    "views": {
+      "all": "すべて",
+      "running": "ダウンロード中",
+      "waiting": "待機中",
+      "paused": "一時停止",
+      "completed": "完了",
+      "failed": "失敗",
+      "cancelled": "キャンセル済み"
+    }
+  },
+  "categories": {
+    "add": "カテゴリを追加",
+    "edit": "カテゴリを編集",
+    "delete": "カテゴリを削除",
+    "confirmDelete": "「{{name}}」を削除しますか？ダウンロードは削除されず、このカテゴリから外れるだけです。",
+    "name": "名前",
+    "rules": "自動追加のルール",
+    "matchAll": "すべて一致",
+    "matchAny": "いずれか一致",
+    "addRule": "ルールを追加",
+    "removeRule": "ルールを削除",
+    "kind": {
+      "extension": "拡張子",
+      "host": "サイト",
+      "contains": "文字を含む",
+      "regex": "正規表現"
+    },
+    "target": {
+      "filename": "ファイル名",
+      "url": "URL"
+    },
+    "placeholder": {
+      "extension": "mp4, mkv, avi",
+      "host": "k2s.cc, pan.baidu.com",
+      "contains": "1080p",
+      "regex": "\\[\\d{3,4}p\\]"
+    },
+    "help": "ルールはダウンロード追加時に適用されます（サイトモジュールのリンクはファイル名の取得後に再判定）。既存のダウンロードは変わりません。右クリックで手動で変更できます。ルールのないカテゴリは手動のみです。",
+    "none": "カテゴリがありません"
   }
 }

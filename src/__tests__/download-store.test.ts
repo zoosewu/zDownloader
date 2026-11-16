@@ -36,6 +36,8 @@ function task(id: string, rev: number, overrides: Partial<Task> = {}): Task {
     nextRetryAt: null,
     rev,
     order: 1,
+    tags: [],
+    customTags: false,
     ...overrides,
   };
 }

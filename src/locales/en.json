@@ -250,5 +250,50 @@
       "sourceChanged": "The new URL serves a different file",
       "insufficientSpace": "Not enough disk space: {{needed}} needed, {{available}} free"
     }
+  },
+  "sidebar": {
+    "status": "Status",
+    "categories": "Categories",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "views": {
+      "all": "All",
+      "running": "Downloading",
+      "waiting": "Waiting",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "categories": {
+    "add": "New category",
+    "edit": "Edit category",
+    "delete": "Delete category",
+    "confirmDelete": "Delete \"{{name}}\"? Downloads stay; they only leave this category.",
+    "name": "Name",
+    "rules": "Add downloads that match",
+    "matchAll": "all rules",
+    "matchAny": "any rule",
+    "addRule": "Add rule",
+    "removeRule": "Remove rule",
+    "kind": {
+      "extension": "Extension",
+      "host": "Website",
+      "contains": "Contains",
+      "regex": "Regex"
+    },
+    "target": {
+      "filename": "File name",
+      "url": "URL"
+    },
+    "placeholder": {
+      "extension": "mp4, mkv, avi",
+      "host": "k2s.cc, pan.baidu.com",
+      "contains": "1080p",
+      "regex": "\\[\\d{3,4}p\\]"
+    },
+    "help": "Rules apply when a download is added (site-module links again once the file name is known). Existing downloads are not moved; right-click a download to change its categories. A category without rules is filled by hand.",
+    "none": "No categories yet"
   }
 }

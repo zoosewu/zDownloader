@@ -41,4 +41,12 @@ rev: number,
 /**
  * Place in the list and the queue: queued tasks start lowest first. Unique per task.
  */
-order: number, };
+order: number, 
+/**
+ * Ids of the user categories the task is in (see `category`).
+ */
+tags: Array<string>, 
+/**
+ * The user set `tags` by hand; category rules no longer change them.
+ */
+customTags: boolean, };
