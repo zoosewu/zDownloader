@@ -3,6 +3,13 @@
 // other's entries. Each platform's entry is the bundle the updater installs plus the contents
 // of its .sig file (created with TAURI_SIGNING_PRIVATE_KEY).
 //   env: GITHUB_TOKEN, GITHUB_REPOSITORY (owner/repo), RELEASE_ID, TAG (vX.Y.Z)
+
+// Failures become workflow annotations, which the public API shows (job logs need a login).
+process.on('uncaughtException', (e) => {
+  console.log(`::error title=latest.json::${String(e.message).replace(/\r?\n/g, '%0A')}`);
+  process.exit(1);
+});
+
 const { GITHUB_TOKEN, GITHUB_REPOSITORY: repo, RELEASE_ID: releaseId, TAG: tag } = process.env;
 for (const [name, value] of Object.entries({ GITHUB_TOKEN, GITHUB_REPOSITORY: repo, RELEASE_ID: releaseId, TAG: tag })) {
   if (!value) throw new Error(`${name} is not set`);
@@ -24,14 +31,16 @@ const api = async (path, accept = 'application/vnd.github+json') => {
   return accept.includes('json') ? res.json() : res.text();
 };
 
-const release = await api(`/repos/${repo}/releases/${releaseId}`);
+const release =await api(`/repos/${repo}/releases/${releaseId}`);
 const assets = await api(`/repos/${repo}/releases/${releaseId}/assets?per_page=100`);
 
 const platforms = {};
 for (const [platform, suffix] of Object.entries(PLATFORMS)) {
   const bundle = assets.find((a) => a.name.endsWith(suffix));
   const sig = bundle && assets.find((a) => a.name === `${bundle.name}.sig`);
-  if (!bundle || !sig) throw new Error(`${platform}: no *${suffix} with a .sig among the release assets`);
+  if (!bundle || !sig) {
+    throw new Error(`${platform}: no *${suffix} with a .sig. Assets: ${assets.map((a) => a.name).join(', ')}`);
+  }
   platforms[platform] = {
     signature: (await api(`/repos/${repo}/releases/assets/${sig.id}`, 'application/octet-stream')).trim(),
     // The published URL (a draft's own download URL changes when it is published).
