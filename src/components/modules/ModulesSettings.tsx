@@ -24,7 +24,7 @@ import {
 import {
   ArrowDownward as DownIcon,
   ArrowUpward as UpIcon,
-  DeleteOutline as RemoveIcon,
+  DeleteOutlined as RemoveIcon,
   Key as CredentialsIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
@@ -51,7 +51,7 @@ export default function ModulesSettings() {
 
   if (!loaded) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <CircularProgress />
       </Box>
     );

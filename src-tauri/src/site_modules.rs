@@ -182,20 +182,39 @@ struct KeyringSecrets;
 
 const KEYRING_SERVICE: &str = "zoo-downloader.site-modules";
 
+/// The OS credential store, chosen once. Each store's default naming matches what keyring 2
+/// wrote, so credentials saved by older versions are still found.
+fn keyring_entry(account: &str) -> keyring_core::Result<keyring_core::Entry> {
+    static STORE: std::sync::Once = std::sync::Once::new();
+    STORE.call_once(|| {
+        #[cfg(windows)]
+        let store = windows_native_keyring_store::Store::new();
+        #[cfg(target_os = "macos")]
+        let store = apple_native_keyring_store::keychain::Store::new();
+        #[cfg(target_os = "linux")]
+        let store = zbus_secret_service_keyring_store::Store::new();
+        match store {
+            Ok(store) => keyring_core::set_default_store(store),
+            Err(e) => log::error!("no OS credential store: {e}"),
+        }
+    });
+    keyring_core::Entry::new(KEYRING_SERVICE, account)
+}
+
 impl SecretStore for KeyringSecrets {
     fn get(&self, account: &str) -> Result<Option<Secret>, String> {
-        match keyring::Entry::new(KEYRING_SERVICE, account).and_then(|e| e.get_password()) {
+        match keyring_entry(account).and_then(|e| e.get_password()) {
             Ok(value) => Ok(Some(Secret(value))),
-            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(keyring_core::Error::NoEntry) => Ok(None),
             Err(e) => Err(e.to_string()),
         }
     }
     fn set(&self, account: &str, value: &Secret) -> Result<(), String> {
-        keyring::Entry::new(KEYRING_SERVICE, account).and_then(|e| e.set_password(&value.0)).map_err(|e| e.to_string())
+        keyring_entry(account).and_then(|e| e.set_password(&value.0)).map_err(|e| e.to_string())
     }
     fn delete(&self, account: &str) -> Result<(), String> {
-        match keyring::Entry::new(KEYRING_SERVICE, account).and_then(|e| e.delete_password()) {
-            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        match keyring_entry(account).and_then(|e| e.delete_credential()) {
+            Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
             Err(e) => Err(e.to_string()),
         }
     }

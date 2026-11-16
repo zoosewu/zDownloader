@@ -49,7 +49,7 @@ struct FetchReply {
     body: ToJsBuffer,
 }
 
-#[op2(async)]
+#[op2]
 #[serde]
 async fn op_zoo_fetch(state: Rc<RefCell<OpState>>, #[serde] args: FetchArgs) -> Result<FetchReply, JsErrorBox> {
     let net = state.borrow().borrow::<Rc<Net>>().clone();
@@ -95,7 +95,7 @@ fn op_zoo_credential(state: &mut OpState, #[string] key: &str) -> Option<String>
     state.borrow::<Rc<Net>>().credentials.placeholder(key)
 }
 
-#[op2(async)]
+#[op2]
 async fn op_zoo_wait(state: Rc<RefCell<OpState>>, ms: f64, #[string] reason: String) -> Result<(), JsErrorBox> {
     let ms = ms.max(0.0) as u64;
     let reason = (!reason.is_empty()).then_some(reason);
@@ -122,7 +122,7 @@ enum CaptchaArgs {
 }
 
 /// The user's solution, or null if they declined.
-#[op2(async)]
+#[op2]
 #[string]
 async fn op_zoo_captcha(state: Rc<RefCell<OpState>>, #[serde] args: CaptchaArgs) -> Result<Option<String>, JsErrorBox> {
     let (budget, hooks, net) = {

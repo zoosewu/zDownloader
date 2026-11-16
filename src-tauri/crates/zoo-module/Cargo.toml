@@ -7,16 +7,16 @@ publish = false
 
 [dependencies]
 zoo-module-client = { path = "../zoo-module-client" }
-deno_core = "0.372"
+deno_core = "0.413"
 deno_error = "=0.7.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt", "time", "net", "macros", "sync"] }
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "cookies", "gzip", "brotli", "deflate"] }
-sha1 = "0.10"
-sha2 = "0.10"
-getrandom = "0.3"
-base64 = "0.22"
+sha1 = "0.11"
+sha2 = "0.11"
+getrandom = "0.4"
+base64 = "0.23"
 percent-encoding = "2"
 clap = { version = "4.6", features = ["derive"] }
 
@@ -25,5 +25,5 @@ zoo-module-client = { path = "../zoo-module-client", features = ["core"] }
 zoo-core = { path = "../zoo-core" }
 chrono = "0.4"
 tempfile = "3"
-jsonschema = { version = "0.60", default-features = false }
+jsonschema = { version = "0.61", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

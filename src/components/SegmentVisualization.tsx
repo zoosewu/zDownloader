@@ -91,7 +91,7 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
     <Box sx={{ p: 1.5 }}>
       <Stack direction="row" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
         {LEGEND.map((status) => (
-          <Stack key={status} direction="row" spacing={0.5} alignItems="center">
+          <Stack key={status} direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
             <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: colors[status] }} />
             <Typography variant="caption">{t(`downloads.segments.${status}`)}</Typography>
           </Stack>

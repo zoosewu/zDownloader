@@ -100,7 +100,7 @@ function ConsentDialog({ plan, onAccept, onDecline }: ConsentDialogProps) {
                   <ListItemText
                     primary={c.label}
                     secondary={c.optional ? t('modules.credentials.optional') : undefined}
-                    primaryTypographyProps={{ color: isNewKey(c.key) ? 'warning.main' : undefined }}
+                    slotProps={{ primary: { color: isNewKey(c.key) ? 'warning.main' : undefined } }}
                   />
                 </ListItem>
               ))}

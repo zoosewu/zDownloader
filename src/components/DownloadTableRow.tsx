@@ -12,7 +12,7 @@ import {
   PlayArrow as ResumeIcon,
   Stop as CancelIcon,
   Replay as RetryIcon,
-  DeleteOutline as RemoveIcon,
+  DeleteOutlined as RemoveIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';

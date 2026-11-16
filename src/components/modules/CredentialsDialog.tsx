@@ -53,14 +53,16 @@ export default function CredentialsDialog({ module, onClose }: CredentialsDialog
               autoComplete="off"
               fullWidth
               margin="normal"
-              InputProps={{
-                endAdornment: stored ? (
+              slotProps={{
+                input: {
+                  endAdornment: stored ? (
                   <InputAdornment position="end">
                     <Button size="small" onClick={() => setValues((v) => ({ ...v, [field.key]: null }))}>
                       {t('modules.credentials.clear')}
                     </Button>
                   </InputAdornment>
-                ) : undefined,
+                  ) : undefined,
+                },
               }}
             />
           );

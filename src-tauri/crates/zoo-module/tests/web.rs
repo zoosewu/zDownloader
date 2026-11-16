@@ -66,6 +66,31 @@ async fn standard_globals_behave_like_the_browser() {
 }
 
 #[tokio::test]
+async fn timers_clear_repeat_and_do_not_hold_the_call_open() {
+    let started = Instant::now();
+    let value = eval(
+        &host(),
+        &[],
+        r#"
+        const log = [];
+        const cleared = setTimeout(() => log.push('cleared'), 1);
+        clearTimeout(cleared);
+        clearTimeout(12345); // unknown ids are ignored
+        let n = 0;
+        await new Promise((r) => {
+          const id = setInterval(() => { n += 1; if (n === 3) { clearInterval(id); r(); } }, 2);
+        });
+        await new Promise((r) => setTimeout(r, 10));
+        const signal = AbortSignal.timeout(60_000); // unref'd: the call may end before it fires
+        return { log, n, idType: typeof cleared, aborted: signal.aborted };
+        "#,
+    )
+    .await;
+    assert_eq!(value, json!({ "log": [], "n": 3, "idType": "number", "aborted": false }));
+    assert!(started.elapsed().as_secs() < 30);
+}
+
+#[tokio::test]
 async fn fetch_follows_redirects_keeps_cookies_and_posts_forms() {
     let server = Server::start(|req| match req.path.as_str() {
         "/login" => Resp::redirect(302, "/home").header("Set-Cookie", "sid=abc; Path=/"),

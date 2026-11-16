@@ -6,10 +6,10 @@
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import ts from 'typescript';
 import { afterAll, describe, expect, test } from 'vitest';
+import { typeErrors } from './tsc';
 
-const crate = resolve(__dirname, '../../src-tauri/crates/zoo-module');
+const crate = resolve(import.meta.dirname, '../../src-tauri/crates/zoo-module');
 const dir = mkdtempSync(join(tmpdir(), 'zoo-module-template-'));
 cpSync(join(crate, 'template'), dir, { recursive: true });
 cpSync(join(crate, 'sdk'), join(dir, 'types'), { recursive: true });
@@ -18,12 +18,7 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 function typecheck(extra?: string): string[] {
   if (extra !== undefined) writeFileSync(join(dir, 'src', 'extra.ts'), extra);
   else rmSync(join(dir, 'src', 'extra.ts'), { force: true });
-  const configPath = join(dir, 'tsconfig.json');
-  const config = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, dir);
-  const program = ts.createProgram(config.fileNames, config.options);
-  return ts
-    .getPreEmitDiagnostics(program)
-    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+  return typeErrors(dir);
 }
 
 describe('module SDK types', () => {

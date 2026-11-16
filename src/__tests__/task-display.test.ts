@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import type { Task } from '../backend/bindings/Task';
+import type { TFunction } from 'i18next';
 import { errorText } from '../utils/errors';
 import { displayName, droppedBefore, statusLabel } from '../utils/downloadCalculations';
 
-const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
+// Echoes the key and its options, so tests see what would be translated.
+const t = ((key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key)) as unknown as TFunction;
 
 function task(overrides: Partial<Task>): Task {
   return {

@@ -23,9 +23,9 @@ import {
   AllInbox as AllIcon,
   Download as RunningIcon,
   Schedule as WaitingIcon,
-  PauseCircleOutline as PausedIcon,
-  CheckCircleOutline as CompletedIcon,
-  ErrorOutline as FailedIcon,
+  PauseCircleOutlined as PausedIcon,
+  CheckCircleOutlined as CompletedIcon,
+  ErrorOutlined as FailedIcon,
   Block as CancelledIcon,
   LabelOutlined as CategoryIcon,
   Add as AddIcon,
@@ -109,7 +109,7 @@ const Sidebar: React.FC = () => {
           <>
             <ListItemText
               primary={label}
-              slotProps={{ primary: { noWrap: true, fontSize: '0.8125rem', color: count === 0 ? 'text.secondary' : undefined } }}
+              slotProps={{ primary: { noWrap: true, sx: { fontSize: '0.8125rem', color: count === 0 ? 'text.secondary' : undefined } } }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1, fontVariantNumeric: 'tabular-nums' }}>
               {count || ''}

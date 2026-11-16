@@ -27,7 +27,7 @@ import {
   Refresh as ReloadIcon,
   RestartAlt as ResetIcon,
   DeleteSweep as ClearIcon,
-  DeleteOutline as RemoveIcon,
+  DeleteOutlined as RemoveIcon,
 } from '@mui/icons-material';
 import {
   proxyListAtom,

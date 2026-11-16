@@ -55,13 +55,30 @@
 
   // ── Timers ──
 
+  // deno_core timers are objects; scripts get numeric ids like in browsers.
+  const timers = new Map();
   const timer = (repeat) => (callback, delay = 0, ...args) => {
     if (typeof callback !== "function") throw new TypeError("timer callback must be a function");
     const ms = Math.max(0, Number(delay) || 0);
-    return core.queueUserTimer(core.getTimerDepth() + 1, repeat, ms, () => callback(...args));
+    let id;
+    const fire = () => {
+      if (!repeat) timers.delete(id);
+      callback(...args);
+    };
+    const t = core.createTimer(fire, ms, undefined, repeat, true, false);
+    id = t._timerId;
+    timers.set(id, t);
+    return id;
   };
   const clearTimer = (id) => {
-    if (typeof id === "number") core.cancelTimer(id);
+    const t = timers.get(id);
+    if (t === undefined) return;
+    timers.delete(id);
+    core.cancelTimer(t);
+  };
+  const unrefTimer = (id) => {
+    const t = timers.get(id);
+    if (t !== undefined) core.unrefTimer(t);
   };
 
   // ── AbortController / AbortSignal ──
@@ -91,7 +108,7 @@
     static timeout(ms) {
       const signal = new AbortSignal(signalKey);
       const id = timer(false)(() => abortSignal(signal, new DOMException("The operation timed out.", "TimeoutError")), ms);
-      core.unrefTimer(id); // like browsers: a pending timeout signal does not keep the call alive
+      unrefTimer(id); // like browsers: a pending timeout signal does not keep the call alive
       return signal;
     }
     static any(signals) {

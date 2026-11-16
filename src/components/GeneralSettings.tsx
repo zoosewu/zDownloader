@@ -140,7 +140,7 @@ export default function GeneralSettings() {
             <TextField
               fullWidth
               value={settings.defaultDownloadDir}
-              InputProps={{ readOnly: true }}
+              slotProps={{ input: { readOnly: true } }}
               size="small"
             />
             <Button variant="outlined" onClick={handleSelectPath}>
@@ -169,7 +169,7 @@ export default function GeneralSettings() {
           label={t('settings.maxThreads')}
           value={settings.threadCount}
           onChange={(e) => setSettings({ ...settings, threadCount: parseInt(e.target.value) || 8 })}
-          inputProps={{ min: 1, max: 32 }}
+          slotProps={{ htmlInput: { min: 1, max: 32 } }}
         />
 
         {/* UI Settings */}

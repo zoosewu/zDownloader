@@ -1,11 +1,10 @@
 // What a failed task's error means, in the user's language.
+import type { TFunction } from 'i18next';
 import type { CoreError } from '../backend';
 import { formatBytes } from './downloadCalculations';
 
-type T = (key: string, options?: Record<string, unknown>) => string;
-
 /** A sentence for `error`; the backend's own detail is appended where it helps. */
-export function errorText(error: CoreError | null, t: T): string {
+export function errorText(error: CoreError | null, t: TFunction): string {
   if (!error) return '';
   switch (error.kind) {
     case 'resolve':

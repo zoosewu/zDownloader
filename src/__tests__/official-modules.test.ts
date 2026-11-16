@@ -6,10 +6,10 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
+import { typeErrors } from './tsc';
 
-const root = resolve(__dirname, '../..');
+const root = resolve(import.meta.dirname, '../..');
 const marketplace = join(root, 'src-tauri/marketplace');
 const sdk = join(root, 'src-tauri/crates/zoo-module/sdk');
 const modules = readdirSync(marketplace, { withFileTypes: true })
@@ -34,8 +34,6 @@ describe('official modules', () => {
   });
 
   test.each(modules)('%s: type-checks', (dir) => {
-    const config = ts.parseJsonConfigFileContent(ts.readConfigFile(join(dir, 'tsconfig.json'), ts.sys.readFile).config, ts.sys, dir);
-    const program = ts.createProgram(config.fileNames, config.options);
-    expect(ts.getPreEmitDiagnostics(program).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))).toEqual([]);
+    expect(typeErrors(dir)).toEqual([]);
   }, 30_000);
 });

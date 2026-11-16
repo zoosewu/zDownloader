@@ -150,7 +150,7 @@ export default function AdvancedSettings() {
               label={t('settings.segmentSize') || 'Segment Size (MB)'}
               value={settings.segmentSizeMb}
               onChange={(e) => setSettings({ ...settings, segmentSizeMb: parseInt(e.target.value) || 10 })}
-              inputProps={{ min: 1, max: 100 }}
+              slotProps={{ htmlInput: { min: 1, max: 100 } }}
               helperText={t('settings.segmentSizeHelp') || 'Size of each download segment (1-100 MB)'}
             />
           </Stack>
@@ -184,8 +184,8 @@ export default function AdvancedSettings() {
                   const value = e.target.value === '' ? null : parseInt(e.target.value);
                   setSettings({ ...settings, speedLimitKbps: value });
                 }}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">KB/s</InputAdornment>,
+                slotProps={{
+                  input: { endAdornment: <InputAdornment position="end">KB/s</InputAdornment> },
                 }}
               />
             )}
@@ -229,7 +229,7 @@ export default function AdvancedSettings() {
                   label={t('settings.maxRetryCount') || 'Max Retry Count'}
                   value={settings.maxRetryCount}
                   onChange={(e) => setSettings({ ...settings, maxRetryCount: parseInt(e.target.value) || 3 })}
-                  inputProps={{ min: 1, max: 10 }}
+                  slotProps={{ htmlInput: { min: 1, max: 10 } }}
                 />
                 <TextField
                   fullWidth
@@ -237,7 +237,7 @@ export default function AdvancedSettings() {
                   label={t('settings.retryInterval') || 'Retry Interval (seconds)'}
                   value={settings.retryIntervalSecs}
                   onChange={(e) => setSettings({ ...settings, retryIntervalSecs: parseInt(e.target.value) || 5 })}
-                  inputProps={{ min: 1, max: 60 }}
+                  slotProps={{ htmlInput: { min: 1, max: 60 } }}
                 />
               </>
             )}

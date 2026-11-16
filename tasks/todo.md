@@ -161,3 +161,15 @@
 - [x] 剪貼簿與瀏覽器擴充共用總開關 `autoStartLinks`，關閉時送進新增視窗（擴充的標頭一併帶入）
 - [x] 修正剪貼簿偶爾漏掉連結（讀取重試）；連續複製 5 次 5 次都收到
 - 實機：貼上 3 個、複製 5 個、擴充送 1 個都進清單並帶分類；以「暫停」送出 7 筆正確；全部成功後視窗自動關閉；測試資料已清除
+
+# 依賴全面升級（2026-11-16）
+
+起因：GitHub runner 的 Rust 1.100 改了 cargo build-dir 格式，tauri-build 2.5 在 macOS/Linux 放錯 sidecar。使用者要求能升的全升。每組升完跑 cargo test、vitest、tsc、build。
+
+- [ ] 1 Rust 相容更新（cargo update，含 tauri 2.12）＋ npm `@tauri-apps/*`、react 19.3、testing-library、@types
+- [ ] 2 Rust 主版本：base64、dirs、getrandom、sha1/sha2、jsonschema、keyring、deno_core（+deno_error）
+- [ ] 3 前端建置：vite 8、@vitejs/plugin-react 6、vitest 5、@vitest/ui、jsdom、jest-dom 7
+- [ ] 4 TypeScript 7
+- [ ] 5 函式庫：MUI 9、i18next 27 / react-i18next 18、jotai 3
+- [ ] 6 GitHub Actions 版本（Node 20 棄用警告）；CI 用 stable Rust
+- [ ] 7 實機：開發版操作一輪；Docker 用 Rust 1.100 跑 Linux 正式建置；發 v0.2.2
