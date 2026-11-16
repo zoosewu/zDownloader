@@ -38,10 +38,11 @@ interface RowProps {
 }
 
 
+// Theme palette names only (see styles/theme.ts): running is info, finished is the brand.
 const STATE_COLOR: Record<TaskState, 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info'> = {
-  scheduled: 'info',
+  scheduled: 'default',
   queued: 'default',
-  running: 'primary',
+  running: 'info',
   paused: 'warning',
   completed: 'success',
   failed: 'error',
@@ -56,6 +57,17 @@ const STATE_ICON: Record<TaskState, React.ReactElement> = {
   completed: <CompleteIcon fontSize="small" />,
   failed: <ErrorIcon fontSize="small" />,
   cancelled: <CancelledIcon fontSize="small" />,
+};
+
+/** Waiting and cancelled bars stay neutral (`inherit` takes the grey set on the bar). */
+const PROGRESS_COLOR: Record<TaskState, 'inherit' | 'success' | 'error' | 'warning' | 'info'> = {
+  scheduled: 'inherit',
+  queued: 'inherit',
+  running: 'info',
+  paused: 'warning',
+  completed: 'success',
+  failed: 'error',
+  cancelled: 'inherit',
 };
 
 type Action = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove';
@@ -189,8 +201,8 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
               <LinearProgress
                 variant={task.total === null && task.state === 'running' ? 'indeterminate' : 'determinate'}
                 value={displayData.progress}
-                color={shownState === 'completed' ? 'success' : shownState === 'failed' ? 'error' : 'primary'}
-                sx={{ height: 4 }}
+                color={PROGRESS_COLOR[shownState]}
+                sx={{ height: 4, color: 'text.disabled' }}
               />
             </Box>
             <Box sx={{ minWidth: 42, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{displayData.progressFormatted}</Box>

@@ -1,18 +1,55 @@
 // Material UI theme: a dense desktop-application look (small radii, compact controls, no
-// ripples or shadows), in light and dark. Colors follow the app icon (teal to emerald).
+// ripples or shadows), in light and dark.
+//
+// Every color comes from one brand hue, the app icon's teal-emerald. Status colors keep the
+// brand's saturation and lightness and only turn the hue, so they read as one family; greys
+// carry a trace of the brand hue. Components use palette names (primary, info, success,
+// warning, error, text.*, divider), never color literals.
 import { createTheme, alpha, type PaletteMode, type Theme } from '@mui/material/styles';
+
+/** The icon's teal-emerald (#0F766E to #34D399). */
+export const BRAND_HUE = 165;
+
+// Comma syntax: MUI's color helpers (alpha, darken, getContrastText) do not parse `hsl(h s l)`.
+const hsl = (h: number, s: number, l: number) => `hsl(${h}, ${s}%, ${l}%)`;
+
+/** Hue offsets from the brand: downloading (info) leans blue, warning amber, error rose. */
+function tones(dark: boolean) {
+  // Same saturation and lightness per mode, so no color shouts louder than the brand.
+  const [s, l] = dark ? [62, 58] : [72, 33];
+  const tone = (offset: number) => hsl((BRAND_HUE + offset + 360) % 360, s, l);
+  return {
+    primary: tone(0),
+    info: tone(40),
+    warning: tone(-125),
+    error: tone(-170),
+  };
+}
 
 function appTheme(mode: PaletteMode): Theme {
   const dark = mode === 'dark';
+  const t = tones(dark);
+  const grey = (s: number, l: number) => hsl(BRAND_HUE, s, l);
   const base = createTheme({
     spacing: 6,
     shape: { borderRadius: 4 },
     palette: {
       mode,
-      primary: { main: dark ? '#34d399' : '#0f766e' },
-      secondary: { main: dark ? '#5eead4' : '#0d9488' },
-      background: dark ? { default: '#17181a', paper: '#1f2023' } : { default: '#f3f4f5', paper: '#ffffff' },
-      divider: dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.10)',
+      primary: { main: t.primary },
+      secondary: { main: t.info },
+      // Finished is the brand's own color; running is told apart by `info`.
+      success: { main: t.primary },
+      info: { main: t.info },
+      warning: { main: t.warning },
+      error: { main: t.error },
+      background: dark ? { default: grey(9, 9), paper: grey(8, 12) } : { default: grey(14, 95), paper: grey(20, 99.5) },
+      text: dark
+        ? { primary: grey(12, 91), secondary: grey(7, 63), disabled: grey(5, 42) }
+        : { primary: grey(22, 13), secondary: grey(8, 38), disabled: grey(6, 62) },
+      divider: dark ? alpha(grey(20, 80), 0.1) : alpha(grey(30, 15), 0.11),
+      action: dark
+        ? { hover: alpha(t.primary, 0.07), selected: alpha(t.primary, 0.14) }
+        : { hover: alpha(t.primary, 0.05), selected: alpha(t.primary, 0.1) },
     },
     typography: {
       fontFamily: ['"Segoe UI Variable Text"', '"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif'].join(','),

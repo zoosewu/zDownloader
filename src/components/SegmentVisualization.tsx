@@ -1,6 +1,6 @@
 // Segment grid: which parts of the file are done, being fetched, or waiting to retry.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Typography, Stack } from '@mui/material';
+import { Box, Typography, Stack, useTheme, alpha } from '@mui/material';
 import SegmentCanvas from './SegmentCanvas';
 import { useTranslation } from 'react-i18next';
 import { backend, type SegmentMap, type Task } from '../backend';
@@ -9,13 +9,20 @@ import { formatBytes } from '../utils/downloadCalculations';
 
 const MIN_GAP_MS = 500;
 
-export const CELL_COLOR: Record<CellStatus, string> = {
-  pending: '#9e9e9e',
-  partial: '#a5d6a7',
-  downloading: '#2196f3',
-  retrying: '#f44336',
-  completed: '#4caf50',
-};
+/** Block colors from the theme palette, the same ones the list's states use. */
+function useCellColors(): Record<CellStatus, string> {
+  const { palette } = useTheme();
+  return useMemo(
+    () => ({
+      pending: alpha(palette.text.primary, 0.14),
+      partial: alpha(palette.success.main, 0.45),
+      downloading: palette.info.main,
+      retrying: palette.error.main,
+      completed: palette.success.main,
+    }),
+    [palette],
+  );
+}
 
 const LEGEND: CellStatus[] = ['completed', 'partial', 'downloading', 'retrying', 'pending'];
 
@@ -25,6 +32,7 @@ interface SegmentVisualizationProps {
 
 const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => {
   const { t } = useTranslation();
+  const colors = useCellColors();
   const [map, setMap] = useState<SegmentMap | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +92,7 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
       <Stack direction="row" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
         {LEGEND.map((status) => (
           <Stack key={status} direction="row" spacing={0.5} alignItems="center">
-            <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: CELL_COLOR[status] }} />
+            <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: colors[status] }} />
             <Typography variant="caption">{t(`downloads.segments.${status}`)}</Typography>
           </Stack>
         ))}
@@ -92,7 +100,7 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
 
       <SegmentCanvas
         cells={cells}
-        colors={CELL_COLOR}
+        colors={colors}
         describe={(cell) =>
           `#${cell.index + 1} · ${formatBytes(cell.start)} – ${formatBytes(cell.end)} · ${Math.floor(cell.done * 100)}% · ${t(`downloads.segments.${cell.status}`)}`
         }

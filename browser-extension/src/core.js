@@ -80,7 +80,7 @@ export async function onMenuClick(chrome, info, tab, userAgent) {
 }
 
 function flashBadge(chrome) {
-  chrome.action.setBadgeBackgroundColor({ color: '#2e7d32' });
+  chrome.action.setBadgeBackgroundColor({ color: '#189172' }); // the app's brand color, hsl(165 72% 33%)
   chrome.action.setBadgeText({ text: '✓' });
   setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000);
 }

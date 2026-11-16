@@ -1,10 +1,36 @@
-// Proxy Settings Component - Manage proxy list
-import { useEffect } from 'react';
+// Proxy settings: the imported proxies, their health, and list actions. Colors come from the
+// theme palette (success / warning / error), so the page follows light and dark mode.
+import { useEffect, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  IconButton,
+  LinearProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import {
+  Upload as ImportIcon,
+  Refresh as ReloadIcon,
+  RestartAlt as ResetIcon,
+  DeleteSweep as ClearIcon,
+  DeleteOutline as RemoveIcon,
+} from '@mui/icons-material';
+import {
   proxyListAtom,
-  // activeProxiesAtom, // Currently unused
   proxyStatsAtom,
   proxyLoadingAtom,
   proxyErrorAtom,
@@ -15,11 +41,27 @@ import {
   resetFailedProxiesAtom,
 } from '../stores/proxyStore';
 import type { ProxyStatus } from '../backend';
-import './ProxySettings.css';
+
+const STATUS_COLOR: Record<ProxyStatus, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
+  unknown: 'default',
+  verifying: 'info',
+  active: 'success',
+  failed: 'warning',
+  blacklisted: 'error',
+};
+
+const healthColor = (score: number) => (score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error');
+
+const formatTime = (timestamp: string | null) =>
+  timestamp ? new Date(timestamp).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+
+interface Confirm {
+  text: string;
+  action: () => Promise<unknown>;
+}
 
 export default function ProxySettings() {
   const [proxies] = useAtom(proxyListAtom);
-  // const activeProxies = useAtomValue(activeProxiesAtom);
   const stats = useAtomValue(proxyStatsAtom);
   const loading = useAtomValue(proxyLoadingAtom);
   const error = useAtomValue(proxyErrorAtom);
@@ -30,230 +72,175 @@ export default function ProxySettings() {
   const clearAllProxies = useSetAtom(clearAllProxiesAtom);
   const resetFailedProxies = useSetAtom(resetFailedProxiesAtom);
 
-  // Load proxy list on mount
+  const [notice, setNotice] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
+  const [confirm, setConfirm] = useState<Confirm | null>(null);
+
   useEffect(() => {
     loadProxyList();
   }, [loadProxyList]);
 
-  // Import proxy list from file
-  const handleImport = async () => {
+  const run = async (action: () => Promise<unknown>, failure: string) => {
     try {
-      const file = await open({
-        filters: [
-          {
-            name: 'Text Files',
-            extensions: ['txt'],
-          },
-        ],
-      });
-
-      if (file) {
-        const filePath = typeof file === 'string' ? file : file;
-        const count = await importProxyList(filePath);
-        alert(`成功匯入 ${count} 個 Proxy`);
-      }
-    } catch (error) {
-      console.error('Import failed:', error);
-      alert(`匯入失敗: ${error}`);
+      await action();
+    } catch (e) {
+      setNotice({ severity: 'error', text: `${failure}: ${e instanceof Error ? e.message : String(e)}` });
     }
   };
 
-  // Remove a proxy
-  const handleRemove = async (proxyId: string) => {
-    if (confirm('確定要移除此 Proxy？')) {
-      try {
-        await removeProxy(proxyId);
-      } catch (error) {
-        console.error('Remove failed:', error);
-        alert(`移除失敗: ${error}`);
-      }
-    }
-  };
+  const handleImport = () =>
+    run(async () => {
+      const file = await open({ filters: [{ name: 'Text Files', extensions: ['txt'] }] });
+      if (!file) return;
+      const count = await importProxyList(file);
+      setNotice({ severity: 'success', text: `成功匯入 ${count} 個 Proxy` });
+    }, '匯入失敗');
 
-  // Clear all proxies
-  const handleClearAll = async () => {
-    if (confirm(`確定要清空所有 ${proxies.length} 個 Proxy？此操作無法撤銷。`)) {
-      try {
-        await clearAllProxies();
-      } catch (error) {
-        console.error('Clear failed:', error);
-        alert(`清空失敗: ${error}`);
-      }
-    }
-  };
+  const ask = (text: string, action: () => Promise<unknown>, failure: string) =>
+    setConfirm({ text, action: () => run(action, failure) });
 
-  // Reset failed proxies
-  const handleReset = async () => {
-    if (confirm('確定要重置所有失敗的 Proxy？')) {
-      try {
-        await resetFailedProxies();
-      } catch (error) {
-        console.error('Reset failed:', error);
-        alert(`重置失敗: ${error}`);
-      }
-    }
-  };
-
-  // Get status badge class
-  const getStatusClass = (status: ProxyStatus): string => {
-    switch (status) {
-      case 'active':
-        return 'status-badge status-active';
-      case 'failed':
-        return 'status-badge status-failed';
-      case 'blacklisted':
-        return 'status-badge status-blacklisted';
-      default:
-        return 'status-badge';
-    }
-  };
-
-  // Get health score color
-  const getHealthColor = (score: number): string => {
-    if (score >= 80) return '#4caf50';
-    if (score >= 60) return '#ff9800';
-    return '#f44336';
-  };
-
-  // Format timestamp
-  const formatTime = (timestamp: string | null): string => {
-    if (!timestamp) return '-';
-    const date = new Date(timestamp);
-    return date.toLocaleString('zh-TW', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const statItems: Array<[string, number | string, string?]> = [
+    ['總數', stats.total],
+    ['活躍', stats.active, 'success.main'],
+    ['失敗', stats.failed, 'warning.main'],
+    ['黑名單', stats.blacklisted, 'error.main'],
+    ['平均健康度', stats.avgHealth.toFixed(1)],
+  ];
 
   return (
-    <div className="proxy-settings">
-      <div className="proxy-header">
-        <h2>Proxy 管理</h2>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        {statItems.map(([label, value, color]) => (
+          <Box key={label}>
+            <Typography variant="caption" color="text.secondary" component="div">
+              {label}
+            </Typography>
+            <Typography variant="h6" sx={{ color, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>
+              {value}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
 
-        {/* Statistics */}
-        <div className="proxy-stats">
-          <div className="stat-item">
-            <span className="stat-label">總數</span>
-            <span className="stat-value">{stats.total}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">活躍</span>
-            <span className="stat-value stat-active">{stats.active}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">失敗</span>
-            <span className="stat-value stat-failed">{stats.failed}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">黑名單</span>
-            <span className="stat-value stat-blacklisted">
-              {stats.blacklisted}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">平均健康度</span>
-            <span className="stat-value">{stats.avgHealth.toFixed(1)}</span>
-          </div>
-        </div>
+      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+        <Button variant="contained" startIcon={<ImportIcon fontSize="small" />} onClick={handleImport} disabled={loading}>
+          匯入 Proxy
+        </Button>
+        <Button color="inherit" startIcon={<ReloadIcon fontSize="small" />} onClick={() => loadProxyList()} disabled={loading}>
+          重新載入
+        </Button>
+        <Button
+          color="inherit"
+          startIcon={<ResetIcon fontSize="small" />}
+          disabled={loading || stats.failed === 0}
+          onClick={() => ask('確定要重置所有失敗的 Proxy？', () => resetFailedProxies(), '重置失敗')}
+        >
+          重置失敗
+        </Button>
+        <Button
+          color="error"
+          startIcon={<ClearIcon fontSize="small" />}
+          disabled={loading || proxies.length === 0}
+          onClick={() => ask(`確定要清空所有 ${proxies.length} 個 Proxy？此操作無法撤銷。`, () => clearAllProxies(), '清空失敗')}
+        >
+          清空全部
+        </Button>
+      </Box>
 
-        {/* Toolbar */}
-        <div className="proxy-toolbar">
-          <button onClick={handleImport} disabled={loading} className="btn-primary">
-            📥 匯入 Proxy
-          </button>
-          <button onClick={() => loadProxyList()} disabled={loading}>
-            🔄 重新載入
-          </button>
-          <button onClick={handleReset} disabled={loading || stats.failed === 0}>
-            ♻️ 重置失敗
-          </button>
-          <button
-            onClick={handleClearAll}
-            disabled={loading || proxies.length === 0}
-            className="btn-danger"
-          >
-            🗑️ 清空全部
-          </button>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && <div className="error-message">❌ {error}</div>}
-
-      {/* Loading State */}
-      {loading && <div className="loading-message">載入中...</div>}
-
-      {/* Proxy Table */}
-      {!loading && proxies.length === 0 ? (
-        <div className="empty-state">
-          <p>📝 尚無 Proxy</p>
-          <p className="empty-hint">點擊「匯入 Proxy」從檔案載入</p>
-        </div>
-      ) : (
-        <div className="proxy-table-container">
-          <table className="proxy-table">
-            <thead>
-              <tr>
-                <th>地址</th>
-                <th>狀態</th>
-                <th>健康度</th>
-                <th>成功/失敗</th>
-                <th>平均延遲</th>
-                <th>最後使用</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {proxies.map((proxy) => (
-                <tr key={proxy.id}>
-                  <td className="proxy-address">
-                    {proxy.host}:{proxy.port}
-                  </td>
-                  <td>
-                    <span className={getStatusClass(proxy.status)}>
-                      {proxy.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="health-cell">
-                      <div
-                        className="health-bar"
-                        style={{
-                          width: `${proxy.healthScore * 100}%`,
-                          backgroundColor: getHealthColor(proxy.healthScore * 100),
-                        }}
-                      />
-                      <span className="health-value">
-                        {(proxy.healthScore * 100).toFixed(0)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="requests-cell">
-                    <span className="success-count">
-                      {proxy.successfulRequests}
-                    </span>
-                    {' / '}
-                    <span className="failed-count">{proxy.failedRequests}</span>
-                  </td>
-                  <td>{proxy.avgLatencyMs.toFixed(0)} ms</td>
-                  <td className="time-cell">{formatTime(proxy.lastUsed)}</td>
-                  <td>
-                    <button
-                      onClick={() => handleRemove(proxy.id)}
-                      disabled={loading}
-                      className="btn-remove"
-                    >
-                      移除
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {error && <Alert severity="error">{error}</Alert>}
+      {notice && (
+        <Alert severity={notice.severity} onClose={() => setNotice(null)}>
+          {notice.text}
+        </Alert>
       )}
-    </div>
+      {loading && <LinearProgress />}
+
+      {!loading && proxies.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+          尚無 Proxy。按「匯入 Proxy」從檔案載入。
+        </Typography>
+      ) : (
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'auto' }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>地址</TableCell>
+                <TableCell>狀態</TableCell>
+                <TableCell sx={{ width: 140 }}>健康度</TableCell>
+                <TableCell align="right">成功 / 失敗</TableCell>
+                <TableCell align="right">平均延遲</TableCell>
+                <TableCell>最後使用</TableCell>
+                <TableCell sx={{ width: 36 }} />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {proxies.map((proxy) => {
+                const health = proxy.healthScore * 100;
+                return (
+                  <TableRow key={proxy.id} hover>
+                    <TableCell sx={{ fontFamily: 'Consolas, monospace', fontSize: '0.75rem' }}>
+                      {proxy.host}:{proxy.port}
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={proxy.status} color={STATUS_COLOR[proxy.status]} variant="outlined" />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress variant="determinate" value={health} color={healthColor(health)} sx={{ flex: 1, height: 4 }} />
+                        <Typography variant="caption" sx={{ minWidth: 24, textAlign: 'right' }}>
+                          {health.toFixed(0)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      <Box component="span" sx={{ color: 'success.main' }}>
+                        {proxy.successfulRequests}
+                      </Box>
+                      {' / '}
+                      <Box component="span" sx={{ color: 'error.main' }}>
+                        {proxy.failedRequests}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">{proxy.avgLatencyMs.toFixed(0)} ms</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{formatTime(proxy.lastUsed)}</TableCell>
+                    <TableCell padding="none">
+                      <Tooltip title="移除">
+                        <IconButton
+                          disabled={loading}
+                          onClick={() => ask('確定要移除此 Proxy？', () => removeProxy(proxy.id), '移除失敗')}
+                        >
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Box>
+      )}
+
+      <Dialog open={!!confirm} onClose={() => setConfirm(null)}>
+        <DialogContent>
+          <DialogContentText>{confirm?.text}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button color="inherit" onClick={() => setConfirm(null)}>
+            取消
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              const action = confirm!.action;
+              setConfirm(null);
+              action();
+            }}
+          >
+            確定
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
