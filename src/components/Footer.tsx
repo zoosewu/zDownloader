@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 import { useAtomValue } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { taskCountsAtom } from '../stores/downloadStore';
+import { version } from '../../package.json';
 
 /**
  * Footer - displays at the bottom of the app
@@ -49,7 +50,7 @@ const Footer: React.FC = () => {
       {/* Right side - app info */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <Typography variant="caption" color="text.secondary">
-          Zoo Downloader v0.1.0
+          Zoo Downloader v{version}
         </Typography>
       </Box>
     </Box>
