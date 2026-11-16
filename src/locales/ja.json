@@ -311,5 +311,22 @@
     "headersCount": "ヘッダー（{{count}}）…",
     "headersTitle": "すべてのリンク共通のヘッダー",
     "browserHeaders": "ブラウザからのヘッダー"
+  },
+  "update": {
+    "title": "アップデート",
+    "automatic": "新しいバージョンを自動確認（インストール前に確認）",
+    "current": "バージョン {{version}}",
+    "checkNow": "今すぐ確認",
+    "upToDate": "最新バージョンです",
+    "available": "Zoo Downloader {{version}} が利用可能です",
+    "downloading": "{{version}} をダウンロード中（{{progress}}）",
+    "installing": "インストール中。完了後に再起動し、ダウンロードは続行されます",
+    "failed": "アップデートに失敗しました：{{message}}",
+    "notes": "変更内容",
+    "notesTitle": "{{version}} の変更内容",
+    "install": "更新して再起動",
+    "retry": "再試行",
+    "later": "後で",
+    "noRelease": "公開済みのバージョン情報が見つかりません（未公開、または GitHub に接続できません）"
   }
 }

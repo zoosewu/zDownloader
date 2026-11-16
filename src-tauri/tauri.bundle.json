@@ -3,6 +3,8 @@
     "beforeBuildCommand": "pnpm build:sidecars && pnpm build"
   },
   "bundle": {
-    "externalBin": ["binaries/zoo-module", "binaries/zoo-native-host"]
+    "externalBin": ["binaries/zoo-module", "binaries/zoo-native-host"],
+    "createUpdaterArtifacts": true,
+    "macOS": { "signingIdentity": "-" }
   }
 }

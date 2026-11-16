@@ -23,6 +23,10 @@ userAgent: string | null,
  */
 checkModuleUpdates: boolean, 
 /**
+ * Look for a new version of the app at start and every few hours; installing asks first.
+ */
+checkAppUpdates: boolean, 
+/**
  * The user's categories, in sidebar order; their rules tag new downloads.
  */
 categories: Array<Category>, };

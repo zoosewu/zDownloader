@@ -311,5 +311,22 @@
     "headersCount": "標頭（{{count}}）…",
     "headersTitle": "所有連結共用的標頭",
     "browserHeaders": "瀏覽器送來的標頭"
+  },
+  "update": {
+    "title": "更新",
+    "automatic": "自動檢查新版本（安裝前會先詢問）",
+    "current": "目前版本 {{version}}",
+    "checkNow": "立即檢查",
+    "upToDate": "已是最新版本",
+    "available": "Zoo Downloader {{version}} 已推出",
+    "downloading": "正在下載 {{version}}（{{progress}}）",
+    "installing": "正在安裝，完成後會自動重新啟動；進行中的下載會在重新啟動後繼續",
+    "failed": "更新失敗：{{message}}",
+    "notes": "更新內容",
+    "notesTitle": "{{version}} 更新內容",
+    "install": "更新並重新啟動",
+    "retry": "再試一次",
+    "later": "稍後",
+    "noRelease": "找不到已發布的版本資訊（尚未發布，或暫時連不到 GitHub）"
   }
 }

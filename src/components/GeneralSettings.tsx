@@ -19,6 +19,7 @@ import { useAtom } from 'jotai';
 import { settingsAtom } from '../stores/settingsStore';
 import { backend, type AppSettings, type Theme } from '../backend';
 import { open } from '@tauri-apps/plugin-dialog';
+import AppUpdateSection from './AppUpdateSection';
 
 export default function GeneralSettings() {
   const { t, i18n } = useTranslation();
@@ -215,6 +216,24 @@ export default function GeneralSettings() {
               }
               label={t('settings.systemTray') || 'Enable System Tray'}
             />
+          </Stack>
+        </Box>
+
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>
+            {t('update.title')}
+          </Typography>
+          <Stack spacing={1}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.checkAppUpdates}
+                  onChange={(e) => setSettings({ ...settings, checkAppUpdates: e.target.checked })}
+                />
+              }
+              label={t('update.automatic')}
+            />
+            <AppUpdateSection />
           </Stack>
         </Box>
 

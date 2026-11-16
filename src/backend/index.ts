@@ -145,6 +145,10 @@ export const backend = {
     /** The categories the rules give this download (to pre-fill the add window). */
     match: (url: string, filename: string | null = null) => call<string[]>('categories_match', { url, filename }),
   },
+  app: {
+    /** Stop downloads and save their state; call right before installing an update. */
+    prepareUpdate: () => call<null>('app_prepare_update'),
+  },
   addWindow: {
     /** Show the add-downloads window with these links added to its list. */
     open: (items: AddItem[] = []) => call<null>('add_window_open', { items }),

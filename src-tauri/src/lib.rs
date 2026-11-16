@@ -24,6 +24,7 @@ use commands::site_modules::{
     modules_set_auto_start, modules_set_credentials, modules_set_enabled, modules_sources,
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
+use commands::app::app_prepare_update;
 use commands::settings::{
     load_settings_from_file, settings_export, settings_get, settings_import, settings_reset,
     settings_update, SettingsState,
@@ -93,6 +94,7 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             captcha_answer,
             captcha_open_window,
             categories_match,
+            app_prepare_update,
             add_window_open,
             add_window_take,
             add_window_import,
@@ -122,6 +124,8 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
         .manage(add_window::Pending::default())
         // App commands answer the main window only. Captcha windows show other sites' pages and

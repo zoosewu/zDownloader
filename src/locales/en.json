@@ -311,5 +311,22 @@
     "headersCount": "Headers ({{count}})…",
     "headersTitle": "Headers for every link",
     "browserHeaders": "Headers from the browser"
+  },
+  "update": {
+    "title": "Updates",
+    "automatic": "Check for new versions automatically (asks before installing)",
+    "current": "Version {{version}}",
+    "checkNow": "Check now",
+    "upToDate": "You have the latest version",
+    "available": "Zoo Downloader {{version}} is available",
+    "downloading": "Downloading {{version}} ({{progress}})",
+    "installing": "Installing; the app restarts when done and downloads continue",
+    "failed": "Update failed: {{message}}",
+    "notes": "What's new",
+    "notesTitle": "What's new in {{version}}",
+    "install": "Update and restart",
+    "retry": "Try again",
+    "later": "Later",
+    "noRelease": "No published version found (nothing released yet, or GitHub is unreachable)"
   }
 }

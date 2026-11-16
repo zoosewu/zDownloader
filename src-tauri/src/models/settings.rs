@@ -48,6 +48,9 @@ pub struct AppSettings {
     /// Look for module updates when the app starts (never installs them).
     #[serde(default = "default_true")]
     pub check_module_updates: bool,
+    /// Look for a new version of the app at start and every few hours; installing asks first.
+    #[serde(default = "default_true")]
+    pub check_app_updates: bool,
 
     // Categories
     /// The user's categories, in sidebar order; their rules tag new downloads.
@@ -96,6 +99,7 @@ impl Default for AppSettings {
             retry_interval_secs: 5,
             user_agent: None,
             check_module_updates: true,
+            check_app_updates: true,
             categories: Vec::new(),
         }
     }

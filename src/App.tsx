@@ -21,6 +21,8 @@ import { useClipboard } from './hooks/useClipboard';
 import { useDownloadSync } from './hooks/useDownloadSync';
 import CaptchaDialog from './components/CaptchaDialog';
 import SourceChangedPrompt from './components/SourceChangedPrompt';
+import UpdateBanner from './components/UpdateBanner';
+import { useAutomaticUpdateChecks } from './hooks/useAppUpdate';
 import { waitForTauri } from './utils/tauri';
 import { backend } from './backend';
 import './i18n';
@@ -38,6 +40,7 @@ function App() {
 
   useClipboard(tauriReady);
   useDownloadSync(tauriReady);
+  useAutomaticUpdateChecks(tauriReady);
   const { currentPage } = useNavigation();
   const [currentTheme] = useAtom(themeAtom);
   const [, setSettings] = useAtom(settingsAtom);
@@ -103,6 +106,8 @@ function App() {
           flexDirection: 'column',
         }}
       >
+        <UpdateBanner />
+
         {/* Page Content */}
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
           {currentPage === 'main' && <MainPage />}

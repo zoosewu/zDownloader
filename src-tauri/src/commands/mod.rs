@@ -1,4 +1,5 @@
 // Tauri command handlers
+pub mod app;
 pub mod clipboard;
 pub mod downloads;
 pub mod error;
