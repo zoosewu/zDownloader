@@ -94,3 +94,11 @@
 
 - 錯誤：剪貼簿監聽當初只測了「複製一次有反應」就算通過；實際上變更通知送到時，剪貼簿常被其他程式（剪貼簿歷程、其他監聽程式）開著，讀取會偶爾失敗，於是有時漏掉連結。使用者問「是不是還沒有偵測剪貼簿」才發現。
 - 規則：牽涉到 OS 共用資源（剪貼簿、檔案鎖、網路）的功能，驗證時至少連續操作 5 次並計數；讀取共用資源的地方要有短暫重試。
+
+## 只在 Windows 驗證過的程式不能當成跨平台可用（2026-11-16）
+
+- 錯誤：第一次發布前只在本機（Windows、Rust 1.99）建置，推上 GitHub 後 macOS、Linux 連續三次失敗：interprocess 在 Unix 用到較新的 tokio API；GitHub 的 Rust 1.100 改了 cargo build-dir 格式，tauri-build 2.5 把無副檔名的 sidecar 放錯位置；換 keyring-core 後各平台 store 要另外開 feature。每次都要等 CI 跑 20 分鐘才看到。
+- 規則：
+  - 動到依賴、工具鏈或平台相關程式後，推送前用 Docker（`rust:1-bookworm`，乾淨 clone）跑一次 Linux 的 `pnpm tauri build`；macOS 至少讀過新增 crate 的 `[features]` 與 `compile_error!`。
+  - 本機與 CI 的 Rust 版本可能不同；CI 失敗先比對版本。
+  - 公開的 Actions API 拿不到 log；未登入時用 check-runs 的 annotations，或在本機重現。
