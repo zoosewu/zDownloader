@@ -6,7 +6,6 @@ import {
   FormControlLabel,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
   Switch,
@@ -131,8 +130,8 @@ export default function AdvancedSettings() {
   }
 
   return (
-    <Paper elevation={1} sx={{ p: 3 }}>
-      <Stack spacing={3}>
+    <Box>
+      <Stack spacing={2.5}>
         {message && (
           <Alert severity={message.type} onClose={() => setMessage(null)}>
             {message.text}
@@ -303,6 +302,6 @@ export default function AdvancedSettings() {
           </Button>
         </Box>
       </Stack>
-    </Paper>
+    </Box>
   );
 }

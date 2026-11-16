@@ -117,7 +117,7 @@ const ActionsCell = React.memo(
       <TableCell align="center" sx={widthSx(width)}>
         {actionsFor(state).map((action) => (
           <Tooltip key={action} title={t(`downloads.actions.${action}`)} arrow>
-            <IconButton size="small" onClick={run(action)} aria-label={t(`downloads.actions.${action}`)}>
+            <IconButton onClick={run(action)} aria-label={t(`downloads.actions.${action}`)} sx={{ p: '2px' }}>
               {ACTION_ICON[action]}
             </IconButton>
           </Tooltip>
@@ -181,10 +181,10 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
                 variant={task.total === null && task.state === 'running' ? 'indeterminate' : 'determinate'}
                 value={displayData.progress}
                 color={shownState === 'completed' ? 'success' : shownState === 'failed' ? 'error' : 'primary'}
-                sx={{ height: 6, borderRadius: 3 }}
+                sx={{ height: 4 }}
               />
             </Box>
-            <Box sx={{ minWidth: 45, textAlign: 'right' }}>{displayData.progressFormatted}</Box>
+            <Box sx={{ minWidth: 42, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{displayData.progressFormatted}</Box>
           </Box>
         </TableCell>
 

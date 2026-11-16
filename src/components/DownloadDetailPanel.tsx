@@ -34,15 +34,14 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
   if (!task) {
     return (
       <Paper
-        elevation={1}
         sx={{
-          minHeight: 250,
+          height: '100%',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           {t('downloads.details.selectItem')}
         </Typography>
       </Paper>
@@ -65,7 +64,7 @@ const DownloadDetailPanel: React.FC<DownloadDetailPanelProps> = ({ task }) => {
           value={activeTab}
           onChange={handleTabChange}
           aria-label="download detail tabs"
-          sx={{ paddingX: 2 }}
+          sx={{ paddingX: 1 }}
         >
           <Tab label={t('downloads.details.basicInfo')} />
           <Tab label={t('downloads.details.segmentVisualization')} />

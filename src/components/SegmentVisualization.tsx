@@ -64,7 +64,7 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
 
   if (error) {
     return (
-      <Typography sx={{ p: 3 }} color="error">
+      <Typography sx={{ p: 1.5 }} color="error">
         {error}
       </Typography>
     );
@@ -72,14 +72,14 @@ const SegmentVisualization: React.FC<SegmentVisualizationProps> = ({ task }) => 
   if (!map) return null;
   if (cells.length === 0) {
     return (
-      <Typography sx={{ p: 3 }} color="text.secondary">
+      <Typography sx={{ p: 1.5 }} color="text.secondary">
         {t('downloads.segments.unknownSize')}
       </Typography>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 1.5 }}>
       <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: 'wrap' }}>
         {LEGEND.map((status) => (
           <Stack key={status} direction="row" spacing={0.5} alignItems="center">

@@ -1,6 +1,6 @@
 // Queue controls component - pause all, resume all, clear completed
 import React from 'react';
-import { Box, Button, ButtonGroup, Chip } from '@mui/material';
+import { Button } from '@mui/material';
 import {
   PauseCircle as PauseIcon,
   PlayCircle as PlayIcon,
@@ -36,59 +36,34 @@ const QueueControls: React.FC<QueueControlsProps> = ({ onControlError }) => {
   const handleResumeAll = run('resume', actions.resumeAll);
   const handleClearCompleted = run('clear', actions.clearFinished);
 
+  // Counts live in the sidebar and the status bar; the toolbar only enables what can run.
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        flexWrap: 'wrap',
-      }}
-    >
-      {/* Status chips */}
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        <Chip
-          label={`${t('downloads.status.active')}: ${activeCount}`}
-          color="primary"
-          size="small"
-        />
-        <Chip
-          label={`${t('downloads.status.paused')}: ${pausedCount}`}
-          color="warning"
-          size="small"
-        />
-        <Chip
-          label={`${t('downloads.status.completed')}: ${completedCount}`}
-          color="success"
-          size="small"
-        />
-      </Box>
-
-      {/* Control buttons */}
-      <ButtonGroup size="small" variant="outlined">
+    <>
+      <Button
+        color="inherit"
+        startIcon={<PlayIcon fontSize="small" />}
+        onClick={handleResumeAll}
+        disabled={pausedCount === 0 || loading !== null}
+      >
+        {t('downloads.actions.resumeAll')}
+      </Button>
         <Button
-          startIcon={<PauseIcon />}
+          color="inherit"
+          startIcon={<PauseIcon fontSize="small" />}
           onClick={handlePauseAll}
           disabled={activeCount === 0 || loading !== null}
         >
           {t('downloads.actions.pauseAll')}
         </Button>
         <Button
-          startIcon={<PlayIcon />}
-          onClick={handleResumeAll}
-          disabled={pausedCount === 0 || loading !== null}
-        >
-          {t('downloads.actions.resumeAll')}
-        </Button>
-        <Button
-          startIcon={<ClearIcon />}
+          color="inherit"
+          startIcon={<ClearIcon fontSize="small" />}
           onClick={handleClearCompleted}
           disabled={completedCount === 0 || loading !== null}
         >
           {t('downloads.actions.clearCompleted')}
         </Button>
-      </ButtonGroup>
-    </Box>
+    </>
   );
 };
 

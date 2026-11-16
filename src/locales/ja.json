@@ -8,7 +8,8 @@
     "reset": "リセット",
     "progress": "進捗",
     "later": "後で",
-    "browse": "参照"
+    "browse": "参照",
+    "back": "戻る"
   },
   "downloads": {
     "addDownload": "ダウンロードを追加",
@@ -71,7 +72,6 @@
       "startedAt": "開始日時",
       "completedAt": "完了日時",
       "noError": "エラーメッセージなし",
-      "retryInfo": "再試行情報",
       "retryCount": "再試行回数",
       "scheduledStart": "予定開始時刻",
       "notScheduled": "スケジュール未設定",
@@ -162,7 +162,8 @@
       "importFailed": "設定のインポートに失敗しました"
     },
     "proxyFallbackDirect": "使用できるプロキシがない場合は直接接続する",
-    "userAgentHelp": "ダウンロードが User-Agent を指定しないときに使います。モジュールやタスクの指定が優先されます。"
+    "userAgentHelp": "ダウンロードが User-Agent を指定しないときに使います。モジュールやタスクの指定が優先されます。",
+    "title": "設定"
   },
   "modules": {
     "title": "サイトモジュール",

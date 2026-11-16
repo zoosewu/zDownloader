@@ -15,7 +15,7 @@ const ErrorInfoTab: React.FC<ErrorInfoTabProps> = ({ task }) => {
 
   if (!task.error) {
     return (
-      <Box sx={{ padding: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 150 }}>
+      <Box sx={{ padding: 1.5, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 150 }}>
         <Alert severity="success" variant="outlined">
           <Typography variant="body2">{t('downloads.details.noError')}</Typography>
         </Alert>
@@ -24,7 +24,7 @@ const ErrorInfoTab: React.FC<ErrorInfoTabProps> = ({ task }) => {
   }
 
   return (
-    <Box sx={{ padding: 3 }}>
+    <Box sx={{ padding: 1.5 }}>
       <Stack spacing={2}>
         <Alert severity="error" variant="outlined">
           <Typography variant="subtitle2" gutterBottom>

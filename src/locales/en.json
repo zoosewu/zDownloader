@@ -8,7 +8,8 @@
     "reset": "Reset",
     "progress": "Progress",
     "later": "Later",
-    "browse": "Browse"
+    "browse": "Browse",
+    "back": "Back"
   },
   "downloads": {
     "addDownload": "Add Download",
@@ -71,7 +72,6 @@
       "startedAt": "Started At",
       "completedAt": "Completed At",
       "noError": "No error message",
-      "retryInfo": "Retry Info",
       "retryCount": "Retry Count",
       "scheduledStart": "Scheduled Start",
       "notScheduled": "Not Scheduled",
@@ -162,7 +162,8 @@
       "importFailed": "Failed to import settings"
     },
     "proxyFallbackDirect": "Connect directly when no proxy is usable",
-    "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins."
+    "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins.",
+    "title": "Settings"
   },
   "proxy": {
     "enabled": "Enable Proxy"

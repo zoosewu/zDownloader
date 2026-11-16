@@ -1,7 +1,10 @@
 // Download list component - displays all download tasks in table view with resizable detail panel
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Divider, Button } from '@mui/material';
+import { Box, Divider, Button, IconButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import SettingsIcon from '@mui/icons-material/SettingsOutlined';
+import { useTranslation } from 'react-i18next';
+import { useNavigation } from '../hooks/useNavigation';
 import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
 import QueueControls from './QueueControls';
@@ -30,6 +33,8 @@ const DownloadList: React.FC<DownloadListProps> = ({
   onBatchImportSuccess,
   onBatchImportError,
 }) => {
+  const { t } = useTranslation();
+  const { navigateTo } = useNavigation();
   const { selectedTaskId } = useSelectedDownload();
   const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
   const [isDragging, setIsDragging] = useState(false);
@@ -83,45 +88,39 @@ const DownloadList: React.FC<DownloadListProps> = ({
         position: 'relative',
       }}
     >
-      {/* Queue Controls and Action Buttons Header - fixed at top */}
+      {/* Toolbar */}
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          px: 2,
-          py: 1.5,
+          gap: 0.5,
+          px: 1,
+          minHeight: 40,
           borderBottom: 1,
           borderColor: 'divider',
           backgroundColor: 'background.paper',
         }}
       >
-        {/* Queue controls on the left */}
+        <Button variant="contained" startIcon={<AddIcon />} onClick={onAddDownload}>
+          {t('downloads.addDownload')}
+        </Button>
+        <BatchImportButton onImportSuccess={onBatchImportSuccess} onImportError={onBatchImportError} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, my: 1 }} />
         <QueueControls onControlError={onControlError} />
-
-        {/* Action buttons on the right */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={onAddDownload}
-            size="small"
-          >
-            新增下載
-          </Button>
-          <BatchImportButton
-            onImportSuccess={onBatchImportSuccess}
-            onImportError={onBatchImportError}
-          />
-        </Box>
+        <Box sx={{ flex: 1 }} />
+        <Tooltip title={t('settings.title')}>
+          <IconButton onClick={() => navigateTo('settings')}>
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Scrollable Content Area - DownloadTable */}
       <Box
         sx={{
           flex: 1,
-          overflow: 'auto',
-          minHeight: 200,
+          overflow: 'hidden',
+          minHeight: 120,
         }}
       >
 
@@ -135,25 +134,12 @@ const DownloadList: React.FC<DownloadListProps> = ({
           <Divider
             onMouseDown={handleMouseDown}
             sx={{
-              height: '8px',
+              height: 4,
               cursor: 'ns-resize',
+              border: 0,
               backgroundColor: isDragging ? 'primary.main' : 'divider',
-              '&:hover': {
-                backgroundColor: 'primary.light',
-              },
-              transition: 'background-color 0.2s',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '40px',
-                height: '4px',
-                borderRadius: '2px',
-                backgroundColor: 'text.secondary',
-              },
+              '&:hover': { backgroundColor: 'primary.main' },
+              transition: 'background-color 0.15s',
             }}
           />
 

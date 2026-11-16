@@ -40,8 +40,8 @@ const BatchImportButton: React.FC<BatchImportButtonProps> = ({ onImportSuccess, 
 
   return (
     <Button
-      variant="outlined"
-      startIcon={loading ? <CircularProgress size={20} /> : <UploadIcon />}
+      color="inherit"
+      startIcon={loading ? <CircularProgress size={14} /> : <UploadIcon fontSize="small" />}
       onClick={handleImport}
       disabled={loading}
     >

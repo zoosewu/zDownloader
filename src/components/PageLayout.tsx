@@ -55,8 +55,9 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           sx={{
             display: 'flex',
             alignItems: 'center',
-            px: 2,
-            py: 1.5,
+            gap: 1,
+            px: 1,
+            minHeight: 40,
             borderBottom: 1,
             borderColor: 'divider',
             backgroundColor: 'background.paper',

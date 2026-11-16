@@ -8,7 +8,8 @@
     "reset": "重設",
     "progress": "進度",
     "later": "稍後",
-    "browse": "瀏覽"
+    "browse": "瀏覽",
+    "back": "返回"
   },
   "downloads": {
     "addDownload": "新增下載",
@@ -71,7 +72,6 @@
       "startedAt": "開始時間",
       "completedAt": "完成時間",
       "noError": "無錯誤訊息",
-      "retryInfo": "重試資訊",
       "retryCount": "已重試次數",
       "scheduledStart": "排程開始時間",
       "notScheduled": "未排程",
@@ -162,7 +162,8 @@
       "importFailed": "無法匯入設定"
     },
     "proxyFallbackDirect": "所有代理都無法使用時改用直接連線",
-    "userAgentHelp": "下載沒有指定 User-Agent 時使用；模組回傳的與任務自訂的優先。"
+    "userAgentHelp": "下載沒有指定 User-Agent 時使用；模組回傳的與任務自訂的優先。",
+    "title": "設定"
   },
   "proxy": {
     "enabled": "啟用代理"

@@ -7,7 +7,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Box,
   Typography,
 } from '@mui/material';
@@ -115,11 +114,11 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          minHeight: 200,
-          padding: 4,
+          height: '100%',
+          minHeight: 120,
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           {t('downloads.noTasks')}
         </Typography>
       </Box>
@@ -136,13 +135,11 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
       key={column}
       align={align}
       sx={{
-        fontWeight: 'bold',
         width: columnWidths[column],
         minWidth: columnWidths[column],
         maxWidth: columnWidths[column],
         position: 'relative',
-        paddingRight: '24px',
-        userSelect: 'none',
+        whiteSpace: 'nowrap',
       }}
     >
       {label}
@@ -154,13 +151,11 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
           right: 0,
           top: 0,
           bottom: 0,
-          width: '8px',
+          width: 5,
           cursor: 'col-resize',
-          backgroundColor: resizingColumn === column ? 'primary.main' : 'transparent',
-          '&:hover': {
-            backgroundColor: 'primary.light',
-          },
-          transition: 'background-color 0.2s',
+          borderRight: 1,
+          borderColor: resizingColumn === column ? 'primary.main' : 'divider',
+          '&:hover': { borderColor: 'primary.main' },
           zIndex: 1,
         }}
       />
@@ -168,13 +163,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   );
 
   return (
-    <TableContainer
-      component={Paper}
-      sx={{
-        maxHeight: 'calc(100vh - 300px)', // Allow vertical scrolling
-        overflow: 'auto',
-      }}
-    >
+    <TableContainer sx={{ height: '100%', overflow: 'auto', backgroundColor: 'background.paper' }}>
       <Table stickyHeader aria-label="download table">
         <TableHead>
           <TableRow>

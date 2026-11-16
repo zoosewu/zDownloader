@@ -17,11 +17,11 @@ const Footer: React.FC = () => {
   return (
     <Box
       sx={{
-        height: '32px',
+        height: 24,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        px: 2,
+        px: 1.5,
         borderTop: 1,
         borderColor: 'divider',
         backgroundColor: 'background.paper',

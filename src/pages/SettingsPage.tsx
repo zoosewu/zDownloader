@@ -1,5 +1,7 @@
 // Settings Page - App settings and Proxy management
-import { Box, Tabs, Tab } from '@mui/material';
+import { Box, Tabs, Tab, IconButton, Tooltip } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigation } from '../hooks/useNavigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProxySettings from '../components/ProxySettings';
@@ -25,7 +27,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`settings-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 2, maxWidth: 960 }}>{children}</Box>}
     </div>
   );
 }
@@ -33,6 +35,7 @@ function TabPanel(props: TabPanelProps) {
 export default function SettingsPage() {
   const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState(0);
+  const { navigateTo } = useNavigation();
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -41,12 +44,19 @@ export default function SettingsPage() {
   return (
     <PageLayout
       header={
-        <Tabs value={currentTab} onChange={handleTabChange} sx={{ width: '100%' }}>
+        <>
+          <Tooltip title={t('common.back')}>
+            <IconButton onClick={() => navigateTo('main')}>
+              <ArrowBackIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tabs value={currentTab} onChange={handleTabChange} sx={{ flex: 1, alignSelf: 'flex-end' }}>
           <Tab label={t('settings.general')} />
           <Tab label={t('settings.proxy')} />
           <Tab label={t('modules.title')} />
           <Tab label={t('settings.advanced')} />
-        </Tabs>
+          </Tabs>
+        </>
       }
     >
       <TabPanel value={currentTab} index={0}>

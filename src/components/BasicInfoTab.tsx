@@ -1,94 +1,42 @@
-// Basic info tab component - displays basic download information
+// Basic info tab: URL, file path, size and timestamps.
 import React, { useState } from 'react';
-import { Box, Button, Typography, Stack } from '@mui/material';
+import { Box, Button, Link } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '../backend';
 import { formatBytes } from '../utils/downloadCalculations';
 import { formatAbsoluteTime } from '../utils/formatters';
-import CollapsibleField from './CollapsibleField';
+import PropertyList from './PropertyList';
 import EditTaskDialog, { editable } from './EditTaskDialog';
 
-interface BasicInfoTabProps {
-  task: Task;
-}
-
-/**
- * Basic info tab - displays URL, file path, file size, and timestamps
- */
-const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ task }) => {
+const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
 
   return (
-    <Box sx={{ padding: 3 }}>
+    <Box sx={{ p: 1.5, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <PropertyList
+          items={[
+            { label: t('downloads.details.url'), value: <Link href={task.url} target="_blank" rel="noreferrer" underline="hover">{task.url}</Link> },
+            { label: t('downloads.details.filePath'), value: task.finalPath ?? `${task.dir}\\${task.name}`, mono: true },
+            {
+              label: t('downloads.details.fileSize'),
+              value: task.total !== null ? `${formatBytes(task.total)} (${task.total.toLocaleString()} bytes)` : '--',
+            },
+            { label: t('downloads.details.createdAt'), value: formatAbsoluteTime(task.createdAt) },
+            task.startedAt && { label: t('downloads.details.startedAt'), value: formatAbsoluteTime(task.startedAt) },
+            task.state === 'completed' &&
+              task.finishedAt && { label: t('downloads.details.completedAt'), value: formatAbsoluteTime(task.finishedAt) },
+          ]}
+        />
+      </Box>
       {editable(task) && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button size="small" startIcon={<EditIcon fontSize="small" />} onClick={() => setEditing(true)} sx={{ textTransform: 'none' }}>
-            {t('downloads.edit.title')}
-          </Button>
-        </Box>
+        <Button color="inherit" startIcon={<EditIcon fontSize="small" />} onClick={() => setEditing(true)}>
+          {t('downloads.edit.title')}
+        </Button>
       )}
       <EditTaskDialog task={editing ? task : null} onClose={() => setEditing(false)} />
-      <Stack spacing={0.5}>
-        {/* URL - Collapsible */}
-        <CollapsibleField
-          label={t('downloads.details.url')}
-          content={task.url}
-          contentStyle="link"
-        />
-
-        {/* File Path - Collapsible */}
-        <CollapsibleField
-          label={t('downloads.details.filePath')}
-          content={task.finalPath ?? `${task.dir}/${task.name}`}
-          contentStyle="monospace"
-        />
-
-        {/* File Size */}
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {t('downloads.details.fileSize')}
-          </Typography>
-          <Typography variant="body2">
-            {task.total !== null ? `${formatBytes(task.total)} (${task.total.toLocaleString()} bytes)` : '--'}
-          </Typography>
-        </Box>
-
-        {/* Created At */}
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {t('downloads.details.createdAt')}
-          </Typography>
-          <Typography variant="body2">
-            {formatAbsoluteTime(task.createdAt)}
-          </Typography>
-        </Box>
-
-        {/* Started At */}
-        {task.startedAt && (
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              {t('downloads.details.startedAt')}
-            </Typography>
-            <Typography variant="body2">
-              {formatAbsoluteTime(task.startedAt)}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Completed At */}
-        {task.state === 'completed' && task.finishedAt && (
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              {t('downloads.details.completedAt')}
-            </Typography>
-            <Typography variant="body2">
-              {formatAbsoluteTime(task.finishedAt)}
-            </Typography>
-          </Box>
-        )}
-      </Stack>
     </Box>
   );
 };

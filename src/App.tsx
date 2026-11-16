@@ -4,10 +4,7 @@ import {
   ThemeProvider,
   CssBaseline,
   Box,
-  AppBar,
-  Toolbar,
   Typography,
-  Button,
   CircularProgress,
   Alert,
 } from '@mui/material';
@@ -42,7 +39,7 @@ function App() {
 
   useClipboard(tauriReady);
   useDownloadSync(tauriReady);
-  const { currentPage, navigateTo } = useNavigation();
+  const { currentPage } = useNavigation();
   const [currentTheme] = useAtom(themeAtom);
   const [, setSettings] = useAtom(settingsAtom);
 
@@ -107,33 +104,6 @@ function App() {
           flexDirection: 'column',
         }}
       >
-        {/* Navigation Bar */}
-        <AppBar position="static" elevation={1}>
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              Zoo Downloader
-            </Typography>
-            <Button
-              color="inherit"
-              onClick={() => navigateTo('main')}
-              sx={{
-                fontWeight: currentPage === 'main' || currentPage === 'add-download' ? 'bold' : 'normal',
-              }}
-            >
-              下載
-            </Button>
-            <Button
-              color="inherit"
-              onClick={() => navigateTo('settings')}
-              sx={{
-                fontWeight: currentPage === 'settings' ? 'bold' : 'normal',
-              }}
-            >
-              設定
-            </Button>
-          </Toolbar>
-        </AppBar>
-
         {/* Page Content */}
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
           {currentPage === 'main' && <MainPage />}
