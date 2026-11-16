@@ -9,10 +9,11 @@ export type AppSettings = { language: string, theme: Theme, defaultDownloadDir: 
  */
 proxyFallbackDirect: boolean, proxyVerificationIntervalHours: number, enableClipboardMonitoring: boolean, 
 /**
- * Copied links start downloading at once when their module allows it (each module has
- * its own switch). Off: every copied link opens the add-download page.
+ * Links from the clipboard and the browser extension start downloading at once, unless
+ * their module says otherwise (each module has its own switch). Off: they wait in the add
+ * window.
  */
-clipboardAutoStart: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
+autoStartLinks: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
 /**
  * User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
  */

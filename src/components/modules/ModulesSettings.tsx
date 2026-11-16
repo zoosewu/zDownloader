@@ -172,7 +172,7 @@ function Installed({
                 <Switch size="small" checked={m.autoStart} onChange={run(() => backend.modules.setAutoStart(m.key, !m.autoStart))} />
               }
               label={
-                <Typography variant="body2" color={settings.clipboardAutoStart ? 'text.primary' : 'text.secondary'}>
+                <Typography variant="body2" color={settings.autoStartLinks ? 'text.primary' : 'text.secondary'}>
                   {t('modules.installed.autoStart')}
                 </Typography>
               }

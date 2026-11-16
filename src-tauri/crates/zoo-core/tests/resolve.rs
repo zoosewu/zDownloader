@@ -84,7 +84,7 @@ fn start(cfg: Config, store: &Path, resolver: Arc<dyn Resolver>) -> DownloadMana
 }
 
 fn req(dir: &Path, filename: Option<&str>) -> AddRequest {
-    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new() }
+    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {
@@ -348,6 +348,10 @@ async fn categories_follow_the_rules_until_the_user_sets_them() {
     assert_eq!(auto.tags, ["share"], "the share page has no file name yet");
     let auto = wait_until(&m, auto.id, |t| t.state == TaskState::Completed).await;
     assert_eq!(auto.tags, ["share", "bin"], "named by the module: the rules run again");
+
+    let chosen = m.add(AddRequest { tags: Some(vec!["manual".into()]), ..req(dir.path(), None) }).await.unwrap();
+    assert_eq!((chosen.tags.as_slice(), chosen.custom_tags), (["manual".to_string()].as_slice(), true), "chosen when added");
+    assert!(m.add(AddRequest { tags: Some(vec!["nope".into()]), ..req(dir.path(), None) }).await.is_err());
 
     let manual = m.add(AddRequest { start: StartMode::Later, ..req(dir.path(), None) }).await.unwrap();
     assert!(matches!(m.set_tags(manual.id, vec!["nope".into()]).await, Err(CoreError::Invalid(_))));

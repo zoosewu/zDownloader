@@ -4,14 +4,15 @@
 
 mod register;
 
-use crate::commands::{downloads, error::CommandError, settings::SettingsState};
+use crate::add_window::{self, AddItem};
+use crate::commands::{downloads, error::CommandError, settings::SettingsState, urls};
+use crate::site_modules::SiteModules;
 use crate::downloads::Downloads;
 use interprocess::local_socket::{tokio::Listener, traits::tokio::Listener as _, ListenerOptions, Name};
 use std::future::Future;
 use std::io;
 use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
-use zoo_core::StartMode;
 use zoo_native_host::{parse_request, AddDownload, ErrorCode, Request, Response, MAX_LINE};
 
 pub fn start(app: AppHandle) {
@@ -88,7 +89,14 @@ async fn handle(app: &AppHandle, request: Request) -> Response {
             let headers = add.headers();
             let AddDownload { url, filename, .. } = add;
             let (downloads, settings) = (app.state::<Downloads>(), app.state::<SettingsState>());
-            match downloads::add(&downloads, &settings, url, filename, None, StartMode::Now, headers).await {
+            if !urls::starts_at_once(&url, &app.state::<SiteModules>(), &settings).await {
+                // The user checks it first, with the browser's headers kept.
+                return match add_window::open(app, vec![AddItem { url, filename, headers }]).await {
+                    Ok(()) => Response::ok(None),
+                    Err(e) => error_response(e),
+                };
+            }
+            match downloads::add_now(&downloads, &settings, url, filename, headers).await {
                 Ok(task) => Response::ok(Some(task.name)),
                 Err(e) => error_response(e),
             }

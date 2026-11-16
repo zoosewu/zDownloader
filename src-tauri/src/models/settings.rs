@@ -28,10 +28,11 @@ pub struct AppSettings {
 
     // UI settings
     pub enable_clipboard_monitoring: bool,
-    /// Copied links start downloading at once when their module allows it (each module has
-    /// its own switch). Off: every copied link opens the add-download page.
+    /// Links from the clipboard and the browser extension start downloading at once, unless
+    /// their module says otherwise (each module has its own switch). Off: they wait in the add
+    /// window.
     #[serde(default)]
-    pub clipboard_auto_start: bool,
+    pub auto_start_links: bool,
     pub enable_notifications: bool,
     pub enable_system_tray: bool,
 
@@ -87,7 +88,7 @@ impl Default for AppSettings {
             proxy_fallback_direct: true,
             proxy_verification_interval_hours: 24,
             enable_clipboard_monitoring: true,
-            clipboard_auto_start: false,
+            auto_start_links: false,
             enable_notifications: true,
             enable_system_tray: true,
             auto_retry_enabled: true,

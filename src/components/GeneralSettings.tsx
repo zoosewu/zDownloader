@@ -189,15 +189,13 @@ export default function GeneralSettings() {
               label={t('settings.clipboardMonitor')}
             />
             <FormControlLabel
-              sx={{ pl: 4 }}
-              disabled={!settings.enableClipboardMonitoring}
               control={
                 <Switch
-                  checked={settings.clipboardAutoStart}
-                  onChange={(e) => setSettings({ ...settings, clipboardAutoStart: e.target.checked })}
+                  checked={settings.autoStartLinks}
+                  onChange={(e) => setSettings({ ...settings, autoStartLinks: e.target.checked })}
                 />
               }
-              label={t('settings.clipboardAutoStart')}
+              label={t('settings.autoStartLinks')}
             />
             <FormControlLabel
               control={

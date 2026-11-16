@@ -514,7 +514,8 @@ chmod +x .git/hooks/pre-commit
 - 不要讀整份任務清單或從它產生新陣列傳下去；要新的資料就在 store 加一個窄 view。
 - 傳給 memo 元件的 props 用基本型別或穩定參考（`useCallback`、atom 的值）；每次 render 新建的物件或函式會讓 memo 失效。`SortableContext` 的 `items` 要用 `taskIdsAtom` 的陣列。
 - 列分成「隨進度變化的格子」與只隨狀態變化的 `FilenameCell`、`StatusCell`、`ActionsCell`、`CreatedCell`。
-- 剪貼簿：`clipboard-link` → `urls_inspect`。`autoStart` 由後端決定：總開關 `clipboardAutoStart`（預設關，關閉時一律不自動開始）且模組的分項開關（預設取 manifest 的 `autoStart`，使用者可覆寫）都開才直接加入下載，否則跳到新增下載頁。模組的網址比對是 `urlPatterns` 加選填的 `urlRegex`（兩者都要符合），不執行模組程式。
+- 外來連結（剪貼簿 `clipboard-link`、瀏覽器擴充）：`urls::starts_at_once` 決定直接下載或送進新增視窗。總開關 `autoStartLinks`（預設關，關閉時一律進新增視窗）開著、且連結的模組（若有）分項開關允許（預設取 manifest 的 `autoStart`，使用者可覆寫）才直接下載。模組的網址比對是 `urlPatterns` 加選填的 `urlRegex`（兩者都要符合），不執行模組程式。
+- 新增視窗（`src-tauri/src/add_window.rs`、`src/addWindow/`）：label `add` 的第二個視窗，自己的 React 樹與 store（取得焦點時重讀設定）。連結先放進後端的 `Pending`，視窗載入時或收到 `add-items-ready` 時用 `add_window_take` 取走，所以視窗開啟途中送來的連結不會遺失。建立視窗的命令必須是 async（同步命令建立視窗在 Windows 會死結）。app 命令只接受 `main` 與 `add` 兩個視窗。
 - 不輪詢：後端推事件（下載、剪貼簿 `clipboard-link`、模組、captcha）；分段圖在該任務變動時才重抓（節流 500 ms）。唯一的計時器是倒數顯示（`useNow`，只在有倒數的列）。
 - React 19 開發版會為每次 render 記 `performance.measure()`，沒有上限；`main.tsx` 在開發模式定期清除（曾讓 WebView 約 2.5 小時後當機）。
 - 驗證方式：在開發模式用 CDP 數 `performance.getEntriesByType('measure')` 的元件名稱（每秒、每個元件幾次）。

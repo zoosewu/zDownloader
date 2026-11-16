@@ -9,9 +9,9 @@ import DownloadTable from './DownloadTable';
 import DownloadDetailPanel from './DownloadDetailPanel';
 import QueueControls from './QueueControls';
 import Sidebar from './Sidebar';
-import BatchImportButton from './BatchImportButton';
+import ImportListButton from './ImportListButton';
 import { useSelectedDownload, useSelectedTask } from '../hooks/useSelectedDownload';
-import type { BatchResult } from '../backend';
+import { backend } from '../backend';
 
 /** The panel is the only part of the list that follows the selected task's progress. */
 const SelectedTaskPanel: React.FC = () => <DownloadDetailPanel task={useSelectedTask()} />;
@@ -19,9 +19,6 @@ const SelectedTaskPanel: React.FC = () => <DownloadDetailPanel task={useSelected
 interface DownloadListProps {
   className?: string;
   onControlError: (error: string) => void;
-  onAddDownload: () => void;
-  onBatchImportSuccess: (result: BatchResult) => void;
-  onBatchImportError: (error: string) => void;
 }
 
 const MIN_PANEL_HEIGHT = 200; // Minimum height for detail panel
@@ -30,9 +27,6 @@ const DEFAULT_PANEL_HEIGHT = 300; // Default height for detail panel
 const DownloadList: React.FC<DownloadListProps> = ({
   className,
   onControlError,
-  onAddDownload,
-  onBatchImportSuccess,
-  onBatchImportError,
 }) => {
   const { t } = useTranslation();
   const { navigateTo } = useNavigation();
@@ -92,10 +86,14 @@ const DownloadList: React.FC<DownloadListProps> = ({
           backgroundColor: 'background.paper',
         }}
       >
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAddDownload}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => backend.addWindow.open().catch((e) => onControlError(e.message))}
+        >
           {t('downloads.addDownload')}
         </Button>
-        <BatchImportButton onImportSuccess={onBatchImportSuccess} onImportError={onBatchImportError} />
+        <ImportListButton onError={onControlError} />
         <Divider orientation="vertical" flexItem sx={{ mx: 0.5, my: 1 }} />
         <QueueControls onControlError={onControlError} />
         <Box sx={{ flex: 1 }} />

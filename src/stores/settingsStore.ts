@@ -16,7 +16,7 @@ const defaultSettings: AppSettings = {
   proxyFallbackDirect: true,
   proxyVerificationIntervalHours: 24,
   enableClipboardMonitoring: true,
-  clipboardAutoStart: false,
+  autoStartLinks: false,
   enableNotifications: true,
   enableSystemTray: true,
   autoRetryEnabled: true,

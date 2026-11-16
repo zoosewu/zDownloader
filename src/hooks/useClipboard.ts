@@ -1,14 +1,11 @@
-// Open the add-download page when a download link is copied, or start it at once when the
-// backend says so (app-wide switch on and the module allows it). The backend watches the
-// clipboard (OS change notifications, no polling) and sends copied links as events while
-// monitoring is enabled in settings.
+// A copied download link starts at once when the backend says so (the app-wide switch is on
+// and the link's module allows it); otherwise it waits in the add-downloads window. The
+// backend watches the clipboard (OS change notifications, no polling) and sends copied links
+// while monitoring is enabled in settings.
 import { useEffect } from 'react';
 import { backend } from '../backend';
-import { useNavigation } from './useNavigation';
 
 export function useClipboard(tauriReady: boolean = false) {
-  const { navigateTo } = useNavigation();
-
   useEffect(() => {
     if (!tauriReady) return;
     let disposed = false;
@@ -23,10 +20,10 @@ export function useClipboard(tauriReady: boolean = false) {
               await backend.downloads.add({ url, start: { mode: 'now' } });
               return;
             } catch {
-              // Could not add it: let the user see the link and the reason on the add page.
+              // Could not add it: the add window shows the link and lets the user see why.
             }
           }
-          navigateTo('add-download', { url });
+          await backend.addWindow.open([{ url, filename: null, headers: [] }]);
         } catch {
           // Not a URL the backend understands: ignore it.
         }
@@ -36,5 +33,5 @@ export function useClipboard(tauriReady: boolean = false) {
       disposed = true;
       unlisten?.();
     };
-  }, [tauriReady, navigateTo]);
+  }, [tauriReady]);
 }

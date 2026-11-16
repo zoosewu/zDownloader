@@ -49,6 +49,7 @@ function appTheme(mode: PaletteMode): Theme {
       MuiIconButton: { defaultProps: { size: 'small' }, styleOverrides: { root: { borderRadius: 4, padding: 4 } } },
       MuiToggleButton: { defaultProps: { size: 'small' } },
       MuiTextField: { defaultProps: { size: 'small' } },
+      MuiInputBase: { styleOverrides: { root: { fontSize: '0.8125rem' } } },
       MuiFormControl: { defaultProps: { size: 'small' } },
       MuiSelect: { defaultProps: { size: 'small' } },
       MuiAutocomplete: { defaultProps: { size: 'small' } },

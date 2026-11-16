@@ -3,30 +3,17 @@ import React from 'react';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import DownloadList from '../components/DownloadList';
-import { useNavigation } from '../hooks/useNavigation';
-import type { BatchResult } from '../backend';
 
 type Severity = 'success' | 'error' | 'info' | 'warning';
 
 const MainPage: React.FC = () => {
   const { t } = useTranslation();
-  const { navigateTo } = useNavigation();
 
   const [snackbar, setSnackbar] = React.useState<{ open: boolean; message: string; severity: Severity }>({
     open: false,
     message: '',
     severity: 'info',
   });
-  const show = (message: string, severity: Severity) => setSnackbar({ open: true, message, severity });
-
-  const handleBatchImportSuccess = (result: BatchResult) => {
-    const message = t('downloads.batch.importSuccess', { count: result.added.length });
-    if (result.failed.length === 0) {
-      show(message, 'success');
-    } else {
-      show(`${message}; ${t('downloads.batch.importSkipped', { count: result.failed.length })}`, 'warning');
-    }
-  };
 
   // Stable: it reaches every table row, and a new function each render would defeat their memo.
   const handleError = React.useCallback(
@@ -37,12 +24,7 @@ const MainPage: React.FC = () => {
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        <DownloadList
-          onControlError={handleError}
-          onAddDownload={() => navigateTo('add-download')}
-          onBatchImportSuccess={handleBatchImportSuccess}
-          onBatchImportError={(error) => show(t('downloads.batch.importError', { error }), 'error')}
-        />
+        <DownloadList onControlError={handleError} />
       </Box>
 
       <Snackbar

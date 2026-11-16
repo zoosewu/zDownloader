@@ -1,7 +1,7 @@
 // Navigation state management using Jotai
 import { atom } from 'jotai';
 
-export type PageType = 'main' | 'settings' | 'add-download';
+export type PageType = 'main' | 'settings';
 
 // Current page atom
 export const currentPageAtom = atom<PageType>('main');

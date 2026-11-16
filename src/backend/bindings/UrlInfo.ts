@@ -15,7 +15,7 @@ module: InstalledInfo | null,
  */
 downloadable: boolean, 
 /**
- * When copied, download it at once instead of opening the add-download page: the
- * app-wide switch is on and the resolving module allows it.
+ * Start it at once instead of showing it in the add window: the app-wide switch is on
+ * and the resolving module, if any, allows it.
  */
 autoStart: boolean, };

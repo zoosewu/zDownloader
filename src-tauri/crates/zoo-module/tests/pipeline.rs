@@ -67,7 +67,7 @@ fn manager(dir: &TempDir, site: &Server) -> (DownloadManager, Arc<ModuleResolver
 }
 
 fn add(dir: &TempDir, url: String) -> AddRequest {
-    AddRequest { url, filename: None, dir: dir.path().to_path_buf(), start: StartMode::Now, headers: Vec::new() }
+    AddRequest { url, filename: None, dir: dir.path().to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {

@@ -45,12 +45,6 @@
       "invalidUrl": "Invalid URL format, please enter HTTP/HTTPS URL",
       "queueControlFailed": "Queue control failed: {{error}}"
     },
-    "batch": {
-      "import": "Batch Import",
-      "importSuccess": "Successfully imported {{count}} download tasks",
-      "importError": "Batch import failed: {{error}}",
-      "importSkipped": "skipped {{count}} invalid URLs"
-    },
     "statistics": {
       "currentSpeed": "Current Speed",
       "timeRemaining": "Time Remaining",
@@ -126,7 +120,6 @@
     "maxConcurrentHelp": "Leave empty for unlimited",
     "maxThreads": "Max Threads per Download",
     "clipboardMonitor": "Monitor Clipboard",
-    "clipboardAutoStart": "Start copied links at once when their module allows it",
     "notifications": "Enable Notifications",
     "language": "Language",
     "theme": "Theme",
@@ -165,7 +158,8 @@
     },
     "proxyFallbackDirect": "Connect directly when no proxy is usable",
     "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins.",
-    "title": "Settings"
+    "title": "Settings",
+    "autoStartLinks": "Start links from the clipboard and the browser at once (no add window)"
   },
   "proxy": {
     "enabled": "Enable Proxy"
@@ -184,7 +178,7 @@
     "installed": {
       "title": "Installed",
       "checkOnStart": "Check for updates on start",
-      "autoStart": "Start copied links from this site at once",
+      "autoStart": "Start links from this site at once",
       "empty": "No modules installed. Install one from Browse, or add a marketplace under Sources.",
       "local": "Local",
       "update": "Update to {{version}}",
@@ -297,5 +291,25 @@
     },
     "help": "Rules apply when a download is added (site-module links again once the file name is known). Existing downloads are not moved; right-click a download to change its categories. A category without rules is filled by hand.",
     "none": "No categories yet"
+  },
+  "addWindow": {
+    "pastePlaceholder": "Paste or type a link; pasting several adds them all, or drag links into the window",
+    "importList": "Import list",
+    "empty": "The list is empty. Paste links, import or drop a text file, drag links in, or download from the browser.",
+    "namedBySite": "Named by the site",
+    "noCategory": "None",
+    "remove": "Remove from list",
+    "count": "{{count}} links",
+    "addAll": "Add downloads",
+    "add": "Add",
+    "saveTo": "Save to",
+    "start": "Start",
+    "startNow": "Now",
+    "startPaused": "Paused",
+    "startAt": "At",
+    "headers": "Headers…",
+    "headersCount": "Headers ({{count}})…",
+    "headersTitle": "Headers for every link",
+    "browserHeaders": "Headers from the browser"
   }
 }

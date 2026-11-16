@@ -189,6 +189,9 @@ pub struct AddRequest {
     /// See `Task::headers`.
     #[serde(default)]
     pub headers: Vec<(String, String)>,
+    /// Categories the user chose; `None` lets the category rules decide.
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 /// Changes to a task that is not running. Missing fields stay as they are.

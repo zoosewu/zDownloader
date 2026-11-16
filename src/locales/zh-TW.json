@@ -45,12 +45,6 @@
       "invalidUrl": "無效的網址格式，請輸入 HTTP/HTTPS 連結",
       "queueControlFailed": "佇列控制失敗: {{error}}"
     },
-    "batch": {
-      "import": "批次匯入",
-      "importSuccess": "成功匯入 {{count}} 個下載任務",
-      "importError": "批次匯入失敗: {{error}}",
-      "importSkipped": "略過 {{count}} 個無效網址"
-    },
     "statistics": {
       "currentSpeed": "目前速度",
       "timeRemaining": "剩餘時間",
@@ -126,7 +120,6 @@
     "maxConcurrentHelp": "留空表示無限制",
     "maxThreads": "每個下載的最大執行緒數",
     "clipboardMonitor": "監控剪貼簿",
-    "clipboardAutoStart": "複製連結時，模組允許的直接開始下載",
     "notifications": "啟用通知",
     "language": "語言",
     "theme": "主題",
@@ -165,7 +158,8 @@
     },
     "proxyFallbackDirect": "所有代理都無法使用時改用直接連線",
     "userAgentHelp": "下載沒有指定 User-Agent 時使用；模組回傳的與任務自訂的優先。",
-    "title": "設定"
+    "title": "設定",
+    "autoStartLinks": "剪貼簿與瀏覽器送來的連結直接開始下載（不開新增視窗）"
   },
   "proxy": {
     "enabled": "啟用代理"
@@ -184,7 +178,7 @@
     "installed": {
       "title": "已安裝",
       "checkOnStart": "啟動時檢查更新",
-      "autoStart": "複製這個網站的連結時直接開始下載",
+      "autoStart": "這個網站的連結直接開始下載",
       "empty": "尚未安裝任何模組。到「瀏覽」安裝，或在「來源」新增模組市集。",
       "local": "本機",
       "update": "更新到 {{version}}",
@@ -297,5 +291,25 @@
     },
     "help": "規則在新增下載時套用（網站模組的連結會在取得檔名後再判斷一次）。已存在的下載不會變動；在下載上按右鍵可手動調整分類。沒有規則的分類只能手動加入。",
     "none": "尚未建立分類"
+  },
+  "addWindow": {
+    "pastePlaceholder": "貼上或輸入連結；一次貼上多個會全部加入清單，也可以把連結拖進視窗",
+    "importList": "匯入清單",
+    "empty": "清單是空的。貼上連結、匯入或拖入文字檔、把連結拖進來，或在瀏覽器裡點下載。",
+    "namedBySite": "由網站決定",
+    "noCategory": "無",
+    "remove": "從清單移除",
+    "count": "{{count}} 個連結",
+    "addAll": "加入下載",
+    "add": "加入",
+    "saveTo": "儲存到",
+    "start": "開始",
+    "startNow": "立即",
+    "startPaused": "暫停",
+    "startAt": "排程",
+    "headers": "標頭…",
+    "headersCount": "標頭（{{count}}）…",
+    "headersTitle": "所有連結共用的標頭",
+    "browserHeaders": "瀏覽器送來的標頭"
   }
 }

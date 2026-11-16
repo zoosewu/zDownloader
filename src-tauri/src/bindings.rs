@@ -21,7 +21,7 @@ fn export(dir: &Path) {
         zoo_core::proxy_pool::ProxyInfo::export_all,
         zoo_core::proxy_pool::ImportResult::export_all,
         crate::commands::error::CommandError::export_all,
-        crate::commands::downloads::BatchResult::export_all,
+        crate::add_window::AddItem::export_all,
         crate::models::settings::AppSettings::export_all,
         crate::models::settings::Theme::export_all,
         crate::models::settings::SpeedLimitMode::export_all,

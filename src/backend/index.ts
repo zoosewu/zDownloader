@@ -13,7 +13,7 @@ import type { CaptchaRequest } from './bindings/CaptchaRequest';
 import type { InstalledInfo } from './bindings/InstalledInfo';
 import type { PlanSummary } from './bindings/PlanSummary';
 import type { SourceInfo } from './bindings/SourceInfo';
-import type { BatchResult } from './bindings/BatchResult';
+import type { AddItem } from './bindings/AddItem';
 import type { Event as DownloadEvent } from './bindings/Event';
 import type { ImportResult } from './bindings/ImportResult';
 import type { ProxyInfo } from './bindings/ProxyInfo';
@@ -25,7 +25,7 @@ import type { TaskUpdate } from './bindings/TaskUpdate';
 import type { UrlInfo } from './bindings/UrlInfo';
 
 export type { AppSettings } from './bindings/AppSettings';
-export type { BatchResult } from './bindings/BatchResult';
+export type { AddItem } from './bindings/AddItem';
 export type { CaptchaChallenge } from './bindings/CaptchaChallenge';
 export type { CaptchaEvent } from './bindings/CaptchaEvent';
 export type { CaptchaRequest } from './bindings/CaptchaRequest';
@@ -100,14 +100,14 @@ export interface AddDownload {
   start: StartMode;
   /** Sent with every request of the download (User-Agent, Referer, Cookie, ...). */
   headers?: Array<[string, string]> | null;
+  /** Categories chosen by the user; `null` lets the category rules decide. */
+  tags?: string[] | null;
 }
 
 export const backend = {
   downloads: {
-    add: ({ url, filename = null, dir = null, start, headers = null }: AddDownload) =>
-      call<Task>('downloads_add', { url, filename, dir, start, headers }),
-    importBatch: (filePath: string, start: StartMode, dir: string | null = null) =>
-      call<BatchResult>('downloads_import_batch', { filePath, dir, start }),
+    add: ({ url, filename = null, dir = null, start, headers = null, tags = null }: AddDownload) =>
+      call<Task>('downloads_add', { url, filename, dir, start, headers, tags }),
     list: () => call<Task[]>('downloads_list'),
     pause: (id: TaskId) => call<Task>('downloads_pause', { id }),
     resume: (id: TaskId) => call<Task>('downloads_resume', { id }),
@@ -141,6 +141,18 @@ export const backend = {
     clear: () => call<null>('proxies_clear'),
     resetFailed: () => call<null>('proxies_reset_failed'),
   },
+  categories: {
+    /** The categories the rules give this download (to pre-fill the add window). */
+    match: (url: string, filename: string | null = null) => call<string[]>('categories_match', { url, filename }),
+  },
+  addWindow: {
+    /** Show the add-downloads window with these links added to its list. */
+    open: (items: AddItem[] = []) => call<null>('add_window_open', { items }),
+    /** Links waiting for the add window (each is handed out once). */
+    take: () => call<AddItem[]>('add_window_take'),
+    /** A text file, one link per line, into the add window; resolves to how many were read. */
+    import: (filePath: string) => call<number>('add_window_import', { filePath }),
+  },
   urls: {
     /** File name, resolving module, and whether it is worth offering as a download. */
     inspect: (url: string) => call<UrlInfo>('urls_inspect', { url }),
@@ -159,7 +171,7 @@ export const backend = {
     cancelInstall: (key: string) => call<null>('modules_cancel_install', { key }),
     remove: (key: string) => call<null>('modules_remove', { key }),
     setEnabled: (key: string, enabled: boolean) => call<null>('modules_set_enabled', { key, enabled }),
-    /** Copied links this module resolves start at once (only with `clipboardAutoStart` on). */
+    /** Links this module resolves start at once (only with `autoStartLinks` on). */
     setAutoStart: (key: string, autoStart: boolean) => call<null>('modules_set_auto_start', { key, autoStart }),
     /** Move to `index` in the priority order. */
     move: (key: string, index: number) => call<null>('modules_move', { key, index }),
@@ -182,6 +194,8 @@ export const backend = {
     onResync: (handler: () => void) => subscribe<null>('downloads-resync', () => handler()),
     /** A single http(s) link was copied (sent only while clipboard monitoring is enabled). */
     onClipboardLink: (handler: (url: string) => void) => subscribe('clipboard-link', handler),
+    /** Links are waiting for the add window (`addWindow.take`). */
+    onAddItemsReady: (handler: () => void) => subscribe<null>('add-items-ready', () => handler()),
   },
 };
 

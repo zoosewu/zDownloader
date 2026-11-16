@@ -345,6 +345,9 @@ impl Actor {
     fn add(&mut self, req: AddRequest) -> Result<Task, CoreError> {
         check_url(&req.url)?;
         check_headers(&req.headers)?;
+        if let Some(tags) = &req.tags {
+            self.check_tags(tags)?;
+        }
         let (state, scheduled_at) = match req.start {
             StartMode::Now => (TaskState::Queued, None),
             StartMode::Later => (TaskState::Paused, None),
@@ -354,8 +357,8 @@ impl Actor {
         let name = naming::filename_for(req.filename.as_deref(), &req.url);
         let task = Task {
             id: TaskId::new(),
-            tags: self.cfg.categories.tags(&req.url, &name),
-            custom_tags: false,
+            custom_tags: req.tags.is_some(),
+            tags: req.tags.unwrap_or_else(|| self.cfg.categories.tags(&req.url, &name)),
             module: None,
             name,
             custom_name: req.filename.is_some(),
@@ -385,10 +388,15 @@ impl Actor {
         self.snapshot(task.id)
     }
 
-    fn set_tags(&mut self, id: TaskId, mut tags: Vec<String>) -> Result<Task, CoreError> {
-        if let Some(unknown) = tags.iter().find(|tag| !self.cfg.categories.ids().any(|id| id == tag.as_str())) {
-            return Err(CoreError::Invalid(format!("no category {unknown:?}")));
+    fn check_tags(&self, tags: &[String]) -> Result<(), CoreError> {
+        match tags.iter().find(|tag| !self.cfg.categories.ids().any(|id| id == tag.as_str())) {
+            Some(unknown) => Err(CoreError::Invalid(format!("no category {unknown:?}"))),
+            None => Ok(()),
         }
+    }
+
+    fn set_tags(&mut self, id: TaskId, mut tags: Vec<String>) -> Result<Task, CoreError> {
+        self.check_tags(&tags)?;
         tags.dedup();
         self.set(id, |t| {
             t.tags = tags;

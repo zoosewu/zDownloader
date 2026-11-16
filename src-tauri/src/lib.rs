@@ -1,4 +1,5 @@
 // Zoo Downloader - Tauri shell over zoo-core
+mod add_window;
 mod browser_bridge;
 mod clipboard_watch;
 mod commands;
@@ -13,7 +14,7 @@ mod bindings;
 
 use commands::clipboard::get_clipboard_content;
 use commands::downloads::{
-    downloads_add, downloads_cancel, downloads_clear_finished, downloads_import_batch,
+    categories_match, downloads_add, downloads_cancel, downloads_clear_finished,
     downloads_list, downloads_move, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
     downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_set_tags, downloads_update,
 };
@@ -27,6 +28,7 @@ use commands::settings::{
     load_settings_from_file, settings_export, settings_get, settings_import, settings_reset,
     settings_update, SettingsState,
 };
+use add_window::{add_window_import, add_window_open, add_window_take};
 use commands::urls::urls_inspect;
 use downloads::Downloads;
 use std::sync::Arc;
@@ -48,7 +50,6 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
     let handle: fn(tauri::ipc::Invoke) -> bool = tauri::generate_handler![
             greet,
             downloads_add,
-            downloads_import_batch,
             downloads_list,
             downloads_pause,
             downloads_resume,
@@ -91,6 +92,10 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             captcha_pending,
             captcha_answer,
             captcha_open_window,
+            categories_match,
+            add_window_open,
+            add_window_take,
+            add_window_import,
     ];
     handle(invoke)
 }
@@ -118,10 +123,12 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
+        .manage(add_window::Pending::default())
         // App commands answer the main window only. Captcha windows show other sites' pages and
         // must not reach the app (capabilities cover plugin commands, not these).
         .invoke_handler(move |invoke| {
-            if invoke.message.webview_ref().label() != MAIN_WINDOW {
+            let label = invoke.message.webview_ref().label().to_owned();
+            if label != MAIN_WINDOW && label != add_window::ADD_WINDOW {
                 invoke.resolver.reject(commands::error::CommandError::new("forbidden", "not available in this window"));
                 return true;
             }

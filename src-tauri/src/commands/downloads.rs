@@ -3,11 +3,8 @@
 use crate::commands::error::{CmdResult, CommandError};
 use crate::commands::settings::SettingsState;
 use crate::downloads::Downloads;
-use crate::utils::parser::parse_url_file;
-use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tauri::State;
-use ts_rs::TS;
 use zoo_core::{AddRequest, SegmentMap, StartMode, Task, TaskId, TaskUpdate};
 
 fn task_id(id: &str) -> CmdResult<TaskId> {
@@ -36,53 +33,33 @@ pub async fn downloads_add(
     dir: Option<String>,
     start: StartMode,
     headers: Option<Vec<(String, String)>>,
+    tags: Option<Vec<String>>,
     downloads: State<'_, Downloads>,
     settings: State<'_, SettingsState>,
 ) -> CmdResult<Task> {
-    add(&downloads, &settings, url, filename, dir, start, headers.unwrap_or_default()).await
+    let dir = target_dir(dir, &settings).await?;
+    let req = AddRequest { url, filename, dir, start, headers: headers.unwrap_or_default(), tags };
+    Ok(downloads.manager.add(req).await?)
 }
 
-/// Every single download is added here: from the app and from the browser extension.
-pub async fn add(
+/// A download from the browser extension, started at once with the default folder.
+pub async fn add_now(
     downloads: &Downloads,
     settings: &SettingsState,
     url: String,
     filename: Option<String>,
-    dir: Option<String>,
-    start: StartMode,
     headers: Vec<(String, String)>,
 ) -> CmdResult<Task> {
-    let dir = target_dir(dir, settings).await?;
-    Ok(downloads.manager.add(AddRequest { url, filename, dir, start, headers }).await?)
+    let dir = target_dir(None, settings).await?;
+    Ok(downloads.manager.add(AddRequest { url, filename, dir, start: StartMode::Now, headers, tags: None }).await?)
 }
 
-#[derive(Debug, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct BatchResult {
-    pub added: Vec<Task>,
-    /// `(url, reason)` for every URL that could not be added.
-    pub failed: Vec<(String, String)>,
-}
-
+/// The categories a download would get from the rules (to pre-fill the add window).
 #[tauri::command]
-pub async fn downloads_import_batch(
-    file_path: String,
-    dir: Option<String>,
-    start: StartMode,
-    downloads: State<'_, Downloads>,
-    settings: State<'_, SettingsState>,
-) -> CmdResult<BatchResult> {
-    let urls = parse_url_file(Path::new(&file_path)).map_err(CommandError::invalid)?;
-    let dir = target_dir(dir, &settings).await?;
-    let mut result = BatchResult { added: Vec::new(), failed: Vec::new() };
-    for url in urls {
-        let req = AddRequest { url: url.clone(), filename: None, dir: dir.clone(), start, headers: Vec::new() };
-        match downloads.manager.add(req).await {
-            Ok(task) => result.added.push(task),
-            Err(e) => result.failed.push((url, e.to_string())),
-        }
-    }
-    Ok(result)
+pub async fn categories_match(url: String, filename: Option<String>, settings: State<'_, SettingsState>) -> CmdResult<Vec<String>> {
+    let categories = settings.settings.lock().await.categories.clone();
+    let name = zoo_core::naming::filename_for(filename.as_deref(), &url);
+    Ok(zoo_core::Classifier::new(&categories)?.tags(&url, &name))
 }
 
 #[tauri::command]

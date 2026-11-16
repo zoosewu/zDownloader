@@ -31,7 +31,7 @@ fn start(cfg: Config, store: &Path) -> DownloadManager {
 }
 
 fn req(url: String, dir: &Path) -> AddRequest {
-    AddRequest { url, filename: None, dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new() }
+    AddRequest { url, filename: None, dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {

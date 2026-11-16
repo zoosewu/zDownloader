@@ -1,4 +1,3 @@
-use regex::Regex;
 use std::fs;
 use std::path::Path;
 
@@ -53,15 +52,14 @@ pub fn parse_url_file(file_path: &Path) -> Result<Vec<String>, String> {
 /// Each line should contain one URL
 /// Empty lines and lines starting with # are ignored
 pub fn parse_url_list(content: &str) -> Vec<String> {
-    let url_regex = Regex::new(
-        r"^https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)$"
-    ).unwrap();
-
+    // A real URL parser: non-ASCII paths, IP hosts, ports and long TLDs are all valid links.
     content
         .lines()
         .map(|line| line.trim())
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .filter(|line| url_regex.is_match(line))
+        .filter(|line| {
+            tauri::Url::parse(line).is_ok_and(|u| matches!(u.scheme(), "http" | "https") && u.host_str().is_some())
+        })
         .map(|line| line.to_string())
         .collect()
 }
@@ -92,6 +90,12 @@ https://example.org/file4.pdf
         assert_eq!(urls[1], "http://example.com/file2.tar.gz");
         assert_eq!(urls[2], "https://www.example.com/download?id=123");
         assert_eq!(urls[3], "https://example.org/file4.pdf");
+    }
+
+    #[test]
+    fn real_world_links_are_kept() {
+        let urls = parse_url_list("https://k2s.cc/file/1/My%20Game.rar\nhttp://127.0.0.1:8080/a.bin\nhttps://例子.測試/檔案.zip\nhttps://x.photography/a");
+        assert_eq!(urls.len(), 4);
     }
 
     #[test]

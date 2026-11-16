@@ -25,16 +25,26 @@ pub struct UrlInfo {
     pub module: Option<InstalledInfo>,
     /// Worth offering as a download: a module resolves it or it names a common file type.
     pub downloadable: bool,
-    /// When copied, download it at once instead of opening the add-download page: the
-    /// app-wide switch is on and the resolving module allows it.
+    /// Start it at once instead of showing it in the add window: the app-wide switch is on
+    /// and the resolving module, if any, allows it.
     pub auto_start: bool,
 }
 
 #[tauri::command]
 pub async fn urls_inspect(url: String, modules: State<'_, SiteModules>, settings: State<'_, SettingsState>) -> CmdResult<UrlInfo> {
-    let module = modules.resolver.module_for(&url).and_then(|m| modules.market.installed().into_iter().find(|i| i.key == m.module.id));
-    let allowed = settings.settings.lock().await.clipboard_auto_start;
-    Ok(inspect(&url, module, allowed))
+    let allowed = settings.settings.lock().await.auto_start_links;
+    Ok(inspect(&url, module_for(&url, &modules), allowed))
+}
+
+/// Whether a link from outside (clipboard, browser) starts at once; see `UrlInfo::auto_start`.
+pub async fn starts_at_once(url: &str, modules: &SiteModules, settings: &SettingsState) -> bool {
+    let allowed = settings.settings.lock().await.auto_start_links;
+    allowed && module_for(url, modules).is_none_or(|m| m.auto_start)
+}
+
+fn module_for(url: &str, modules: &SiteModules) -> Option<InstalledInfo> {
+    let key = modules.resolver.module_for(url)?.module.id;
+    modules.market.installed().into_iter().find(|i| i.key == key)
 }
 
 /// `auto_start_allowed`: the app-wide switch; without it nothing starts by itself.
@@ -50,7 +60,7 @@ fn inspect(url: &str, module: Option<InstalledInfo>, auto_start_allowed: bool) -
         .as_deref()
         .and_then(|name| name.rsplit_once('.'))
         .is_some_and(|(_, ext)| DOWNLOAD_TYPES.contains(&ext.to_ascii_lowercase().as_str()));
-    let auto_start = auto_start_allowed && module.as_ref().is_some_and(|m| m.auto_start);
+    let auto_start = auto_start_allowed && module.as_ref().is_none_or(|m| m.auto_start);
     UrlInfo { downloadable: module.is_some() || known_type, filename, module, auto_start }
 }
 
@@ -80,6 +90,7 @@ mod tests {
     #[test]
     fn serializes_camel_case() {
         let json = serde_json::to_value(inspect("https://x/a.zip", None, true)).unwrap();
-        assert_eq!(json, serde_json::json!({ "filename": "a.zip", "module": null, "downloadable": true, "autoStart": false }));
+        assert_eq!(json, serde_json::json!({ "filename": "a.zip", "module": null, "downloadable": true, "autoStart": true }));
+        assert!(!inspect("https://x/a.zip", None, false).auto_start, "the app-wide switch decides first");
     }
 }

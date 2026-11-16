@@ -15,7 +15,6 @@ import { themeAtom, settingsAtom } from './stores/settingsStore';
 import { lightTheme, darkTheme } from './styles/theme';
 import MainPage from './pages/MainPage';
 import SettingsPage from './pages/SettingsPage';
-import AddDownloadPage from './pages/AddDownloadPage';
 import Footer from './components/Footer';
 import { useNavigation } from './hooks/useNavigation';
 import { useClipboard } from './hooks/useClipboard';
@@ -108,7 +107,6 @@ function App() {
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
           {currentPage === 'main' && <MainPage />}
           {currentPage === 'settings' && <SettingsPage />}
-          {currentPage === 'add-download' && <AddDownloadPage />}
         </Box>
 
         {/* Global Footer */}

@@ -4,7 +4,7 @@
 //! http(s) link is ever sent.
 
 use crate::commands::settings::SettingsState;
-use clipboard_rs::{Clipboard, ClipboardContext, ClipboardHandler, ClipboardWatcher, ClipboardWatcherContext};
+use clipboard_rs::{Clipboard, ClipboardContext, ClipboardHandler, ClipboardWatcher, ClipboardWatcherContext, ContentFormat};
 use tauri::{AppHandle, Emitter, Manager};
 
 pub const CLIPBOARD_LINK_EVENT: &str = "clipboard-link";
@@ -20,10 +20,31 @@ impl ClipboardHandler for Forward {
         if !self.app.state::<SettingsState>().settings.blocking_lock().enable_clipboard_monitoring {
             return;
         }
-        let Some(link) = self.clipboard.get_text().ok().as_deref().and_then(link) else { return };
+        let Some(link) = self.read_text().as_deref().and_then(link) else { return };
         if let Err(e) = self.app.emit(CLIPBOARD_LINK_EVENT, link) {
             log::warn!("failed to emit {CLIPBOARD_LINK_EVENT}: {e}");
         }
+    }
+}
+
+impl Forward {
+    /// The clipboard's text. Right after a change other programs (clipboard history, other
+    /// watchers) often have the clipboard open, and a read then fails; retry briefly so a
+    /// copied link is not missed.
+    fn read_text(&self) -> Option<String> {
+        for attempt in 0..10 {
+            if attempt > 0 {
+                std::thread::sleep(std::time::Duration::from_millis(30));
+            }
+            match self.clipboard.get_text() {
+                Ok(text) => return Some(text),
+                // No text on the clipboard (an image, files): nothing to retry.
+                Err(_) if !self.clipboard.has(ContentFormat::Text) && attempt > 0 => return None,
+                Err(_) => {}
+            }
+        }
+        log::warn!("clipboard changed but its text could not be read");
+        None
     }
 }
 
