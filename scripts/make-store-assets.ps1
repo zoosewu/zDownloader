@@ -46,6 +46,8 @@ try {
     Render 'logo-300' 300 300 'transparent' '<img src="icon.svg" width="300" height="300" style="display:block">'
     Render 'tile-440x280' 440 280 'hsl(220, 5%, 12%)' `
         '<div class="tile"><img src="icon.svg" width="112" height="112"><div><div class="name">Zoo<br>Downloader</div><div class="line">Downloads, handed to the app</div></div></div>'
+    Render 'marquee-1400x560' 1400 560 'hsl(220, 5%, 12%)' `
+        '<div class="tile" style="gap:56px"><img src="icon.svg" width="240" height="240"><div><div class="name" style="font-size:84px">Zoo Downloader</div><div class="line" style="font-size:30px;margin-top:16px">Your downloads, handed to the desktop app.</div></div></div>'
 } finally {
     Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
 }
