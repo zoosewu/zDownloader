@@ -166,10 +166,19 @@
 
 起因：GitHub runner 的 Rust 1.100 改了 cargo build-dir 格式，tauri-build 2.5 在 macOS/Linux 放錯 sidecar。使用者要求能升的全升。每組升完跑 cargo test、vitest、tsc、build。
 
-- [ ] 1 Rust 相容更新（cargo update，含 tauri 2.12）＋ npm `@tauri-apps/*`、react 19.3、testing-library、@types
-- [ ] 2 Rust 主版本：base64、dirs、getrandom、sha1/sha2、jsonschema、keyring、deno_core（+deno_error）
-- [ ] 3 前端建置：vite 8、@vitejs/plugin-react 6、vitest 5、@vitest/ui、jsdom、jest-dom 7
-- [ ] 4 TypeScript 7
-- [ ] 5 函式庫：MUI 9、i18next 27 / react-i18next 18、jotai 3
-- [ ] 6 GitHub Actions 版本（Node 20 棄用警告）；CI 用 stable Rust
-- [ ] 7 實機：開發版操作一輪；Docker 用 Rust 1.100 跑 Linux 正式建置；發 v0.2.2
+- [x] 1 Rust 相容更新（cargo update，含 tauri 2.12）＋ npm `@tauri-apps/*`、react 19.3、testing-library、@types
+- [x] 2 Rust 主版本：base64、dirs、getrandom、sha1/sha2、jsonschema、keyring、deno_core（+deno_error）
+- [x] 3 前端建置：vite 8、@vitejs/plugin-react 6、vitest 5、@vitest/ui、jsdom、jest-dom 7
+- [x] 4 TypeScript 7
+- [x] 5 函式庫：MUI 9、i18next 27 / react-i18next 18、jotai 3
+- [x] 6 GitHub Actions 版本（Node 20 棄用警告）；CI 用 stable Rust
+- [x] 7 實機：開發版操作一輪；Docker 用 Rust 1.100 跑 Linux 正式建置；發 v0.2.2 → 實際在 v0.2.3 發布成功
+
+### 結果（2026-11-17）
+- keyring 2 → keyring-core 1 + 各平台 store（Windows 沿用舊命名，舊憑證可讀；macOS 要 `keychain`、Linux 要 `crypto-rust` feature）
+- deno_core 0.413：`#[op2]` 推斷 async；計時器改用 `createTimer` 物件（新增測試）
+- TypeScript 7 沒有穩定 JS API → 型別測試改呼叫 `tsc` CLI；MUI 9 改 `slotProps`、`*Outlined` 圖示
+- release：建立草稿時直接取得 release id（列表查詢可能還看不到剛建立的草稿，v0.2.2 因此沒有上傳任何檔案）
+- v0.2.3 四個平台建置、`latest.json`、發布全部成功；CI 三平台通過
+- 未處理：zoo-module 在 Windows 連結時的 LNK4098 警告（新版 v8，測試全過）
+- 未驗證：已安裝的 app 實際自動更新一次（等下一版）
