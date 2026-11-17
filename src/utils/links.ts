@@ -12,3 +12,10 @@ export function linksIn(text: string): string[] {
       }
     });
 }
+
+/** Links in something dropped on the page: links dragged from a browser, or text files. */
+export async function linksDropped(data: DataTransfer): Promise<string[]> {
+  const texts = await Promise.all([...data.files].filter((f) => /\.txt$/i.test(f.name)).map((f) => f.text()));
+  texts.push(data.getData('text/uri-list'), data.getData('text/plain'));
+  return [...new Set(linksIn(texts.join('\n')))];
+}

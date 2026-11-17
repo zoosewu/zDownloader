@@ -108,7 +108,15 @@
       "restart": "Start over",
       "otherUrl": "Use another URL"
     },
-    "retryPending": "Retrying in"
+    "retryPending": "Retrying in",
+    "menu": {
+      "restart": "Download again from the start",
+      "categories": "Categories",
+      "removeWithFile": "Remove and delete file…",
+      "deleteTitle": "Delete files",
+      "deleteConfirm": "Move {{count}} downloaded file(s) to the Recycle Bin and remove the downloads?",
+      "deleteAction": "Delete"
+    }
   },
   "settings": {
     "general": "General",

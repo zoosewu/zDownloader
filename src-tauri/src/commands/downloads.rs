@@ -4,7 +4,8 @@ use crate::commands::error::{CmdResult, CommandError};
 use crate::commands::settings::SettingsState;
 use crate::downloads::Downloads;
 use std::path::{Path, PathBuf};
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_opener::OpenerExt;
 use zoo_core::{AddRequest, SegmentMap, StartMode, Task, TaskId, TaskUpdate};
 
 fn task_id(id: &str) -> CmdResult<TaskId> {
@@ -118,8 +119,47 @@ pub async fn downloads_set_tags(id: String, tags: Vec<String>, downloads: State<
 }
 
 #[tauri::command]
-pub async fn downloads_remove(id: String, downloads: State<'_, Downloads>) -> CmdResult<()> {
-    Ok(downloads.manager.remove(task_id(&id)?).await?)
+pub async fn downloads_remove(id: String, delete_file: Option<bool>, downloads: State<'_, Downloads>) -> CmdResult<()> {
+    // Removing discards a partial download; `delete_file` also takes a finished one, to the
+    // recycle bin so a slip can be undone.
+    let file = match delete_file {
+        Some(true) => finished_file(&downloads, &id).await.ok(),
+        _ => None,
+    };
+    downloads.manager.remove(task_id(&id)?).await?;
+    if let Some(path) = file {
+        trash::delete(&path)
+            .map_err(|e| CommandError::new("io", format!("removed, but cannot move {} to the recycle bin: {e}", path.display())))?;
+    }
+    Ok(())
+}
+
+/// Open a finished download with its default app.
+#[tauri::command]
+pub async fn downloads_open_file(id: String, app: AppHandle, downloads: State<'_, Downloads>) -> CmdResult<()> {
+    let path = finished_file(&downloads, &id).await?;
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(|e| CommandError::new("io", format!("cannot open {}: {e}", path.display())))
+}
+
+/// Show a finished download in its folder, selected.
+#[tauri::command]
+pub async fn downloads_show_in_folder(id: String, app: AppHandle, downloads: State<'_, Downloads>) -> CmdResult<()> {
+    let path = finished_file(&downloads, &id).await?;
+    app.opener()
+        .reveal_item_in_dir(&path)
+        .map_err(|e| CommandError::new("io", format!("cannot show {}: {e}", path.display())))
+}
+
+/// The file a finished task wrote, if it is still there. Only these paths are opened: the page
+/// never names a path itself.
+async fn finished_file(downloads: &Downloads, id: &str) -> CmdResult<PathBuf> {
+    let id = task_id(id)?;
+    let task = downloads.manager.list().await?.into_iter().find(|t| t.id == id);
+    task.and_then(|t| t.final_path)
+        .filter(|path| path.is_file())
+        .ok_or_else(|| CommandError::new("notFound", "the downloaded file is not there any more"))
 }
 
 /// Move a task in front of `before` (or to the end); queued tasks start in list order.

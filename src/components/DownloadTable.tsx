@@ -1,5 +1,5 @@
 // Download table component - table view for all download items with resizable columns
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -16,10 +16,11 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useAtomValue } from 'jotai';
 import DownloadTableRow from './DownloadTableRow';
 import { visibleTaskIdsAtom, viewAtom, canReorder } from '../stores/viewStore';
-import TaskCategoryMenu, { type MenuAnchor } from './TaskCategoryMenu';
+import TaskMenu, { type MenuAnchor } from './TaskMenu';
 import { useSelectedDownload } from '../hooks/useSelectedDownload';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import { droppedBefore } from '../utils/downloadCalculations';
+import { click, forMenu, noSelection, within, type ClickMode } from '../utils/selection';
 
 interface DownloadTableProps {
   onActionError?: (message: string) => void;
@@ -47,26 +48,40 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   // Only the order of the shown tasks: progress re-renders the row of that task, not the table.
   const ids = useAtomValue(visibleTaskIdsAtom);
   const sortable = canReorder(useAtomValue(viewAtom));
-  const { selectedTaskId, selectTask } = useSelectedDownload();
+  const { selection, setSelection } = useSelectedDownload();
+  const selected = useMemo(() => new Set(selection.ids), [selection.ids]);
+  const idsRef = useRef(ids);
+  idsRef.current = ids;
   const [menu, setMenu] = useState<MenuAnchor | null>(null);
-  const handleContextMenu = useCallback((id: string, x: number, y: number) => setMenu({ id, x, y }), []);
+  // The menu is for the selection, or for the row alone if it was not selected.
+  const handleContextMenu = useCallback(
+    (id: string, x: number, y: number) => {
+      setSelection((s) => forMenu(s, id));
+      setMenu({ x, y });
+    },
+    [setSelection]
+  );
 
-  // A selected task that leaves the view (finished, moved to another category) is deselected.
-  useEffect(() => {
-    if (selectedTaskId && !ids.includes(selectedTaskId)) selectTask(null);
-  }, [ids, selectedTaskId, selectTask]);
+  // Selected tasks that leave the view (finished, moved to another category) are deselected.
+  useEffect(() => setSelection((s) => within(s, ids)), [ids, setSelection]);
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(DEFAULT_COLUMN_WIDTHS);
   const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
 
-  // Toggle selection; stable across renders so memoized rows skip re-rendering.
-  const selectedRef = useRef(selectedTaskId);
-  selectedRef.current = selectedTaskId;
+  // Stable across renders so memoized rows skip re-rendering.
   const handleRowClick = useCallback(
-    (taskId: string) => selectTask(selectedRef.current === taskId ? null : taskId),
-    [selectTask]
+    (taskId: string, mode: ClickMode) => setSelection((s) => click(s, taskId, mode, idsRef.current)),
+    [setSelection]
   );
+  // Esc clears the selection, Ctrl+A selects every shown download.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') setSelection(noSelection);
+    else if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      setSelection({ ids: [...ids], anchor: ids[0] ?? null });
+    }
+  };
 
   // Drag a row to reorder; a short move first, so clicks still select.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -172,7 +187,11 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   );
 
   return (
-    <TableContainer sx={{ height: '100%', overflow: 'auto', backgroundColor: 'background.paper' }}>
+    <TableContainer
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      sx={{ height: '100%', overflow: 'auto', backgroundColor: 'background.paper', outline: 'none' }}
+    >
       <Table stickyHeader aria-label="download table">
         <TableHead>
           <TableRow>
@@ -194,7 +213,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
                 <DownloadTableRow
                   key={id}
                   id={id}
-                  isSelected={selectedTaskId === id}
+                  isSelected={selected.has(id)}
                   onClick={handleRowClick}
                   onActionError={onActionError}
                   onContextMenu={handleContextMenu}
@@ -206,7 +225,7 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
           </SortableContext>
         </DndContext>
       </Table>
-      {menu && <TaskCategoryMenu anchor={menu} onClose={() => setMenu(null)} onError={onActionError} />}
+      {menu && <TaskMenu anchor={menu} ids={selection.ids} onClose={() => setMenu(null)} onError={onActionError} />}
     </TableContainer>
   );
 };

@@ -25,12 +25,14 @@ import { CSS } from '@dnd-kit/utilities';
 import { useNow } from '../hooks/useNow';
 import { deadline, formatTaskForTable } from '../utils/downloadCalculations';
 import { formatRelativeTime } from '../utils/formatters';
+import { clickMode, type ClickMode } from '../utils/selection';
+import { actionsFor, type Action } from '../utils/taskActions';
 
 interface RowProps {
   isSelected: boolean;
-  onClick: (taskId: string) => void;
+  onClick: (taskId: string, mode: ClickMode) => void;
   onActionError?: (message: string) => void;
-  /** Right click: the categories menu. */
+  /** Right click: the menu for the selection. */
   onContextMenu?: (taskId: string, x: number, y: number) => void;
   /** Drag to reorder (only where the whole queue is shown). */
   sortable?: boolean;
@@ -70,25 +72,6 @@ const PROGRESS_COLOR: Record<TaskState, 'inherit' | 'success' | 'error' | 'warni
   cancelled: 'inherit',
 };
 
-type Action = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove';
-
-/** Which buttons make sense in each state (mirrors the transitions zoo-core allows). */
-function actionsFor(state: TaskState): Action[] {
-  switch (state) {
-    case 'running':
-    case 'queued':
-    case 'scheduled':
-      return ['pause', 'cancel', 'remove'];
-    case 'paused':
-      return ['resume', 'cancel', 'remove'];
-    case 'failed':
-      return ['retry', 'cancel', 'remove'];
-    case 'cancelled':
-      return ['retry', 'remove'];
-    case 'completed':
-      return ['remove'];
-  }
-}
 
 const ACTION_ICON: Record<Action, React.ReactElement> = {
   pause: <PausedIcon fontSize="small" />,
@@ -174,7 +157,7 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
         {...listeners}
         hover
         selected={isSelected}
-        onClick={() => onClick(task.id)}
+        onClick={(e) => onClick(task.id, clickMode(e))}
         onContextMenu={(e) => {
           e.preventDefault();
           onContextMenu?.(task.id, e.clientX, e.clientY);
@@ -182,6 +165,8 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
         style={{ transform: CSS.Translate.toString(transform), transition }}
         sx={{
           cursor: 'pointer',
+          // Shift-click selects rows, not text.
+          userSelect: 'none',
           position: 'relative',
           zIndex: isDragging ? 1 : undefined,
           opacity: isDragging ? 0.8 : undefined,

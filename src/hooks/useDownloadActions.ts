@@ -20,8 +20,9 @@ export function useDownloadActions() {
       cancel: (id: TaskId) => one(backend.downloads.cancel(id)),
       retry: (id: TaskId) => one(backend.downloads.retry(id)),
       restart: (id: TaskId) => one(backend.downloads.restart(id)),
-      remove: async (id: TaskId) => {
-        await backend.downloads.remove(id);
+      /** `deleteFile`: a finished download's file goes to the recycle bin too. */
+      remove: async (id: TaskId, deleteFile = false) => {
+        await backend.downloads.remove(id, deleteFile);
         removed(id);
       },
       move: (id: TaskId, before: TaskId | null) => one(backend.downloads.move(id, before)),

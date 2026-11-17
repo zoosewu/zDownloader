@@ -108,7 +108,15 @@
       "restart": "最初からダウンロード",
       "otherUrl": "別の URL にする"
     },
-    "retryPending": "再試行まで"
+    "retryPending": "再試行まで",
+    "menu": {
+      "restart": "最初からダウンロード",
+      "categories": "カテゴリ",
+      "removeWithFile": "削除してファイルも消す…",
+      "deleteTitle": "ファイルを削除",
+      "deleteConfirm": "ダウンロード済みの {{count}} 個のファイルをごみ箱に移し、ダウンロードを削除しますか？",
+      "deleteAction": "削除"
+    }
   },
   "settings": {
     "general": "一般",

@@ -1,4 +1,4 @@
-// The add-downloads window: a fixed one-line input on top, the list (the only part that
+// The add-downloads dialog: a fixed one-line input on top, the list (the only part that
 // scrolls), and fixed options at the bottom. Links arrive from the clipboard, the browser
 // extension, an imported or dropped text file, links dragged in, or pasted here (several at
 // once). Each row shows which module will resolve it and its categories (filled in from the
@@ -35,14 +35,13 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { backend, type AddItem, type InstalledInfo, type StartMode } from '../backend';
 import { useCategories } from '../hooks/useCategories';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { invoke } from '../utils/tauri';
-import { linksIn } from '../utils/links';
+import { linksDropped, linksIn } from '../utils/links';
 import { formatBytes } from '../utils/downloadCalculations';
-import HeaderFieldsEditor from '../components/HeaderFieldsEditor';
+import HeaderFieldsEditor from './HeaderFieldsEditor';
 import { emptyHeaderFields, fromHeaderFields, type HeaderFields, type HeaderPairs } from '../utils/headers';
 
 interface Row {
@@ -96,7 +95,8 @@ const hostOf = (url: string) => {
   }
 };
 
-const AddDownloads: React.FC = () => {
+/** `initial`: links that were waiting when the dialog opened; `onClose` drops the list. */
+const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ initial, onClose }) => {
   const { t } = useTranslation();
   const { categories } = useCategories();
   const { path, openDirectoryPicker } = useDownloadPath();
@@ -211,9 +211,10 @@ const AddDownloads: React.FC = () => {
     return links.length;
   }, [addItems]);
 
-  // Links waiting in the backend: now, and whenever more arrive while the window is open.
+  // Links waiting in the backend: now, and whenever more arrive while the dialog is open.
   useEffect(() => {
     const take = () => backend.addWindow.take().then(addItems).catch(() => {});
+    addItems(initial);
     take();
     let stop: (() => void) | undefined;
     let disposed = false;
@@ -222,6 +223,7 @@ const AddDownloads: React.FC = () => {
       disposed = true;
       stop?.();
     };
+    // `initial` is read once, when the dialog opens.
   }, [addItems]);
 
   // Opened with nothing to add: offer the link on the clipboard, if it is one.
@@ -248,9 +250,7 @@ const AddDownloads: React.FC = () => {
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    const texts = await Promise.all([...e.dataTransfer.files].filter((f) => /\.txt$/i.test(f.name)).map((f) => f.text()));
-    texts.push(e.dataTransfer.getData('text/uri-list'), e.dataTransfer.getData('text/plain'));
-    addLinks(texts.join('\n'));
+    addLinks((await linksDropped(e.dataTransfer)).join('\n'));
   };
 
   const submit = async () => {
@@ -292,8 +292,8 @@ const AddDownloads: React.FC = () => {
 
   const setGroup = (key: number, patch: Partial<Row>) => setRows((all) => all.map((r) => (r.group === key ? { ...r, ...patch } : r)));
   const toggleGroup = (key: number) => setGroups((all) => all.map((g) => (g.key === key ? { ...g, collapsed: !g.collapsed } : g)));
-  const close = () => getCurrentWindow().close().catch(() => {});
-  // Links that arrived while adding keep the window open.
+  const close = onClose;
+  // Links that arrived while adding keep the dialog open.
   useEffect(() => {
     if (done && rows.length === 0) close();
     else if (done) setDone(false);
@@ -548,4 +548,51 @@ const AddDownloads: React.FC = () => {
   );
 };
 
-export default AddDownloads;
+/**
+ * The dialog around `AddDownloads`. It opens when links arrive (clipboard, browser extension,
+ * an imported list) or the user asks for it, and its list lives only while it is open.
+ */
+const AddDownloadsDialog: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [initial, setInitial] = useState<AddItem[]>([]);
+
+  useEffect(() => {
+    // Links that came before this page loaded (the app was started for them).
+    backend.addWindow
+      .take()
+      .then((items) => {
+        if (items.length === 0) return;
+        setInitial(items);
+        setOpen(true);
+      })
+      .catch(() => {});
+    let stop: (() => void) | undefined;
+    let disposed = false;
+    // An open dialog takes the links itself; a closed one opens and takes them when it mounts.
+    backend.events.onAddItemsReady(() => setOpen(true)).then((u) => (disposed ? u() : (stop = u)));
+    return () => {
+      disposed = true;
+      stop?.();
+    };
+  }, []);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setInitial([]);
+  }, []);
+
+  return (
+    <Dialog
+      open={open}
+      // A stray click beside it must not drop the list.
+      onClose={(_, reason) => reason !== 'backdropClick' && close()}
+      maxWidth="md"
+      fullWidth
+      slotProps={{ paper: { sx: { height: 'min(600px, calc(100% - 64px))' } } }}
+    >
+      {open && <AddDownloads initial={initial} onClose={close} />}
+    </Dialog>
+  );
+};
+
+export default AddDownloadsDialog;

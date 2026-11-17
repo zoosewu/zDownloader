@@ -2,6 +2,7 @@
 import { atom } from 'jotai';
 import { selectAtom } from 'jotai/utils';
 import type { DownloadEvent, Task, TaskId } from '../backend';
+import { focused, noSelection, type Selection } from '../utils/selection';
 
 export type TaskMap = Record<TaskId, Task>;
 
@@ -115,10 +116,13 @@ export const upsertTaskAtom = atom(null, (get, set, task: Task) => {
   set(tasksByIdAtom, applyEvent(get(tasksByIdAtom), { type: 'upserted', data: task }));
 });
 
-// Selected task ID atom - tracks which download item is currently selected in the table
-export const selectedTaskIdAtom = atom<TaskId | null>(null);
+/** The downloads selected in the table (see utils/selection). */
+export const selectionAtom = atom<Selection>(noSelection);
 
-// Selected task atom (derived) - the full task object of the selected item
+/** The selected download the detail panel shows. */
+export const selectedTaskIdAtom = atom((get) => focused(get(selectionAtom)));
+
+/** That download's task. */
 export const selectedTaskAtom = atom((get) => {
   const id = get(selectedTaskIdAtom);
   return id ? get(tasksByIdAtom)[id] ?? null : null;

@@ -108,7 +108,15 @@
       "restart": "從頭下載",
       "otherUrl": "換別的網址"
     },
-    "retryPending": "等待重試"
+    "retryPending": "等待重試",
+    "menu": {
+      "restart": "從頭下載",
+      "categories": "分類",
+      "removeWithFile": "移除並刪除檔案…",
+      "deleteTitle": "刪除檔案",
+      "deleteConfirm": "把 {{count}} 個已下載的檔案移到資源回收筒，並移除這些下載？",
+      "deleteAction": "刪除"
+    }
   },
   "settings": {
     "general": "一般",

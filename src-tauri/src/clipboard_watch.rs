@@ -9,6 +9,10 @@ use tauri::{AppHandle, Emitter, Manager};
 
 pub const CLIPBOARD_LINK_EVENT: &str = "clipboard-link";
 
+/// What the app itself last put on the clipboard (`clipboard_copy`): not a link to offer.
+#[derive(Default)]
+pub struct OwnCopy(pub std::sync::Mutex<Option<String>>);
+
 struct Forward {
     app: AppHandle,
     clipboard: ClipboardContext,
@@ -20,7 +24,11 @@ impl ClipboardHandler for Forward {
         if !self.app.state::<SettingsState>().settings.blocking_lock().enable_clipboard_monitoring {
             return;
         }
-        let Some(link) = self.read_text().as_deref().and_then(link) else { return };
+        let Some(text) = self.read_text() else { return };
+        if self.app.state::<OwnCopy>().0.lock().unwrap().take().is_some_and(|own| own == text) {
+            return;
+        }
+        let Some(link) = link(&text) else { return };
         if let Err(e) = self.app.emit(CLIPBOARD_LINK_EVENT, link) {
             log::warn!("failed to emit {CLIPBOARD_LINK_EVENT}: {e}");
         }

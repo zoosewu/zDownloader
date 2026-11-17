@@ -12,10 +12,10 @@ mod utils;
 #[cfg(test)]
 mod bindings;
 
-use commands::clipboard::get_clipboard_content;
+use commands::clipboard::{clipboard_copy, get_clipboard_content};
 use commands::downloads::{
     categories_match, downloads_add, downloads_cancel, downloads_clear_finished,
-    downloads_list, downloads_move, downloads_pause, downloads_pause_all, downloads_remove, downloads_resume,
+    downloads_list, downloads_move, downloads_pause, downloads_pause_all, downloads_remove, downloads_open_file, downloads_show_in_folder, downloads_resume,
     downloads_restart, downloads_resume_all, downloads_retry, downloads_segments, downloads_set_tags, downloads_update,
 };
 use commands::site_modules::{
@@ -37,7 +37,7 @@ use tauri::Manager;
 use tokio::sync::Mutex;
 
 /// The app's own window (tauri.conf.json); the only one that may call app commands.
-const MAIN_WINDOW: &str = "main";
+pub(crate) const MAIN_WINDOW: &str = "main";
 
 // Used by the frontend as a "backend is ready" ping.
 #[tauri::command]
@@ -60,12 +60,15 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             downloads_update,
             downloads_set_tags,
             downloads_remove,
+            downloads_open_file,
+            downloads_show_in_folder,
             downloads_move,
             downloads_pause_all,
             downloads_resume_all,
             downloads_clear_finished,
             downloads_segments,
             get_clipboard_content,
+            clipboard_copy,
             urls_inspect,
             urls_list,
             proxies_import,
@@ -129,11 +132,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
         .manage(add_window::Pending::default())
+        .manage(clipboard_watch::OwnCopy::default())
         // App commands answer the main window only. Captcha windows show other sites' pages and
         // must not reach the app (capabilities cover plugin commands, not these).
         .invoke_handler(move |invoke| {
             let label = invoke.message.webview_ref().label().to_owned();
-            if label != MAIN_WINDOW && label != add_window::ADD_WINDOW {
+            if label != MAIN_WINDOW {
                 invoke.resolver.reject(commands::error::CommandError::new("forbidden", "not available in this window"));
                 return true;
             }

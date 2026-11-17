@@ -18,8 +18,10 @@ import SettingsPage from './pages/SettingsPage';
 import Footer from './components/Footer';
 import { useNavigation } from './hooks/useNavigation';
 import { useClipboard } from './hooks/useClipboard';
+import { usePageGuards } from './hooks/usePageGuards';
 import { useDownloadSync } from './hooks/useDownloadSync';
 import CaptchaDialog from './components/CaptchaDialog';
+import AddDownloadsDialog from './components/AddDownloads';
 import SourceChangedPrompt from './components/SourceChangedPrompt';
 import UpdateBanner from './components/UpdateBanner';
 import { useAutomaticUpdateChecks } from './hooks/useAppUpdate';
@@ -38,6 +40,7 @@ function App() {
     waitForTauri().then((ready) => setStartup(ready ? 'ready' : 'failed'));
   }, []);
 
+  usePageGuards();
   useClipboard(tauriReady);
   useDownloadSync(tauriReady);
   useAutomaticUpdateChecks(tauriReady);
@@ -117,6 +120,7 @@ function App() {
         {/* Global Footer */}
         <Footer />
 
+        <AddDownloadsDialog />
         <CaptchaDialog />
         <SourceChangedPrompt />
       </Box>

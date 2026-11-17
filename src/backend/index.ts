@@ -123,7 +123,12 @@ export const backend = {
     setTags: (id: TaskId, tags: string[]) => call<Task>('downloads_set_tags', { id, tags }),
     /** Change the URL or headers of a task that is not running. */
     update: (id: TaskId, update: TaskUpdate) => call<Task>('downloads_update', { id, update }),
-    remove: (id: TaskId) => call<null>('downloads_remove', { id }),
+    /** `deleteFile`: also move a finished download's file to the recycle bin. */
+    remove: (id: TaskId, deleteFile = false) => call<null>('downloads_remove', { id, deleteFile }),
+    /** Open a finished download with its default app. */
+    openFile: (id: TaskId) => call<null>('downloads_open_file', { id }),
+    /** Show a finished download in its folder. */
+    showInFolder: (id: TaskId) => call<null>('downloads_show_in_folder', { id }),
     /** Move a task in front of `before` (or to the end); queued tasks start in list order. */
     move: (id: TaskId, before: TaskId | null) => call<Task>('downloads_move', { id, before }),
     pauseAll: () => call<Task[]>('downloads_pause_all'),
@@ -160,6 +165,10 @@ export const backend = {
     take: () => call<AddItem[]>('add_window_take'),
     /** A text file, one link per line, into the add window; resolves to how many were read. */
     import: (filePath: string) => call<number>('add_window_import', { filePath }),
+  },
+  clipboard: {
+    /** Copy text; the clipboard watcher does not offer the app's own copy back as a download. */
+    copy: (text: string) => call<null>('clipboard_copy', { text }),
   },
   urls: {
     /** File name, resolving module, and whether it is worth offering as a download. */
