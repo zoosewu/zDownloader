@@ -167,7 +167,16 @@
     "proxyFallbackDirect": "Connect directly when no proxy is usable",
     "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins.",
     "title": "Settings",
-    "autoStartLinks": "Start links from the clipboard and the browser at once (no add window)"
+    "autoStartLinks": "Start links from the clipboard and the browser at once (no add window)",
+    "extension": {
+      "title": "Browser extension",
+      "step1": "Open the extensions page and turn on Developer mode",
+      "step2": "Click \"Load unpacked\" and pick this folder",
+      "showFolder": "Show folder",
+      "noBrowser": "Edge or Chrome was not found; load the folder below on your browser's extensions page.",
+      "afterUpdate": "After the app updates, click the extension's Reload on the extensions page to use the new version.",
+      "pasteAddress": "Copied {{address}}: paste it into the browser's address bar and press Enter (browsers do not let other programs open this page)."
+    }
   },
   "proxy": {
     "enabled": "Enable Proxy"

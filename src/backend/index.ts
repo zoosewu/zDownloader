@@ -23,6 +23,7 @@ import type { Task } from './bindings/Task';
 import type { TaskId } from './bindings/TaskId';
 import type { TaskUpdate } from './bindings/TaskUpdate';
 import type { ListedFile } from './bindings/ListedFile';
+import type { ExtensionSetup } from './bindings/ExtensionSetup';
 import type { UrlInfo } from './bindings/UrlInfo';
 
 export type { AppSettings } from './bindings/AppSettings';
@@ -38,6 +39,7 @@ export type { PlanSummary } from './bindings/PlanSummary';
 export type { SourceInfo } from './bindings/SourceInfo';
 export type { Trust } from './bindings/Trust';
 export type { ListedFile } from './bindings/ListedFile';
+export type { ExtensionSetup } from './bindings/ExtensionSetup';
 export type { UrlInfo } from './bindings/UrlInfo';
 export type { CoreError } from './bindings/CoreError';
 export type { Event as DownloadEvent } from './bindings/Event';
@@ -165,6 +167,14 @@ export const backend = {
     take: () => call<AddItem[]>('add_window_take'),
     /** A text file, one link per line, into the add window; resolves to how many were read. */
     import: (filePath: string) => call<number>('add_window_import', { filePath }),
+  },
+  extension: {
+    /** The folder to load the browser extension from, and the installed browsers that can. */
+    setup: () => call<ExtensionSetup>('extension_setup'),
+    /** Start a browser (`edge` or `chrome`) with its extensions page address on the clipboard; resolves to that address. */
+    openPage: (browser: string) => call<string>('extension_open_page', { browser }),
+    /** Show the extension folder in the file manager. */
+    showFolder: () => call<null>('extension_show_folder'),
   },
   clipboard: {
     /** Copy text; the clipboard watcher does not offer the app's own copy back as a download. */

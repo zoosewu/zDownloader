@@ -2,6 +2,7 @@
 //! answers `zoo-native-host` on a per-user local socket, and registers the host with the
 //! browsers.
 
+pub mod install;
 mod register;
 
 use crate::add_window::{self, AddItem};

@@ -20,6 +20,7 @@ import { settingsAtom } from '../stores/settingsStore';
 import { backend, type AppSettings, type Theme } from '../backend';
 import { open } from '@tauri-apps/plugin-dialog';
 import AppUpdateSection from './AppUpdateSection';
+import BrowserExtensionSection from './BrowserExtensionSection';
 
 export default function GeneralSettings() {
   const { t, i18n } = useTranslation();
@@ -192,6 +193,13 @@ export default function GeneralSettings() {
               label={t('settings.systemTray') || 'Enable System Tray'}
             />
           </Stack>
+        </Box>
+
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>
+            {t('settings.extension.title')}
+          </Typography>
+          <BrowserExtensionSection />
         </Box>
 
         <Box>

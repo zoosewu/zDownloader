@@ -31,6 +31,7 @@ use commands::settings::{
 };
 use add_window::{add_window_import, add_window_open, add_window_take};
 use commands::urls::{urls_inspect, urls_list};
+use browser_bridge::install::{extension_open_page, extension_setup, extension_show_folder};
 use downloads::Downloads;
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
@@ -78,6 +79,9 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             clipboard_copy,
             urls_inspect,
             urls_list,
+            extension_setup,
+            extension_open_page,
+            extension_show_folder,
             proxies_import,
             proxies_list,
             proxies_remove,

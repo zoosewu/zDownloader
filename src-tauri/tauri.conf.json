@@ -62,7 +62,20 @@
       "marketplace/k2s/manifest.json": "marketplace/k2s/manifest.json",
       "marketplace/k2s/dist/index.js": "marketplace/k2s/dist/index.js",
       "marketplace/baidu/manifest.json": "marketplace/baidu/manifest.json",
-      "marketplace/baidu/dist/index.js": "marketplace/baidu/dist/index.js"
+      "marketplace/baidu/dist/index.js": "marketplace/baidu/dist/index.js",
+      "../browser-extension/manifest.json": "browser-extension/manifest.json",
+      "../browser-extension/background.js": "browser-extension/background.js",
+      "../browser-extension/src/core.js": "browser-extension/src/core.js",
+      "../browser-extension/popup.html": "browser-extension/popup.html",
+      "../browser-extension/popup.css": "browser-extension/popup.css",
+      "../browser-extension/popup.js": "browser-extension/popup.js",
+      "../browser-extension/_locales/en/messages.json": "browser-extension/_locales/en/messages.json",
+      "../browser-extension/_locales/ja/messages.json": "browser-extension/_locales/ja/messages.json",
+      "../browser-extension/_locales/zh_TW/messages.json": "browser-extension/_locales/zh_TW/messages.json",
+      "../browser-extension/icons/icon16.png": "browser-extension/icons/icon16.png",
+      "../browser-extension/icons/icon32.png": "browser-extension/icons/icon32.png",
+      "../browser-extension/icons/icon48.png": "browser-extension/icons/icon48.png",
+      "../browser-extension/icons/icon128.png": "browser-extension/icons/icon128.png"
     },
     "icon": [
       "icons/32x32.png",

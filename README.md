@@ -149,7 +149,7 @@ npm run tauri build
 ### Browser Extension (Chrome, Edge)
 
 1. **Open Zoo Downloader once.** On every start the app registers `zoo-native-host` with Chrome and Edge; there is nothing else to install.
-2. **Load the extension.** Open `chrome://extensions` (Edge: `edge://extensions`), turn on Developer mode, click *Load unpacked* and select the `browser-extension` folder.
+2. **Load the extension.** In the app, open *Settings → General → Browser extension*: its buttons bring up your browser with the extensions page address on the clipboard (paste it into the address bar; browsers do not let other programs open that page) and show the extension folder the app ships. On the extensions page turn on Developer mode, click *Load unpacked* and pick that folder. After the app updates, click the extension's *Reload* there.
 3. **Use it.**
    - Right-click a link, image, video or audio → *Download with Zoo Downloader*. The site's cookies, Referer and User-Agent go along, so downloads that need a login work.
    - With *Take over browser downloads* on (the default, in the extension popup), downloads the browser starts go to the app instead. If the app does not answer, the browser downloads as usual.

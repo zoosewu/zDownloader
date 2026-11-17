@@ -171,7 +171,7 @@ fn official_dir(app: &AppHandle) -> Option<PathBuf> {
 }
 
 /// Without Windows' `\\?\` prefix (resource paths have it), so the folder reads as people type it.
-fn plain_path(path: PathBuf) -> PathBuf {
+pub(crate) fn plain_path(path: PathBuf) -> PathBuf {
     match path.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
         Some(rest) if !rest.starts_with(r"UNC\") => PathBuf::from(rest),
         _ => path,
