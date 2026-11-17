@@ -310,7 +310,11 @@
     "headers": "ヘッダー…",
     "headersCount": "ヘッダー（{{count}}）…",
     "headersTitle": "すべてのリンク共通のヘッダー",
-    "browserHeaders": "ブラウザからのヘッダー"
+    "browserHeaders": "ブラウザからのヘッダー",
+    "readingShare": "共有の内容を読み込み中…",
+    "shareFiles": "{{count}} 個のファイル · {{size}}",
+    "keepFolders": "フォルダー構成を保つ",
+    "selectFiles": "すべて選択"
   },
   "update": {
     "title": "アップデート",

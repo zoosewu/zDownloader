@@ -21,6 +21,16 @@ async fn target_dir(dir: Option<String>, settings: &SettingsState) -> CmdResult<
     Ok(dir)
 }
 
+/// `dir` plus a folder inside a share (`a/b`), each part made a safe name, so nothing a site
+/// says can lead outside `dir`.
+fn inside(dir: PathBuf, folder: Option<&str>) -> PathBuf {
+    folder
+        .into_iter()
+        .flat_map(|f| f.split(['/', '\\']))
+        .filter(|part| !matches!(part.trim(), "" | "." | ".."))
+        .fold(dir, |dir, part| dir.join(zoo_core::naming::sanitize(part)))
+}
+
 fn ensure_dir(dir: &Path) -> CmdResult<()> {
     std::fs::create_dir_all(dir)
         .map_err(|e| CommandError::new("io", format!("cannot use download folder {}: {e}", dir.display())))
@@ -34,10 +44,12 @@ pub async fn downloads_add(
     start: StartMode,
     headers: Option<Vec<(String, String)>>,
     tags: Option<Vec<String>>,
+    folder: Option<String>,
     downloads: State<'_, Downloads>,
     settings: State<'_, SettingsState>,
 ) -> CmdResult<Task> {
-    let dir = target_dir(dir, &settings).await?;
+    let dir = inside(target_dir(dir, &settings).await?, folder.as_deref());
+    ensure_dir(&dir)?;
     let req = AddRequest { url, filename, dir, start, headers: headers.unwrap_or_default(), tags };
     Ok(downloads.manager.add(req).await?)
 }
@@ -136,4 +148,20 @@ pub async fn downloads_clear_finished(downloads: State<'_, Downloads>) -> CmdRes
 #[tauri::command]
 pub async fn downloads_segments(id: String, downloads: State<'_, Downloads>) -> CmdResult<SegmentMap> {
     Ok(downloads.manager.segments(task_id(&id)?).await?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn share_folders_stay_inside_the_download_folder() {
+        let base = PathBuf::from("dl");
+        assert_eq!(inside(base.clone(), None), base);
+        assert_eq!(inside(base.clone(), Some("罚抄存档/校园怪兽")), base.join("罚抄存档").join("校园怪兽"));
+        assert_eq!(inside(base.clone(), Some("/a//b/")), base.join("a").join("b"));
+        // Nothing climbs out or names a drive or a device.
+        assert_eq!(inside(base.clone(), Some("../../x")), base.join("x"));
+        assert_eq!(inside(base.clone(), Some("C:/AUX/a<b")), base.join("C").join("_AUX").join("ab"));
+    }
 }

@@ -22,6 +22,7 @@ import type { SegmentMap } from './bindings/SegmentMap';
 import type { Task } from './bindings/Task';
 import type { TaskId } from './bindings/TaskId';
 import type { TaskUpdate } from './bindings/TaskUpdate';
+import type { ListedFile } from './bindings/ListedFile';
 import type { UrlInfo } from './bindings/UrlInfo';
 
 export type { AppSettings } from './bindings/AppSettings';
@@ -36,6 +37,7 @@ export type { PermissionSummary } from './bindings/PermissionSummary';
 export type { PlanSummary } from './bindings/PlanSummary';
 export type { SourceInfo } from './bindings/SourceInfo';
 export type { Trust } from './bindings/Trust';
+export type { ListedFile } from './bindings/ListedFile';
 export type { UrlInfo } from './bindings/UrlInfo';
 export type { CoreError } from './bindings/CoreError';
 export type { Event as DownloadEvent } from './bindings/Event';
@@ -102,12 +104,14 @@ export interface AddDownload {
   headers?: Array<[string, string]> | null;
   /** Categories chosen by the user; `null` lets the category rules decide. */
   tags?: string[] | null;
+  /** Folder inside a share (`a/b`), created under `dir`. */
+  folder?: string | null;
 }
 
 export const backend = {
   downloads: {
-    add: ({ url, filename = null, dir = null, start, headers = null, tags = null }: AddDownload) =>
-      call<Task>('downloads_add', { url, filename, dir, start, headers, tags }),
+    add: ({ url, filename = null, dir = null, start, headers = null, tags = null, folder = null }: AddDownload) =>
+      call<Task>('downloads_add', { url, filename, dir, start, headers, tags, folder }),
     list: () => call<Task[]>('downloads_list'),
     pause: (id: TaskId) => call<Task>('downloads_pause', { id }),
     resume: (id: TaskId) => call<Task>('downloads_resume', { id }),
@@ -160,6 +164,8 @@ export const backend = {
   urls: {
     /** File name, resolving module, and whether it is worth offering as a download. */
     inspect: (url: string) => call<UrlInfo>('urls_inspect', { url }),
+    /** The files behind a link: several for a shared folder, else the link itself. Runs its module. */
+    list: (url: string) => call<ListedFile[]>('urls_list', { url }),
   },
   modules: {
     list: () => call<InstalledInfo[]>('modules_list'),

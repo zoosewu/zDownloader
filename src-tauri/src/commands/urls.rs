@@ -30,16 +30,41 @@ pub struct UrlInfo {
     pub auto_start: bool,
 }
 
+/// One file behind a link (see `urls_list`).
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ListedFile {
+    /// A link for just this file: what its task downloads.
+    pub url: String,
+    pub filename: Option<String>,
+    pub size: Option<u64>,
+    /// Folder inside the share (`a/b`); `None` at the top.
+    pub folder: Option<String>,
+}
+
+/// The files behind `url`: several for a shared folder whose module lists it, otherwise one
+/// (the link itself). Runs the module, so it may take a few seconds.
+#[tauri::command]
+pub async fn urls_list(url: String, modules: State<'_, SiteModules>) -> CmdResult<Vec<ListedFile>> {
+    let items = modules.resolver.list(&url).await?;
+    Ok(items
+        .into_iter()
+        .map(|i| ListedFile { url: i.url, filename: i.filename, size: i.size, folder: i.folder })
+        .collect())
+}
+
 #[tauri::command]
 pub async fn urls_inspect(url: String, modules: State<'_, SiteModules>, settings: State<'_, SettingsState>) -> CmdResult<UrlInfo> {
     let allowed = settings.settings.lock().await.auto_start_links;
     Ok(inspect(&url, module_for(&url, &modules), allowed))
 }
 
-/// Whether a link from outside (clipboard, browser) starts at once; see `UrlInfo::auto_start`.
+/// Whether a link from outside (the browser) starts at once: `UrlInfo::auto_start`, and the
+/// link is one file. A shared folder waits in the add window for the user to pick its files,
+/// and so does a link its module cannot list (the add window shows why).
 pub async fn starts_at_once(url: &str, modules: &SiteModules, settings: &SettingsState) -> bool {
     let allowed = settings.settings.lock().await.auto_start_links;
-    allowed && module_for(url, modules).is_none_or(|m| m.auto_start)
+    allowed && module_for(url, modules).is_none_or(|m| m.auto_start) && matches!(modules.resolver.list(url).await.as_deref(), Ok([_]))
 }
 
 fn module_for(url: &str, modules: &SiteModules) -> Option<InstalledInfo> {

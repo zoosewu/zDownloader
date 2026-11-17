@@ -30,7 +30,7 @@ use commands::settings::{
     settings_update, SettingsState,
 };
 use add_window::{add_window_import, add_window_open, add_window_take};
-use commands::urls::urls_inspect;
+use commands::urls::{urls_inspect, urls_list};
 use downloads::Downloads;
 use std::sync::Arc;
 use tauri::Manager;
@@ -67,6 +67,7 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             downloads_segments,
             get_clipboard_content,
             urls_inspect,
+            urls_list,
             proxies_import,
             proxies_list,
             proxies_remove,

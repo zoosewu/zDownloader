@@ -1,5 +1,6 @@
 // A copied download link starts at once when the backend says so (the app-wide switch is on
-// and the link's module allows it); otherwise it waits in the add-downloads window. The
+// and the link's module allows it) and it is one file; otherwise it waits in the
+// add-downloads window, where the user picks the files of a shared folder. The
 // backend watches the clipboard (OS change notifications, no polling) and sends copied links
 // while monitoring is enabled in settings.
 import { useEffect } from 'react';
@@ -15,7 +16,7 @@ export function useClipboard(tauriReady: boolean = false) {
         try {
           const info = await backend.urls.inspect(url);
           if (!info.downloadable) return;
-          if (info.autoStart) {
+          if (info.autoStart && (await backend.urls.list(url).catch(() => [])).length === 1) {
             try {
               await backend.downloads.add({ url, start: { mode: 'now' } });
               return;

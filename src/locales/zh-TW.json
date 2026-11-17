@@ -310,7 +310,11 @@
     "headers": "標頭…",
     "headersCount": "標頭（{{count}}）…",
     "headersTitle": "所有連結共用的標頭",
-    "browserHeaders": "瀏覽器送來的標頭"
+    "browserHeaders": "瀏覽器送來的標頭",
+    "readingShare": "正在讀取分享內容…",
+    "shareFiles": "{{count}} 個檔案 · {{size}}",
+    "keepFolders": "保留資料夾結構",
+    "selectFiles": "全選"
   },
   "update": {
     "title": "更新",

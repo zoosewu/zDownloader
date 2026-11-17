@@ -188,8 +188,11 @@
 規格：[share-listing.md](../docs/architecture/share-listing.md)
 
 - [x] 1 SDK `list` + host 驗證 + 協定 `List` + `zoo-module test` 的 list case（另修：host 的 fetch 不再把 #fragment 留在 Response.url）
-- [ ] 2 app `urls_list` 命令、bindings
-- [ ] 3 新增視窗展開成一組可勾選的列、資料夾結構
-- [ ] 4 自動開始遇到多檔時送進新增視窗
-- [ ] 5 百度模組 `list` 與 `#path=` 的 resolve；錄製多檔、子資料夾分享
-- [ ] 6 實機：全選、部分勾選、子資料夾、過期重新解析
+- [x] 2 app `urls_list` 命令、bindings；`downloads_add` 加 `folder`（後端逐段 sanitize、去掉 `.`/`..`）
+- [x] 3 新增視窗展開成一組可勾選的列、資料夾結構
+- [x] 4 自動開始遇到多檔時送進新增視窗（擴充：`starts_at_once`；剪貼簿：`useClipboard`）
+- [x] 5 百度模組 `list` 與 `#path=` 的 resolve；錄製多檔、子資料夾分享（同名檔改以 md5 比對轉存）
+- [ ] 6 實機
+  - [x] 開發版：新增視窗讀取中→展開 13 個檔案（約 7 秒）；全不選再勾 2 個，計數與大小即時更新；加入後下載到 `下載/罚抄存档/校园怪兽/`，內容正確；未勾的隨群組移除、視窗自動關閉；測試任務與檔案已刪除
+  - [ ] 剪貼簿／擴充自動開始遇到多檔分享（需開啟「自動開始」設定）
+  - [ ] 連結過期後單檔重新解析（需等 8 小時）

@@ -310,7 +310,11 @@
     "headers": "Headers…",
     "headersCount": "Headers ({{count}})…",
     "headersTitle": "Headers for every link",
-    "browserHeaders": "Headers from the browser"
+    "browserHeaders": "Headers from the browser",
+    "readingShare": "Reading the share…",
+    "shareFiles": "{{count}} files · {{size}}",
+    "keepFolders": "Keep folders",
+    "selectFiles": "Select all"
   },
   "update": {
     "title": "Updates",

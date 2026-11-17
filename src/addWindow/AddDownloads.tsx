@@ -2,7 +2,8 @@
 // scrolls), and fixed options at the bottom. Links arrive from the clipboard, the browser
 // extension, an imported or dropped text file, links dragged in, or pasted here (several at
 // once). Each row shows which module will resolve it and its categories (filled in from the
-// rules; changing them makes them the user's choice).
+// rules; changing them makes them the user's choice). A link whose module lists several files
+// (a shared folder) turns into one row per file under a header, to pick which to add.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -24,7 +25,14 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Close as RemoveIcon, Cookie as BrowserIcon, Upload as UploadIcon, FolderOpen as FolderIcon } from '@mui/icons-material';
+import {
+  Close as RemoveIcon,
+  Cookie as BrowserIcon,
+  Upload as UploadIcon,
+  FolderOpen as FolderIcon,
+  ExpandMore as ExpandIcon,
+  ChevronRight as CollapsedIcon,
+} from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -33,6 +41,7 @@ import { useCategories } from '../hooks/useCategories';
 import { useDownloadPath } from '../hooks/useDownloadPath';
 import { invoke } from '../utils/tauri';
 import { linksIn } from '../utils/links';
+import { formatBytes } from '../utils/downloadCalculations';
 import HeaderFieldsEditor from '../components/HeaderFieldsEditor';
 import { emptyHeaderFields, fromHeaderFields, type HeaderFields, type HeaderPairs } from '../utils/headers';
 
@@ -50,7 +59,24 @@ interface Row {
   /** The user changed the categories: they are sent as the user's choice. */
   tagsEdited: boolean;
   error: string | null;
+  /** Its module is reading what the link holds. */
+  listing: boolean;
+  /** For a file of a shared folder: its group's key, folder inside the share, size, and
+   * whether to add it. */
+  group?: number;
+  folder: string | null;
+  size: number | null;
+  selected: boolean;
 }
+
+/** A shared folder whose files are rows of their own. */
+interface Group {
+  key: number;
+  url: string;
+  collapsed: boolean;
+}
+
+const chosen = (r: Row) => r.group === undefined || r.selected;
 
 type Start = 'now' | 'paused' | 'at';
 
@@ -75,6 +101,8 @@ const AddDownloads: React.FC = () => {
   const { categories } = useCategories();
   const { path, openDirectoryPicker } = useDownloadPath();
   const [rows, setRows] = useState<Row[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [keepFolders, setKeepFolders] = useState(true);
   const [input, setInput] = useState('');
   const [start, setStart] = useState<Start>('now');
   const [scheduleAt, setScheduleAt] = useState('');
@@ -87,8 +115,47 @@ const AddDownloads: React.FC = () => {
   const [done, setDone] = useState(false);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
 
   const update = (key: number, patch: Partial<Row>) => setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+
+  /** A link its module lists as several files becomes a group with a row per file. */
+  const expand = useCallback(async (key: number, url: string) => {
+    update(key, { listing: true });
+    let files;
+    try {
+      files = await backend.urls.list(url);
+    } catch (e) {
+      update(key, { listing: false, error: e instanceof Error ? e.message : String(e) });
+      return;
+    }
+    if (files.length <= 1) {
+      update(key, { listing: false });
+      return;
+    }
+    const tags = await Promise.all(files.map((f) => backend.categories.match(f.url, f.filename).catch(() => [] as string[])));
+    setGroups((all) => [...all, { key, url, collapsed: false }]);
+    setRows((all) =>
+      all.flatMap((r) =>
+        r.key !== key
+          ? [r]
+          : files.map((f, i) => ({
+              ...r,
+              key: nextKey++,
+              url: f.url,
+              filename: f.filename ?? '',
+              filenameEdited: false,
+              tags: r.tagsEdited ? r.tags : tags[i],
+              listing: false,
+              group: key,
+              folder: f.folder,
+              size: f.size,
+              selected: true,
+            })),
+      ),
+    );
+  }, []);
 
   /** Module, the link's own name, and the categories the rules give it. */
   const inspect = useCallback(async (key: number, url: string, filename: string | null) => {
@@ -107,11 +174,12 @@ const AddDownloads: React.FC = () => {
             },
       ),
     );
-  }, []);
+    if (info?.module) await expand(key, url);
+  }, [expand]);
 
   const addItems = useCallback(
     (items: AddItem[]) => {
-      const known = new Set(rowsRef.current.map((r) => r.url));
+      const known = new Set([...rowsRef.current.map((r) => r.url), ...groupsRef.current.map((g) => g.url)]);
       const added: Row[] = [];
       for (const i of items) {
         if (known.has(i.url)) continue;
@@ -126,6 +194,10 @@ const AddDownloads: React.FC = () => {
           tags: [],
           tagsEdited: false,
           error: null,
+          listing: false,
+          folder: null,
+          size: null,
+          selected: true,
         });
       }
       setRows((all) => [...all, ...added]);
@@ -188,7 +260,8 @@ const AddDownloads: React.FC = () => {
       start === 'at' && scheduleAt ? { mode: 'at', at: new Date(scheduleAt).toISOString() } : start === 'paused' ? { mode: 'later' } : { mode: 'now' };
     const extra = fromHeaderFields(headers);
     let failed = 0;
-    for (const row of rowsRef.current) {
+    const submitted = rowsRef.current;
+    for (const row of submitted.filter(chosen)) {
       try {
         await backend.downloads.add({
           url: row.url,
@@ -198,6 +271,7 @@ const AddDownloads: React.FC = () => {
           start: how,
           headers: mergeHeaders(row.headers, extra),
           tags: row.tagsEdited ? row.tags : null,
+          folder: keepFolders ? row.folder : null,
         });
         setRows((all) => all.filter((r) => r.key !== row.key));
       } catch (e) {
@@ -205,17 +279,60 @@ const AddDownloads: React.FC = () => {
         update(row.key, { error: e instanceof Error ? e.message : String(e) });
       }
     }
+    // Files left unticked go with their group.
+    const skipped = new Set(submitted.filter((r) => !chosen(r)).map((r) => r.key));
+    setRows((all) => all.filter((r) => !skipped.has(r.key)));
     setAdding(false);
     setDone(failed === 0);
   };
 
+  useEffect(() => {
+    setGroups((all) => (all.some((g) => !rows.some((r) => r.group === g.key)) ? all.filter((g) => rows.some((r) => r.group === g.key)) : all));
+  }, [rows]);
+
+  const setGroup = (key: number, patch: Partial<Row>) => setRows((all) => all.map((r) => (r.group === key ? { ...r, ...patch } : r)));
+  const toggleGroup = (key: number) => setGroups((all) => all.map((g) => (g.key === key ? { ...g, collapsed: !g.collapsed } : g)));
   const close = () => getCurrentWindow().close().catch(() => {});
   // Links that arrived while adding keep the window open.
   useEffect(() => {
     if (done && rows.length === 0) close();
     else if (done) setDone(false);
   }, [done, rows.length]);
+  /** Above a shared folder's files: collapse, tick all, how many and how big, remove all. */
+  const groupHeader = (group: Group, module: InstalledInfo | null) => {
+    const files = rows.filter((r) => r.group === group.key);
+    const picked = files.filter((r) => r.selected);
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5, py: 0.25, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+        <IconButton onClick={() => toggleGroup(group.key)}>
+          {group.collapsed ? <CollapsedIcon fontSize="small" /> : <ExpandIcon fontSize="small" />}
+        </IconButton>
+        <Tooltip title={t('addWindow.selectFiles')}>
+          <Checkbox
+            sx={{ p: 0.5 }}
+            checked={picked.length === files.length}
+            indeterminate={picked.length > 0 && picked.length < files.length}
+            onChange={(e) => setGroup(group.key, { selected: e.target.checked })}
+          />
+        </Tooltip>
+        <Typography variant="body2" noWrap title={group.url} sx={{ flex: 1, minWidth: 0 }}>
+          {hostOf(group.url)} · {module?.name}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {t('addWindow.shareFiles', { count: picked.length, size: formatBytes(picked.reduce((n, r) => n + (r.size ?? 0), 0)) })}
+        </Typography>
+        <Tooltip title={t('addWindow.remove')}>
+          <IconButton onClick={() => setRows((all) => all.filter((r) => r.group !== group.key))}>
+            <RemoveIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    );
+  };
+
   const customHeaders = fromHeaderFields(headers).length;
+  const toAdd = rows.filter(chosen).length;
+  const anyFolders = rows.some((r) => r.folder);
   const fixed = { flexShrink: 0, bgcolor: 'background.paper', borderColor: 'divider' };
 
   return (
@@ -261,83 +378,99 @@ const AddDownloads: React.FC = () => {
             {t('addWindow.empty')}
           </Typography>
         ) : (
-          rows.map((row) => (
-            <Box
-              key={row.key}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) 180px 28px',
-                gap: 1,
-                alignItems: 'center',
-                px: 1,
-                py: 0.75,
-                borderBottom: 1,
-                borderColor: 'divider',
-                '&:hover .remove': { visibility: 'visible' },
-              }}
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <TextField
-                  value={row.filename}
-                  placeholder={row.module ? t('addWindow.namedBySite') : ''}
-                  onChange={(e) => update(row.key, { filename: e.target.value, filenameEdited: true })}
-                  onBlur={() => !row.tagsEdited && row.filenameEdited && inspect(row.key, row.url, row.filename.trim() || null)}
-                  fullWidth
-                  variant="standard"
-                  slotProps={{ htmlInput: { spellCheck: false } }}
-                />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25, minWidth: 0 }}>
-                  {row.headers.length > 0 && (
-                    <Tooltip title={`${t('addWindow.browserHeaders')}: ${row.headers.map(([n]) => n).join(', ')}`}>
-                      <BrowserIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                    </Tooltip>
-                  )}
-                  <Typography
-                    variant="caption"
-                    noWrap
-                    color={row.error ? 'error' : 'text.secondary'}
-                    title={row.error ?? row.url}
-                    sx={{ minWidth: 0 }}
+          rows.map((row, i) => {
+            const group = row.group === undefined ? undefined : groups.find((g) => g.key === row.group);
+            return (
+              <React.Fragment key={row.key}>
+                {group && rows[i - 1]?.group !== group.key && groupHeader(group, row.module)}
+                {!group?.collapsed && (
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(0, 1fr) 180px 28px',
+                      gap: 1,
+                      alignItems: 'center',
+                      px: 1,
+                      py: 0.75,
+                      borderBottom: 1,
+                      borderColor: 'divider',
+                      '&:hover .remove': { visibility: 'visible' },
+                    }}
                   >
-                    {row.error ??
-                      `${hostOf(row.url)} · ${
-                        row.module ? t('modules.match.resolvedBy', { name: row.module.name }) : t('downloads.details.directDownload')
-                      }`}
-                  </Typography>
-                </Box>
-              </Box>
-              <Select
-                multiple
-                fullWidth
-                variant="standard"
-                value={row.tags}
-                displayEmpty
-                disabled={categories.length === 0}
-                onChange={(e) => update(row.key, { tags: typeof e.target.value === 'string' ? [] : e.target.value, tagsEdited: true })}
-                renderValue={(tags) =>
-                  tags.length === 0 ? (
-                    <Typography variant="body2" color="text.disabled" component="span">
-                      {categories.length === 0 ? t('categories.none') : t('addWindow.noCategory')}
-                    </Typography>
-                  ) : (
-                    categories.filter((c) => tags.includes(c.id)).map((c) => c.name).join(', ')
-                  )
-                }
-              >
-                {categories.map((c) => (
-                  <MenuItem key={c.id} value={c.id} sx={{ py: 0 }}>
-                    <Checkbox checked={row.tags.includes(c.id)} sx={{ p: 0.5, mr: 0.5 }} />
-                    <ListItemText primary={c.name} />
-                  </MenuItem>
-                ))}
-              </Select>
-              <Tooltip title={t('addWindow.remove')}>
-                <IconButton className="remove" sx={{ visibility: 'hidden' }} onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>
-                  <RemoveIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          ))
+                    <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'flex-start', gap: 0.5, pl: group ? 3 : 0 }}>
+                      {group && (
+                        <Checkbox sx={{ p: 0.5 }} checked={row.selected} onChange={(e) => update(row.key, { selected: e.target.checked })} />
+                      )}
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <TextField
+                          value={row.filename}
+                          placeholder={row.module ? t('addWindow.namedBySite') : ''}
+                          onChange={(e) => update(row.key, { filename: e.target.value, filenameEdited: true })}
+                          onBlur={() => !row.tagsEdited && row.filenameEdited && inspect(row.key, row.url, row.filename.trim() || null)}
+                          fullWidth
+                          variant="standard"
+                          slotProps={{ htmlInput: { spellCheck: false } }}
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25, minWidth: 0 }}>
+                          {row.headers.length > 0 && (
+                            <Tooltip title={`${t('addWindow.browserHeaders')}: ${row.headers.map(([n]) => n).join(', ')}`}>
+                              <BrowserIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                            </Tooltip>
+                          )}
+                          <Typography
+                            variant="caption"
+                            noWrap
+                            color={row.error ? 'error' : 'text.secondary'}
+                            title={row.error ?? row.url}
+                            sx={{ minWidth: 0 }}
+                          >
+                            {row.error ??
+                              (group
+                                ? [row.folder, row.size === null ? null : formatBytes(row.size)].filter(Boolean).join(' · ')
+                                : row.listing
+                                  ? t('addWindow.readingShare')
+                                  : `${hostOf(row.url)} · ${
+                                      row.module ? t('modules.match.resolvedBy', { name: row.module.name }) : t('downloads.details.directDownload')
+                                    }`)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Select
+                      multiple
+                      fullWidth
+                      variant="standard"
+                      value={row.tags}
+                      displayEmpty
+                      disabled={categories.length === 0}
+                      onChange={(e) => update(row.key, { tags: typeof e.target.value === 'string' ? [] : e.target.value, tagsEdited: true })}
+                      renderValue={(tags) =>
+                        tags.length === 0 ? (
+                          <Typography variant="body2" color="text.disabled" component="span">
+                            {categories.length === 0 ? t('categories.none') : t('addWindow.noCategory')}
+                          </Typography>
+                        ) : (
+                          categories.filter((c) => tags.includes(c.id)).map((c) => c.name).join(', ')
+                        )
+                      }
+                    >
+                      {categories.map((c) => (
+                        <MenuItem key={c.id} value={c.id} sx={{ py: 0 }}>
+                          <Checkbox checked={row.tags.includes(c.id)} sx={{ p: 0.5, mr: 0.5 }} />
+                          <ListItemText primary={c.name} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <Tooltip title={t('addWindow.remove')}>
+                      <IconButton className="remove" sx={{ visibility: 'hidden' }} onClick={() => setRows((all) => all.filter((r) => r.key !== row.key))}>
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
+              </React.Fragment>
+            );
+          })
         )}
       </Box>
 
@@ -351,6 +484,13 @@ const AddDownloads: React.FC = () => {
           <Button color="inherit" startIcon={<FolderIcon fontSize="small" />} onClick={openDirectoryPicker}>
             {t('common.browse')}
           </Button>
+          {anyFolders && (
+            <FormControlLabel
+              sx={{ ml: 0.5, whiteSpace: 'nowrap' }}
+              control={<Checkbox checked={keepFolders} onChange={(e) => setKeepFolders(e.target.checked)} />}
+              label={t('addWindow.keepFolders')}
+            />
+          )}
         </Box>
 
         <Typography variant="body2" color="text.secondary">
@@ -382,12 +522,12 @@ const AddDownloads: React.FC = () => {
         )}
         <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
           <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-            {t('addWindow.count', { count: rows.length })}
+            {t('addWindow.count', { count: toAdd })}
           </Typography>
           <Button color="inherit" onClick={close}>
             {t('common.cancel')}
           </Button>
-          <Button variant="contained" onClick={submit} disabled={adding || rows.length === 0 || (start === 'at' && !scheduleAt)}>
+          <Button variant="contained" onClick={submit} disabled={adding || toAdd === 0 || rows.some((r) => r.listing) || (start === 'at' && !scheduleAt)}>
             {t('addWindow.addAll')}
           </Button>
         </Box>
