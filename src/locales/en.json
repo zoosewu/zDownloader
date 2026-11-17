@@ -340,5 +340,10 @@
     "retry": "Try again",
     "later": "Later",
     "noRelease": "No published version found (nothing released yet, or GitHub is unreachable)"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong on this screen",
+    "message": "Downloads are not affected and keep going in the background. Reloading the screen usually fixes it; if it keeps happening, please report the error below.",
+    "reload": "Reload"
   }
 }

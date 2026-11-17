@@ -22,6 +22,7 @@ import { usePageGuards } from './hooks/usePageGuards';
 import { useDownloadSync } from './hooks/useDownloadSync';
 import { useModulesSync } from './hooks/useSiteModules';
 import CaptchaDialog from './components/CaptchaDialog';
+import ErrorBoundary from './components/ErrorBoundary';
 import AddDownloadsDialog from './components/AddDownloads';
 import SourceChangedPrompt from './components/SourceChangedPrompt';
 import UpdateBanner from './components/UpdateBanner';
@@ -115,16 +116,22 @@ function App() {
 
         {/* Page Content */}
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
-          {currentPage === 'main' && <MainPage />}
-          {currentPage === 'settings' && <SettingsPage />}
+          {/* Keyed by page: going to the other page starts it afresh after an error. */}
+          <ErrorBoundary key={currentPage}>
+            {currentPage === 'main' && <MainPage />}
+            {currentPage === 'settings' && <SettingsPage />}
+          </ErrorBoundary>
         </Box>
 
         {/* Global Footer */}
         <Footer />
 
-        <AddDownloadsDialog />
-        <CaptchaDialog />
-        <SourceChangedPrompt />
+        {/* A broken dialog leaves the list usable. */}
+        <ErrorBoundary>
+          <AddDownloadsDialog />
+          <CaptchaDialog />
+          <SourceChangedPrompt />
+        </ErrorBoundary>
       </Box>
     </ThemeProvider>
   );
