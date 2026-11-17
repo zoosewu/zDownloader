@@ -41,8 +41,8 @@ interface RowProps {
 
 
 // Theme palette names only (see styles/theme.ts): running is info; completed, the normal end,
-// is quiet (outlined, with only its check in the brand color), so a finished list is not a
-// wall of green.
+// is the brand but light (an outlined chip, a softer bar), so a finished list is not a wall of
+// green and does not look disabled either.
 const STATE_COLOR: Record<TaskState, 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info'> = {
   scheduled: 'default',
   queued: 'default',
@@ -63,13 +63,13 @@ const STATE_ICON: Record<TaskState, React.ReactElement> = {
   cancelled: <CancelledIcon fontSize="small" />,
 };
 
-/** Waiting, completed and cancelled bars stay neutral (`inherit` takes the grey set on the bar). */
+/** Waiting and cancelled bars stay neutral (`inherit` takes the grey set on the bar). */
 const PROGRESS_COLOR: Record<TaskState, 'inherit' | 'success' | 'error' | 'warning' | 'info'> = {
   scheduled: 'inherit',
   queued: 'inherit',
   running: 'info',
   paused: 'warning',
-  completed: 'inherit',
+  completed: 'success',
   failed: 'error',
   cancelled: 'inherit',
 };
@@ -106,7 +106,6 @@ const StatusCell = React.memo(
           variant={state === 'completed' ? 'outlined' : 'filled'}
           size="small"
           icon={STATE_ICON[state]}
-          sx={state === 'completed' ? { color: 'text.secondary', borderColor: 'divider' } : undefined}
         />
       </Tooltip>
     </TableCell>
@@ -196,7 +195,7 @@ const TaskRow: React.FC<RowProps & { task: Task }> = React.memo(
                 variant={task.total === null && task.state === 'running' ? 'indeterminate' : 'determinate'}
                 value={displayData.progress}
                 color={PROGRESS_COLOR[shownState]}
-                sx={{ height: 4, color: 'text.disabled' }}
+                sx={{ height: 4, color: 'text.disabled', '& .MuiLinearProgress-bar': { opacity: shownState === 'completed' ? 0.55 : 1 } }}
               />
             </Box>
             <Box sx={{ minWidth: 42, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{displayData.progressFormatted}</Box>

@@ -53,6 +53,14 @@ describe('drag to reorder', () => {
     expect(droppedBefore(ids, 'a', 'd')).toBeNull(); // to the end
     expect(droppedBefore(ids, 'c', 'a')).toBe('a'); // to the front
   });
+
+  test('the table shows the queue reversed; a drop there is worked out in queue order', () => {
+    const queue = ['a', 'b', 'c', 'd']; // shown as d c b a
+    // Shown d c b a, drag a onto c: d a c b on screen, so the queue is b c a d.
+    expect(droppedBefore([...queue], 'a', 'c')).toBe('d');
+    // Shown d c b a, drag d onto b: c b d a on screen, so the queue is a d b c.
+    expect(droppedBefore([...queue], 'd', 'b')).toBe('b');
+  });
 });
 
 describe('task status', () => {

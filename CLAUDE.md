@@ -506,7 +506,7 @@ chmod +x .git/hooks/pre-commit
 - `sourceChangedTasksAtom`：來源已變更的任務 — `SourceChangedPrompt`
 - `selectedTaskIdAtom` / `selectedTaskAtom`：選取的 id / 任務
 
-**viewStore.ts**：側邊欄的檢視。`viewAtom`（狀態或 `cat:<分類 id>`，記在 localStorage）、`visibleTaskIdsAtom`（表格顯示的 id）、`viewCountsAtom`（各檢視的數量，不含速度，工具列也讀它）。等待自動重試的失敗任務算「等待中」。拖曳排序只在「全部」「等待中」開放。
+**viewStore.ts**：側邊欄的檢視。`viewAtom`（狀態或 `cat:<分類 id>`，記在 localStorage）、`visibleTaskIdsAtom`（表格顯示的 id，佇列順序反過來：新的在最上面，下載仍由最舊的開始；拖曳時換回佇列順序計算）、`viewCountsAtom`（各檢視的數量，不含速度，工具列也讀它）。等待自動重試的失敗任務算「等待中」。拖曳排序只在「全部」「等待中」開放。
 
 **分類**：定義在 `AppSettings.categories`，規則在 zoo-core `category.rs`（`match: all|any`；副檔名、網域含子網域、包含文字、regex）。新增任務時套用並存成 `Task.tags`；模組命名檔案後若 `customTags` 為 false 再算一次；手動設定（右鍵選單、`downloads_set_tags`）後規則不再改它；刪除分類時各任務的該標籤自動移除。
 

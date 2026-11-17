@@ -75,12 +75,14 @@ const idsByView = new Map<View, ReturnType<typeof idsIn>>();
 function idsIn(view: View) {
   return selectAtom(
     tasksByIdAtom,
-    (tasks: TaskMap) => orderedIds(tasks).filter((id) => inView(tasks[id], view)),
+    // Newest first: the queue starts from the oldest, which the table shows at the bottom.
+    (tasks: TaskMap) => orderedIds(tasks).filter((id) => inView(tasks[id], view)).reverse(),
     sameItems,
   );
 }
 
-/** Ids of the tasks in the selected view, in queue order. */
+/** Ids of the tasks in the selected view, as the table shows them: reverse queue order, so a
+ * new download appears at the top while downloads still start oldest first. */
 export const visibleTaskIdsAtom = atom((get): TaskId[] => {
   const view = get(viewAtom);
   let ids = idsByView.get(view);

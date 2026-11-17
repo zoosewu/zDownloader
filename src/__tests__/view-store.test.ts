@@ -77,10 +77,10 @@ describe('the selected view', () => {
     return store;
   };
 
-  test('shows the tasks of a status or a category, in queue order', () => {
+  test('shows the tasks of a status or a category, newest (last in the queue) first', () => {
     const store = setup();
     store.set(viewAtom, 'running');
-    expect(store.get(visibleTaskIdsAtom)).toEqual(['a', 'c']);
+    expect(store.get(visibleTaskIdsAtom)).toEqual(['c', 'a']);
     store.set(viewAtom, 'cat:video');
     expect(store.get(visibleTaskIdsAtom)).toEqual(['a']);
   });
@@ -89,7 +89,7 @@ describe('the selected view', () => {
     const store = setup();
     store.set(viewAtom, 'cat:gone');
     expect(store.get(viewAtom)).toBe('all');
-    expect(store.get(visibleTaskIdsAtom)).toEqual(['a', 'b', 'c']);
+    expect(store.get(visibleTaskIdsAtom)).toEqual(['c', 'b', 'a']);
   });
 
   test('progress changes neither the list nor the counts', () => {

@@ -88,7 +88,9 @@ const DownloadTable: React.FC<DownloadTableProps> = ({ onActionError }) => {
   const { move } = useDownloadActions();
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!sortable || !over || active.id === over.id) return;
-    const before = droppedBefore(ids, String(active.id), String(over.id));
+    // The table shows the queue reversed. Taking another row's place is the same move either
+    // way round, so work it out in queue order, which `move` speaks.
+    const before = droppedBefore([...ids].reverse(), String(active.id), String(over.id));
     move(String(active.id), before).catch((error) => onActionError?.(error.message));
   };
 
