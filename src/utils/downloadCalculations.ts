@@ -1,5 +1,6 @@
 // Download calculations utility - Time estimation and data formatting
 import type { Task } from '../backend';
+import { formatDuration } from './formatters';
 
 /** Percent complete (0-100), or null when the size is unknown. */
 export function progressPercent(task: Task): number | null {
@@ -15,21 +16,8 @@ export function calculateRemainingTime(task: Task): number | null {
   return isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
-/** e.g. "2分30秒", "1小時15分"; "--" when unknown. */
-export function formatRemainingTime(seconds: number | null): string {
-  if (seconds === null || !isFinite(seconds) || seconds < 0) {
-    return '--';
-  }
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  if (hours > 0) {
-    return `${hours}小時${minutes}分`;
-  } else if (minutes > 0) {
-    return `${minutes}分${secs}秒`;
-  }
-  return `${secs}秒`;
-}
+/** e.g. "2m 30s" / "2分鐘 30秒" (the app's language); "--" when unknown. */
+export const formatRemainingTime = (seconds: number | null): string => formatDuration(seconds);
 
 /** e.g. "1.50 GB", "230.00 MB". */
 export function formatBytes(bytes: number): string {

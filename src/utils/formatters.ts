@@ -1,96 +1,41 @@
-// Formatting utilities for display
+// Times for display, in the app's language (the browser's Intl does the wording: "5 minutes ago",
+// "5 分鐘前", "yesterday", "昨天").
+import i18n from '../i18n';
 
-/**
- * Format ISO 8601 timestamp to relative time (e.g., "5 minutes ago", "yesterday")
- * @param isoString ISO 8601 timestamp string
- * @returns Human-readable relative time string
- */
-export function formatRelativeTime(isoString: string): string {
-  try {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
+const UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ['year', 365 * 86400],
+  ['month', 30 * 86400],
+  ['week', 7 * 86400],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+];
 
-    // Just now (< 1 minute)
-    if (diffSeconds < 60) {
-      return '剛剛';
-    }
-
-    // Minutes ago (< 1 hour)
-    if (diffMinutes < 60) {
-      return `${diffMinutes}分鐘前`;
-    }
-
-    // Hours ago (< 24 hours)
-    if (diffHours < 24) {
-      return `${diffHours}小時前`;
-    }
-
-    // Days ago (< 7 days)
-    if (diffDays < 7) {
-      if (diffDays === 1) {
-        return '昨天';
-      }
-      return `${diffDays}天前`;
-    }
-
-    // Weeks ago (< 30 days)
-    if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks}週前`;
-    }
-
-    // Months ago (< 365 days)
-    if (diffDays < 365) {
-      const months = Math.floor(diffDays / 30);
-      return `${months}個月前`;
-    }
-
-    // Years ago
-    const years = Math.floor(diffDays / 365);
-    return `${years}年前`;
-  } catch (error) {
-    console.error('Failed to format relative time:', error);
-    return '--';
+/** How long ago `isoString` was ("now", "5 minutes ago", "yesterday"). */
+export function formatRelativeTime(isoString: string, lang: string = i18n.language, now: number = Date.now()): string {
+  const seconds = Math.floor((now - new Date(isoString).getTime()) / 1000);
+  if (!isFinite(seconds)) return '--';
+  const format = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+  for (const [unit, size] of UNITS) {
+    if (seconds >= size) return format.format(-Math.floor(seconds / size), unit);
   }
+  return format.format(0, 'second');
 }
 
-/**
- * Format ISO 8601 timestamp to absolute time (e.g., "2025-12-03 14:30")
- * @param isoString ISO 8601 timestamp string
- * @returns Formatted absolute time string
- */
-export function formatAbsoluteTime(isoString: string): string {
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch (error) {
-    console.error('Failed to format absolute time:', error);
-    return '--';
-  }
+/** Date and time of `isoString` ("2025/12/03 14:30", "12/03/2025, 2:30 PM"). */
+export function formatAbsoluteTime(isoString: string, lang: string = i18n.language): string {
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '--';
+  return date.toLocaleString(lang, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
-/**
- * Format ISO 8601 timestamp with both relative and absolute time for tooltip
- * @param isoString ISO 8601 timestamp string
- * @returns Object with relative and absolute time strings
- */
-export function formatTimeWithTooltip(isoString: string): {
-  relative: string;
-  absolute: string;
-} {
-  return {
-    relative: formatRelativeTime(isoString),
-    absolute: formatAbsoluteTime(isoString),
-  };
+/** A duration in at most two units ("1h 15m", "2分鐘 30秒"); "--" when unknown. */
+export function formatDuration(seconds: number | null, lang: string = i18n.language): string {
+  if (seconds === null || !isFinite(seconds) || seconds < 0) return '--';
+  const unit = (value: number, name: 'hour' | 'minute' | 'second') =>
+    new Intl.NumberFormat(lang, { style: 'unit', unit: name, unitDisplay: 'narrow' }).format(value);
+  const [h, m, s] = [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), Math.floor(seconds % 60)];
+  if (h > 0) return `${unit(h, 'hour')} ${unit(m, 'minute')}`;
+  if (m > 0) return `${unit(m, 'minute')} ${unit(s, 'second')}`;
+  return unit(s, 'second');
 }
