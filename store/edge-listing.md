@@ -33,7 +33,7 @@
 
 ## 3. 商店清單（Store listing，每種語言）
 
-描述與搜尋字詞不提任何網站模組或網站的名稱（使用者決定，2026-11-17）。
+描述與搜尋字詞不提任何網站模組或網站的名稱，也不提 InPrivate（使用者決定，2026-11-17；InPrivate 的行為寫在 PRIVACY.md）。
 
 擴充名稱取自 manifest（`Zoo Downloader`），不用填。
 
@@ -49,7 +49,7 @@
 >
 > Requires the free Zoo Downloader app for Windows, macOS or Linux: https://github.com/zoosewu/zDownloader/releases
 >
-> The extension talks only to the app on your own computer (Native Messaging). It makes no network requests, collects nothing and sends nothing to us or anyone else. It works in InPrivate windows only if you allow it there in the extension's settings; downloads handed to the app then stay in the app's list like any other.
+> The extension talks only to the app on your own computer (Native Messaging). It makes no network requests, collects nothing and sends nothing to us or anyone else.
 
 **Search terms**（最多 7 個）：`download manager`, `downloader`, `accelerator`, `resume download`, `batch download`, `multi-connection download`
 
@@ -65,7 +65,7 @@
 >
 > 需要免費的 Zoo Downloader app（Windows、macOS、Linux）：https://github.com/zoosewu/zDownloader/releases
 >
-> 擴充功能只和你電腦上的 app 溝通（原生訊息），本身不連網路、不收集任何資料，也不會把資料送給我們或任何人。只有在你於擴充功能設定中允許 InPrivate 時，它才會在 InPrivate 視窗運作；交給 app 的下載會和其他下載一樣留在 app 的清單中。
+> 擴充功能只和你電腦上的 app 溝通（原生訊息），本身不連網路、不收集任何資料，也不會把資料送給我們或任何人。
 
 **搜尋字詞**：`下載管理員`, `下載器`, `續傳`, `批次下載`, `加速下載`, `多線程下載`
 
@@ -81,7 +81,7 @@
 >
 > 無料の Zoo Downloader アプリ（Windows、macOS、Linux）が必要です: https://github.com/zoosewu/zDownloader/releases
 >
-> 拡張機能は同じコンピューター上のアプリとだけ通信し（ネイティブ メッセージング）、ネットワークには接続せず、データを収集・送信しません。InPrivate ウィンドウでは、拡張機能の設定で許可した場合にのみ動作します。その場合、アプリに渡したダウンロードは他と同じくアプリの一覧に残ります。
+> 拡張機能は同じコンピューター上のアプリとだけ通信し（ネイティブ メッセージング）、ネットワークには接続せず、データを収集・送信しません。
 
 **検索語句**：`ダウンロード マネージャー`, `ダウンローダー`, `レジューム`, `一括ダウンロード`, `高速ダウンロード`
 
