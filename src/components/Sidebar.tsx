@@ -98,7 +98,7 @@ const Sidebar: React.FC = () => {
       >
         <ListItemIcon sx={{ minWidth: collapsed ? 0 : 28, color: count === 0 ? 'text.disabled' : undefined }}>
           {collapsed ? (
-            <Badge badgeContent={count} max={99} color="primary" variant="standard" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 15, minWidth: 15, px: 0.5 } }}>
+            <Badge badgeContent={count} max={99} color="default" variant="standard" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 15, minWidth: 15, px: 0.5 } }}>
               {icon}
             </Badge>
           ) : (

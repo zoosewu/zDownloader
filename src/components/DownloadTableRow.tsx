@@ -40,7 +40,9 @@ interface RowProps {
 }
 
 
-// Theme palette names only (see styles/theme.ts): running is info, finished is the brand.
+// Theme palette names only (see styles/theme.ts): running is info; completed, the normal end,
+// is quiet (outlined, with only its check in the brand color), so a finished list is not a
+// wall of green.
 const STATE_COLOR: Record<TaskState, 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info'> = {
   scheduled: 'default',
   queued: 'default',
@@ -61,13 +63,13 @@ const STATE_ICON: Record<TaskState, React.ReactElement> = {
   cancelled: <CancelledIcon fontSize="small" />,
 };
 
-/** Waiting and cancelled bars stay neutral (`inherit` takes the grey set on the bar). */
+/** Waiting, completed and cancelled bars stay neutral (`inherit` takes the grey set on the bar). */
 const PROGRESS_COLOR: Record<TaskState, 'inherit' | 'success' | 'error' | 'warning' | 'info'> = {
   scheduled: 'inherit',
   queued: 'inherit',
   running: 'info',
   paused: 'warning',
-  completed: 'success',
+  completed: 'inherit',
   failed: 'error',
   cancelled: 'inherit',
 };
@@ -98,7 +100,14 @@ const StatusCell = React.memo(
   ({ label, state, tooltip, width }: { label: string; state: TaskState; tooltip: string; width?: number }) => (
     <TableCell sx={widthSx(width)}>
       <Tooltip title={tooltip} arrow>
-        <Chip label={label} color={STATE_COLOR[state]} size="small" icon={STATE_ICON[state]} />
+        <Chip
+          label={label}
+          color={STATE_COLOR[state]}
+          variant={state === 'completed' ? 'outlined' : 'filled'}
+          size="small"
+          icon={STATE_ICON[state]}
+          sx={state === 'completed' ? { color: 'text.secondary', borderColor: 'divider' } : undefined}
+        />
       </Tooltip>
     </TableCell>
   ),

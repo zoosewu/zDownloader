@@ -2,13 +2,17 @@
 // ripples or shadows), in light and dark.
 //
 // Every color comes from one brand hue, the app icon's teal-emerald. Status colors keep the
-// brand's saturation and lightness and only turn the hue, so they read as one family; greys
-// carry a trace of the brand hue. Components use palette names (primary, info, success,
+// brand's saturation and lightness and only turn the hue, so they read as one family. The
+// brand is an accent (about a fifth of what shows: primary buttons, tabs, checkboxes, the
+// selection, focus); surfaces, text and dividers are neutral cool greys, and the normal end of
+// a download (completed) stays quiet. Components use palette names (primary, info, success,
 // warning, error, text.*, divider), never color literals.
 import { createTheme, alpha, type PaletteMode, type Theme } from '@mui/material/styles';
 
 /** The icon's teal-emerald (#0F766E to #34D399). */
 export const BRAND_HUE = 165;
+/** Greys: cool and nearly colorless, so surfaces never look tinted by the brand. */
+const GREY_HUE = 220;
 
 // Comma syntax: MUI's color helpers (alpha, darken, getContrastText) do not parse `hsl(h s l)`.
 const hsl = (h: number, s: number, l: number) => `hsl(${h}, ${s}%, ${l}%)`;
@@ -29,7 +33,7 @@ function tones(dark: boolean) {
 function appTheme(mode: PaletteMode): Theme {
   const dark = mode === 'dark';
   const t = tones(dark);
-  const grey = (s: number, l: number) => hsl(BRAND_HUE, s, l);
+  const grey = (s: number, l: number) => hsl(GREY_HUE, s, l);
   const base = createTheme({
     spacing: 6,
     shape: { borderRadius: 4 },
@@ -42,14 +46,15 @@ function appTheme(mode: PaletteMode): Theme {
       info: { main: t.info },
       warning: { main: t.warning },
       error: { main: t.error },
-      background: dark ? { default: grey(9, 9), paper: grey(8, 12) } : { default: grey(14, 95), paper: grey(20, 99.5) },
+      background: dark ? { default: grey(5, 9), paper: grey(5, 12) } : { default: grey(10, 96), paper: grey(10, 99.5) },
       text: dark
-        ? { primary: grey(12, 91), secondary: grey(7, 63), disabled: grey(5, 42) }
-        : { primary: grey(22, 13), secondary: grey(8, 38), disabled: grey(6, 62) },
-      divider: dark ? alpha(grey(20, 80), 0.1) : alpha(grey(30, 15), 0.11),
+        ? { primary: grey(6, 91), secondary: grey(5, 64), disabled: grey(4, 43) }
+        : { primary: grey(10, 13), secondary: grey(6, 38), disabled: grey(5, 62) },
+      divider: dark ? alpha(grey(10, 80), 0.1) : alpha(grey(15, 15), 0.11),
+      // Hover is neutral; only the selection carries the brand.
       action: dark
-        ? { hover: alpha(t.primary, 0.07), selected: alpha(t.primary, 0.14) }
-        : { hover: alpha(t.primary, 0.05), selected: alpha(t.primary, 0.1) },
+        ? { hover: alpha(grey(10, 90), 0.06), selected: alpha(t.primary, 0.13) }
+        : { hover: alpha(grey(15, 15), 0.05), selected: alpha(t.primary, 0.1) },
     },
     typography: {
       fontFamily: ['"Segoe UI Variable Text"', '"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif'].join(','),

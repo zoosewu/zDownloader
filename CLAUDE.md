@@ -543,9 +543,9 @@ chmod +x .git/hooks/pre-commit
 
 ### Theme Support
 
-所有顏色由 `src/styles/theme.ts` 的一個品牌色相（`BRAND_HUE` = 165，圖示的青綠）推導：狀態色與品牌同飽和度、同亮度，只轉色相（info 偏藍 +40、warning 琥珀 −125、error 玫瑰 −170）；success 就是品牌色；灰階帶一點品牌色相。
+所有顏色由 `src/styles/theme.ts` 的一個品牌色相（`BRAND_HUE` = 165，圖示的青綠）推導：狀態色與品牌同飽和度、同亮度，只轉色相（info 偏藍 +40、warning 琥珀 −125、error 玫瑰 −170）；success 就是品牌色。品牌色是重點色，只占畫面約兩到三成（主要按鈕、分頁、勾選框、選取、焦點、連結）；背景、文字、分隔線、滑過是中性冷灰（`GREY_HUE` = 220，飽和度很低），不帶綠（2026-11-17 使用者要求）。
 - 元件只用調色盤名稱（`primary`、`info`、`success`、`warning`、`error`、`text.*`、`divider`、`action.*`），**不寫色碼、不寫 CSS 檔**。canvas 等需要實際色值的地方用 `useTheme()` 取。
-- 任務狀態：下載中 `info`、已完成 `success`、已暫停 `warning`、失敗 `error`，其餘中性。
+- 任務狀態：下載中 `info`、已暫停 `warning`、失敗 `error`；已完成是常態，用中性外框標籤與灰色進度條，其餘中性。
 - `hsl()` 要用逗號格式：MUI 的 `alpha`/`darken`/`getContrastText` 不認得 `hsl(h s l)`。
 - 瀏覽器擴充的 popup 與徽章顏色另外寫死，改品牌色時一併更新（`browser-extension/popup.css`、`src/core.js`）。
 
