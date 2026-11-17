@@ -1,13 +1,12 @@
 //! Shell side of site modules: the marketplace, the resolver it feeds, and the user answering
 //! captchas. Commands live in `commands::site_modules`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
@@ -21,8 +20,6 @@ use zoo_module_client::{Captcha, Interaction, Secret, Supervisor};
 pub const MODULES_EVENT: &str = "modules-changed";
 /// A `CaptchaEvent`.
 pub const CAPTCHA_EVENT: &str = "captcha-event";
-/// How often local (in-development) modules are re-read.
-const LOCAL_RELOAD: Duration = Duration::from_secs(2);
 
 pub struct SiteModules {
     pub market: Arc<Marketplace>,
@@ -30,6 +27,7 @@ pub struct SiteModules {
     pub captchas: Arc<Captchas>,
     /// Downloaded and verified, waiting for the user's consent; by module key.
     plans: Mutex<HashMap<String, Plan>>,
+    local: LocalWatch,
 }
 
 impl SiteModules {
@@ -37,14 +35,16 @@ impl SiteModules {
         let market = Arc::new(Marketplace::open(&data_dir.join("site-modules"), Arc::new(KeyringSecrets))?);
         let captchas = Arc::new(Captchas::default());
         let resolver = Arc::new(ModuleResolver::new(Arc::new(module_host()), captchas.clone()));
-        let modules = Self { market, resolver, captchas, plans: Mutex::default() };
+        let modules = Self { market, resolver, captchas, plans: Mutex::default(), local: LocalWatch::default() };
         modules.sync();
         Ok(modules)
     }
 
-    /// Make downloads use the installed modules as they are now.
+    /// Make downloads use the installed modules as they are now, and watch the folders of the
+    /// local ones.
     pub fn sync(&self) {
         self.resolver.set_modules(self.market.resolver_modules());
+        self.local.follow(self.market.local_dirs());
     }
 
     pub fn keep_plan(&self, plan: Plan) {
@@ -53,6 +53,42 @@ impl SiteModules {
 
     pub fn take_plan(&self, key: &str) -> Option<Plan> {
         self.plans.lock().unwrap().remove(key)
+    }
+}
+
+/// The folders of local modules, watched by the OS: an edited manifest is re-read at once.
+#[derive(Default)]
+struct LocalWatch(Mutex<Option<(notify::RecommendedWatcher, HashSet<PathBuf>)>>);
+
+impl LocalWatch {
+    /// Start watching; `changed` runs (on the watcher's thread) when a manifest changes.
+    fn start(&self, changed: impl Fn() + Send + 'static) {
+        let watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
+            if event.is_ok_and(|e| e.paths.iter().any(|p| p.file_name().is_some_and(|n| n == "manifest.json"))) {
+                changed();
+            }
+        });
+        match watcher {
+            Ok(watcher) => *self.0.lock().unwrap() = Some((watcher, HashSet::new())),
+            Err(e) => log::warn!("local modules will not reload by themselves: {e}"),
+        }
+    }
+
+    /// Watch exactly `dirs`.
+    fn follow(&self, dirs: Vec<PathBuf>) {
+        use notify::Watcher;
+        let mut guard = self.0.lock().unwrap();
+        let Some((watcher, watched)) = guard.as_mut() else { return };
+        let wanted: HashSet<PathBuf> = dirs.into_iter().collect();
+        for gone in watched.difference(&wanted) {
+            let _ = watcher.unwatch(gone);
+        }
+        for dir in wanted.difference(watched) {
+            if let Err(e) = watcher.watch(dir, notify::RecursiveMode::NonRecursive) {
+                log::warn!("cannot watch {}: {e}", dir.display());
+            }
+        }
+        *watched = wanted;
     }
 }
 
@@ -71,7 +107,7 @@ fn module_host() -> Supervisor {
 }
 
 /// Register the official marketplace, check for updates if the user wants that, relay
-/// captchas to the frontend and keep local modules in sync with their folders.
+/// captchas to the frontend and re-read local modules when their folders change.
 pub fn start(app: AppHandle, check_updates: bool) {
     let official = official_dir(&app);
     let handle = app.clone();
@@ -92,22 +128,21 @@ pub fn start(app: AppHandle, check_updates: bool) {
         let _ = handle.emit(MODULES_EVENT, ());
     });
 
+    // A local module's manifest changed: re-read it and tell downloads and the module page.
     let handle = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let mut tick = tokio::time::interval(LOCAL_RELOAD);
-        loop {
-            tick.tick().await;
-            let modules = handle.state::<SiteModules>();
-            match modules.market.reload_local() {
-                Ok(true) => {
-                    modules.sync();
-                    let _ = handle.emit(MODULES_EVENT, ());
-                }
-                Ok(false) => {}
-                Err(e) => log::warn!("cannot reload local modules: {e}"),
+    app.state::<SiteModules>().local.start(move || {
+        let modules = handle.state::<SiteModules>();
+        match modules.market.reload_local() {
+            Ok(true) => {
+                modules.sync();
+                let _ = handle.emit(MODULES_EVENT, ());
             }
+            Ok(false) => {}
+            Err(e) => log::warn!("cannot reload local modules: {e}"),
         }
     });
+    let modules = app.state::<SiteModules>();
+    modules.local.follow(modules.market.local_dirs());
 
     let mut events = app.state::<SiteModules>().captchas.events.subscribe();
     tauri::async_runtime::spawn(async move {
@@ -358,6 +393,27 @@ pub const RECAPTCHA_SCRIPT: &str = r#"
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn local_module_folders_report_manifest_edits_while_followed() {
+        use std::time::Duration;
+        let dir = tempfile::tempdir().unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let watch = LocalWatch::default();
+        watch.start(move || {
+            let _ = tx.send(());
+        });
+        watch.follow(vec![dir.path().to_path_buf()]);
+
+        std::fs::write(dir.path().join("other.txt"), "x").unwrap();
+        std::fs::write(dir.path().join("manifest.json"), "{}").unwrap();
+        rx.recv_timeout(Duration::from_secs(5)).expect("a manifest edit is reported");
+        while rx.recv_timeout(Duration::from_millis(300)).is_ok() {} // one save can be several events
+
+        watch.follow(vec![]);
+        std::fs::write(dir.path().join("manifest.json"), "{ }").unwrap();
+        assert!(rx.recv_timeout(Duration::from_millis(500)).is_err(), "an unfollowed folder is not watched");
+    }
 
     #[tokio::test]
     async fn a_captcha_waits_for_its_answer_and_always_closes() {

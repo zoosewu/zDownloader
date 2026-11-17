@@ -20,6 +20,7 @@ import { useNavigation } from './hooks/useNavigation';
 import { useClipboard } from './hooks/useClipboard';
 import { usePageGuards } from './hooks/usePageGuards';
 import { useDownloadSync } from './hooks/useDownloadSync';
+import { useModulesSync } from './hooks/useSiteModules';
 import CaptchaDialog from './components/CaptchaDialog';
 import AddDownloadsDialog from './components/AddDownloads';
 import SourceChangedPrompt from './components/SourceChangedPrompt';
@@ -43,6 +44,7 @@ function App() {
   usePageGuards();
   useClipboard(tauriReady);
   useDownloadSync(tauriReady);
+  useModulesSync(tauriReady);
   useAutomaticUpdateChecks(tauriReady);
   const { currentPage } = useNavigation();
   const [currentTheme] = useAtom(themeAtom);

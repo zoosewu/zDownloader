@@ -24,7 +24,6 @@ import {
 } from '@mui/material';
 import {
   Upload as ImportIcon,
-  Refresh as ReloadIcon,
   RestartAlt as ResetIcon,
   DeleteSweep as ClearIcon,
   DeleteOutlined as RemoveIcon,
@@ -40,7 +39,7 @@ import {
   clearAllProxiesAtom,
   resetFailedProxiesAtom,
 } from '../stores/proxyStore';
-import type { ProxyStatus } from '../backend';
+import { backend, type ProxyStatus } from '../backend';
 
 const STATUS_COLOR: Record<ProxyStatus, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   unknown: 'default',
@@ -75,8 +74,17 @@ export default function ProxySettings() {
   const [notice, setNotice] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
+  // The list follows the backend while the page is open: health and counters change with
+  // every request through a proxy.
   useEffect(() => {
     loadProxyList();
+    let stop: (() => void) | undefined;
+    let disposed = false;
+    backend.events.onProxiesChanged(() => loadProxyList()).then((u) => (disposed ? u() : (stop = u)));
+    return () => {
+      disposed = true;
+      stop?.();
+    };
   }, [loadProxyList]);
 
   const run = async (action: () => Promise<unknown>, failure: string) => {
@@ -124,9 +132,6 @@ export default function ProxySettings() {
       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
         <Button variant="contained" startIcon={<ImportIcon fontSize="small" />} onClick={handleImport} disabled={loading}>
           匯入 Proxy
-        </Button>
-        <Button color="inherit" startIcon={<ReloadIcon fontSize="small" />} onClick={() => loadProxyList()} disabled={loading}>
-          重新載入
         </Button>
         <Button
           color="inherit"

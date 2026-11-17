@@ -207,6 +207,8 @@ export const backend = {
   },
   events: {
     onModulesChanged: (handler: () => void) => subscribe<null>('modules-changed', () => handler()),
+    /** The proxies changed (list, status or counters); at most twice a second. */
+    onProxiesChanged: (handler: () => void) => subscribe<null>('proxies-changed', () => handler()),
     onCaptchaEvent: (handler: (event: CaptchaEvent) => void) => subscribe('captcha-event', handler),
     onDownloadEvent: (handler: (event: DownloadEvent) => void) => subscribe('download-event', handler),
     /** The backend dropped events; refetch the full list. */

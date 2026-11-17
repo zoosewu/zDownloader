@@ -14,7 +14,7 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAtom } from 'jotai';
 import { backend, type AppSettings, type SpeedLimitMode } from '../backend';
@@ -24,36 +24,19 @@ import UserAgentField from './UserAgentField';
 
 export default function AdvancedSettings() {
   const { t } = useTranslation();
-  const [, setGlobalSettings] = useAtom(settingsAtom);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [saved, setGlobalSettings] = useAtom(settingsAtom);
+  // The form edits a draft of the app's settings (loaded at startup, replaced by every save);
+  // the backend is the only place they are written.
+  const [settings, setSettings] = useState<AppSettings>(saved);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Load settings on mount
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  async function loadSettings() {
-    try {
-      setLoading(true);
-      const loadedSettings = await backend.settings.get();
-      setSettings(loadedSettings);
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-      setMessage({ type: 'error', text: t('settings.errors.loadFailed') || 'Failed to load settings' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSave() {
-    if (!settings) return;
-
     try {
       setSaving(true);
-      setGlobalSettings(await backend.settings.update(settings));
+      const next = await backend.settings.update(settings);
+      setGlobalSettings(next);
+      setSettings(next);
       setMessage({ type: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -119,14 +102,6 @@ export default function AdvancedSettings() {
       console.error('Failed to import settings:', error);
       setMessage({ type: 'error', text: t('settings.errors.importFailed') || 'Failed to import settings' });
     }
-  }
-
-  if (loading) {
-    return <Box sx={{ p: 3, textAlign: 'center' }}><Typography>Loading...</Typography></Box>;
-  }
-
-  if (!settings) {
-    return <Box sx={{ p: 3, textAlign: 'center' }}><Typography>Failed to load settings</Typography></Box>;
   }
 
   return (
@@ -294,7 +269,7 @@ export default function AdvancedSettings() {
 
         {/* Save Button */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button variant="outlined" onClick={loadSettings} disabled={saving}>
+          <Button variant="outlined" onClick={() => setSettings(saved)} disabled={saving}>
             {t('common.reset')}
           </Button>
           <Button variant="contained" onClick={handleSave} disabled={saving}>

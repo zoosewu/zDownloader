@@ -33,23 +33,30 @@ use add_window::{add_window_import, add_window_open, add_window_take};
 use commands::urls::{urls_inspect, urls_list};
 use downloads::Downloads;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 
 /// The app's own window (tauri.conf.json); the only one that may call app commands.
 pub(crate) const MAIN_WINDOW: &str = "main";
 
-// Used by the frontend as a "backend is ready" ping.
+/// Set at the end of `setup`, when every command's state exists. The page can load earlier.
+#[derive(Default)]
+struct Ready(std::sync::atomic::AtomicBool);
+
+/// Sent once, when `Ready` becomes true.
+const READY_EVENT: &str = "app-ready";
+
+/// Whether the backend is ready; if not, `app-ready` follows.
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn app_ready(ready: tauri::State<'_, Ready>) -> bool {
+    ready.0.load(std::sync::atomic::Ordering::SeqCst)
 }
 
 /// Every app command. Keep in sync with src/backend/index.ts (checked by
 /// src/__tests__/command-names.test.ts).
 fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
     let handle: fn(tauri::ipc::Invoke) -> bool = tauri::generate_handler![
-            greet,
+            app_ready,
             downloads_add,
             downloads_list,
             downloads_pause,
@@ -131,6 +138,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
+        .manage(Ready::default())
         .manage(add_window::Pending::default())
         .manage(clipboard_watch::OwnCopy::default())
         // App commands answer the main window only. Captcha windows show other sites' pages and
@@ -158,6 +166,7 @@ pub fn run() {
                 .map_err(|e| format!("cannot start the download manager: {e}"))?;
             app.manage(downloads);
             downloads::forward_events(app.handle().clone());
+            downloads::forward_proxy_changes(app.handle().clone());
 
             browser_bridge::start(app.handle().clone());
             clipboard_watch::start(app.handle().clone());
@@ -165,6 +174,8 @@ pub fn run() {
             if let Err(e) = utils::tray::create_tray(app.handle()) {
                 log::warn!("Failed to create system tray: {e}");
             }
+            app.state::<Ready>().0.store(true, std::sync::atomic::Ordering::SeqCst);
+            let _ = app.emit(READY_EVENT, ());
             Ok(())
         })
         .build(tauri::generate_context!())

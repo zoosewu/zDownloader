@@ -642,6 +642,12 @@ impl Marketplace {
         }
     }
 
+    /// Folders of local (in-development) modules: their manifests are read from there, so the
+    /// app watches them and calls `reload_local` when they change.
+    pub fn local_dirs(&self) -> Vec<PathBuf> {
+        self.state.lock().unwrap().installed.iter().filter(|m| m.local).map(|m| m.dir.clone()).collect()
+    }
+
     /// The enabled modules in priority order, with the permissions and credentials the user
     /// granted, for `ModuleResolver::set_modules`.
     pub fn resolver_modules(&self) -> Vec<InstalledModule> {

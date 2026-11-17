@@ -270,7 +270,9 @@ impl Actor {
                     JobMsg::Done(id, result) => self.finished(id, result),
                     msg => self.job_update(msg),
                 },
-                _ = tick.tick() => self.progress_tick(),
+                // Progress is batched while something transfers; with nothing running the
+                // actor sleeps until a command, a job message or a scheduled time.
+                _ = tick.tick(), if !self.jobs.is_empty() => self.progress_tick(),
                 _ = sleep_for(wake) => self.wake_due(),
             }
         }

@@ -119,6 +119,8 @@ pub struct ProxyPool {
     direct: Direct,
     fallback_direct: AtomicBool,
     failure_limit: u32,
+    /// Bumped on every change (list, status, counters); see `subscribe`.
+    changes: tokio::sync::watch::Sender<u64>,
 }
 
 struct State {
@@ -138,7 +140,18 @@ impl ProxyPool {
             direct: Direct::new()?,
             fallback_direct: AtomicBool::new(true),
             failure_limit: 5,
+            changes: tokio::sync::watch::Sender::new(0),
         })
+    }
+
+    /// Wakes when the proxies change. Changes that come faster than the receiver looks are
+    /// seen as one, so a busy pool cannot flood whoever shows it.
+    pub fn subscribe(&self) -> tokio::sync::watch::Receiver<u64> {
+        self.changes.subscribe()
+    }
+
+    fn changed(&self) {
+        self.changes.send_modify(|n| *n += 1);
     }
 
     /// Consecutive failures that blacklist a proxy.
@@ -222,6 +235,7 @@ impl ProxyPool {
         if let Err(e) = self.store.save(&st.proxies) {
             log::error!("failed to save {}: {e}", self.store.path().display());
         }
+        self.changed();
     }
 }
 
@@ -289,6 +303,8 @@ impl ConnectionSource for ProxyPool {
             }
         }
         p.health_score = p.calculate_health_score();
+        drop(st);
+        self.changed();
     }
 }
 
@@ -296,6 +312,22 @@ impl ConnectionSource for ProxyPool {
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    #[test]
+    fn subscribers_wake_on_changes_and_see_a_burst_as_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = pool(&dir);
+        let mut changes = p.subscribe();
+        assert!(!changes.has_changed().unwrap());
+        p.import("10.0.0.1:8080\n10.0.0.2:8080");
+        let id = p.list()[0].id;
+        p.remove(id).unwrap();
+        assert!(changes.has_changed().unwrap(), "import and remove are changes");
+        changes.mark_unchanged();
+        assert!(!changes.has_changed().unwrap(), "seen once, however many came");
+        p.reset_failed();
+        assert!(changes.has_changed().unwrap());
+    }
 
     fn pool(dir: &tempfile::TempDir) -> ProxyPool {
         ProxyPool::open(dir.path().join("proxies.json")).unwrap()

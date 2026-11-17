@@ -16,6 +16,10 @@ use zoo_core::Resolver;
 pub const DOWNLOAD_EVENT: &str = "download-event";
 /// Frontend event asking for a full `downloads_list` refetch (events were dropped).
 pub const RESYNC_EVENT: &str = "downloads-resync";
+/// Frontend event: the proxies changed (list, status or counters); `proxies_list` has them.
+pub const PROXIES_EVENT: &str = "proxies-changed";
+/// Proxy counters change with every request; tell the frontend at most this often.
+const PROXIES_EVENT_GAP: std::time::Duration = std::time::Duration::from_millis(500);
 
 pub struct Downloads {
     pub manager: DownloadManager,
@@ -74,6 +78,17 @@ pub fn forward_events(app: AppHandle) {
                 }
                 Err(RecvError::Closed) => return,
             }
+        }
+    });
+}
+
+/// Tell the frontend when the proxies change, at most every `PROXIES_EVENT_GAP`.
+pub fn forward_proxy_changes(app: AppHandle) {
+    let mut changes = app.state::<Downloads>().pool.subscribe();
+    tauri::async_runtime::spawn(async move {
+        while changes.changed().await.is_ok() {
+            let _ = app.emit(PROXIES_EVENT, ());
+            tokio::time::sleep(PROXIES_EVENT_GAP).await;
         }
     });
 }

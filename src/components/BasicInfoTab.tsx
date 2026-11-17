@@ -9,6 +9,7 @@ import { formatAbsoluteTime } from '../utils/formatters';
 import PropertyList from './PropertyList';
 import EditTaskDialog, { editable } from './EditTaskDialog';
 import { useCategories } from '../hooks/useCategories';
+import { useSiteModules } from '../hooks/useSiteModules';
 
 const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
   const { t } = useTranslation();
@@ -64,19 +65,21 @@ const BasicInfoTab: React.FC<{ task: Task }> = ({ task }) => {
  * module was recorded have none: the module that handles the URL now is shown instead.
  */
 function useModuleName(key: string | null, url: string): string | null {
-  const [name, setName] = useState<string | null>(null);
+  const { installed } = useSiteModules();
+  const [byUrl, setByUrl] = useState<string | null>(null);
   useEffect(() => {
-    setName(null);
+    setByUrl(null);
+    if (key) return;
     let current = true;
-    const lookup = key
-      ? backend.modules.list().then((all) => all.find((m) => m.key === key)?.name ?? null)
-      : backend.urls.inspect(url).then((info) => info.module?.name ?? null);
-    lookup.then((n) => current && setName(n)).catch(() => {});
+    backend.urls
+      .inspect(url)
+      .then((info) => current && setByUrl(info.module?.name ?? null))
+      .catch(() => {});
     return () => {
       current = false;
     };
   }, [key, url]);
-  return name;
+  return key ? (installed.find((m) => m.key === key)?.name ?? null) : byUrl;
 }
 
 export default BasicInfoTab;

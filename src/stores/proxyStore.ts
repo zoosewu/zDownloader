@@ -1,5 +1,5 @@
 // Jotai atoms for proxy state management
-import { atom } from 'jotai';
+import { atom, type Setter } from 'jotai';
 import { backend, type ProxyInfo } from '../backend';
 
 // Proxy list atom - all proxies
@@ -70,102 +70,40 @@ export const proxyLoadingAtom = atom<boolean>(false);
 export const proxyErrorAtom = atom<string | null>(null);
 
 // === Actions ===
+// The backend owns the proxies. These ask it for changes; the list itself only ever comes from
+// `loadProxyListAtom`, which the settings page runs on every `proxies-changed` event.
 
-// Load proxy list from backend
+/** Fetch the list. Quiet (no loading state): it runs on every change the backend reports. */
 export const loadProxyListAtom = atom(null, async (_get, set) => {
-  set(proxyLoadingAtom, true);
-  set(proxyErrorAtom, null);
-
   try {
-    const proxies = await backend.proxies.list();
-    set(proxyListAtom, proxies);
+    set(proxyListAtom, await backend.proxies.list());
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    set(proxyErrorAtom, errorMsg);
-    console.error('Failed to load proxy list:', error);
-  } finally {
-    set(proxyLoadingAtom, false);
+    set(proxyErrorAtom, error instanceof Error ? error.message : String(error));
   }
 });
 
-// Import proxy list from file
-export const importProxyListAtom = atom(
-  null,
-  async (_get, set, filePath: string) => {
-    set(proxyLoadingAtom, true);
-    set(proxyErrorAtom, null);
-
-    try {
-      const count = (await backend.proxies.import(filePath)).added;
-      // Reload the list after import
-      await set(loadProxyListAtom);
-      return count;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      set(proxyErrorAtom, errorMsg);
-      console.error('Failed to import proxy list:', error);
-      throw error;
-    } finally {
-      set(proxyLoadingAtom, false);
-    }
-  }
-);
-
-// Remove a proxy
-export const removeProxyAtom = atom(
-  null,
-  async (_get, set, proxyId: string) => {
-    set(proxyLoadingAtom, true);
-    set(proxyErrorAtom, null);
-
-    try {
-      await backend.proxies.remove(proxyId);
-      // Reload the list after removal
-      await set(loadProxyListAtom);
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      set(proxyErrorAtom, errorMsg);
-      console.error('Failed to remove proxy:', error);
-      throw error;
-    } finally {
-      set(proxyLoadingAtom, false);
-    }
-  }
-);
-
-// Clear all proxies
-export const clearAllProxiesAtom = atom(null, async (_get, set) => {
+/** Run a change with the loading and error state; the event brings the new list. */
+async function change<T>(set: Setter, work: () => Promise<T>): Promise<T> {
   set(proxyLoadingAtom, true);
   set(proxyErrorAtom, null);
-
   try {
-    await backend.proxies.clear();
-    set(proxyListAtom, []);
+    return await work();
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    set(proxyErrorAtom, errorMsg);
-    console.error('Failed to clear proxies:', error);
+    set(proxyErrorAtom, error instanceof Error ? error.message : String(error));
     throw error;
   } finally {
     set(proxyLoadingAtom, false);
   }
-});
+}
 
-// Reset failed proxies
-export const resetFailedProxiesAtom = atom(null, async (_get, set) => {
-  set(proxyLoadingAtom, true);
-  set(proxyErrorAtom, null);
+/** Import a list file; resolves to how many were added. */
+export const importProxyListAtom = atom(null, (_get, set, filePath: string) =>
+  change(set, async () => (await backend.proxies.import(filePath)).added),
+);
 
-  try {
-    await backend.proxies.resetFailed();
-    // Reload the list after reset
-    await set(loadProxyListAtom);
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    set(proxyErrorAtom, errorMsg);
-    console.error('Failed to reset failed proxies:', error);
-    throw error;
-  } finally {
-    set(proxyLoadingAtom, false);
-  }
-});
+export const removeProxyAtom = atom(null, (_get, set, proxyId: string) => change(set, () => backend.proxies.remove(proxyId)));
+
+export const clearAllProxiesAtom = atom(null, (_get, set) => change(set, () => backend.proxies.clear()));
+
+/** Give failed and blacklisted proxies another chance. */
+export const resetFailedProxiesAtom = atom(null, (_get, set) => change(set, () => backend.proxies.resetFailed()));

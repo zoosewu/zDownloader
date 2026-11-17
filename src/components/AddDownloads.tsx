@@ -214,27 +214,26 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
   // Links waiting in the backend: now, and whenever more arrive while the dialog is open.
   useEffect(() => {
     const take = () => backend.addWindow.take().then(addItems).catch(() => {});
-    addItems(initial);
-    take();
     let stop: (() => void) | undefined;
     let disposed = false;
     backend.events.onAddItemsReady(take).then((u) => (disposed ? u() : (stop = u)));
+    addItems(initial);
+    backend.addWindow
+      .take()
+      .then(async (taken) => {
+        addItems(taken);
+        // Opened with nothing to add: offer the link on the clipboard, if it is one.
+        if (initial.length + taken.length > 0) return;
+        const content = (await invoke<string>('get_clipboard_content').catch(() => '')).trim();
+        if (!disposed && linksIn(content).length === 1) setInput((v) => v || content);
+      })
+      .catch(() => {});
     return () => {
       disposed = true;
       stop?.();
     };
     // `initial` is read once, when the dialog opens.
   }, [addItems]);
-
-  // Opened with nothing to add: offer the link on the clipboard, if it is one.
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (rowsRef.current.length > 0) return;
-      const content = (await invoke<string>('get_clipboard_content').catch(() => '')).trim();
-      if (linksIn(content).length === 1) setInput((v) => v || content);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
 
   const addInput = () => {
     if (addLinks(input) > 0) setInput('');
