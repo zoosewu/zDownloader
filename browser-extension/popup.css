@@ -1,13 +1,13 @@
-/* The app's palette (src/styles/theme.ts): brand hue 165, error hue 355, brand-tinted grey. */
+/* The app's palette (src/styles/theme.ts): brand hue 165, error hue 355, neutral cool grey (hue 220). */
 :root {
   color-scheme: light dark;
-  --muted: hsl(165 6% 62%);
+  --muted: hsl(220 5% 62%);
   --ok: hsl(165 72% 33%);
   --bad: hsl(355 72% 33%);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --muted: hsl(165 5% 42%);
+    --muted: hsl(220 4% 43%);
     --ok: hsl(165 62% 58%);
     --bad: hsl(355 62% 58%);
   }

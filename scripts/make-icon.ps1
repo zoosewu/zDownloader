@@ -63,6 +63,9 @@ try {
     foreach ($s in 16, 32, 48, 128) {
         Copy-Item (Render $s) (Join-Path $root "browser-extension\icons\icon$s.png") -Force
     }
+    # 無損縮小（畫素不變），擴充套件小一點
+    & node (Join-Path $root 'scripts\optimize-png.mjs') (Get-ChildItem (Join-Path $root 'browser-extension\icons\*.png')).FullName | Out-Host
+    if ($LASTEXITCODE) { throw 'optimize-png 失敗' }
 
     # 網頁 favicon
     Copy-Item (Join-Path $source 'icon.svg') (Join-Path $root 'public\favicon.svg') -Force
