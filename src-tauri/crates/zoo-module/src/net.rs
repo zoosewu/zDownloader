@@ -203,6 +203,11 @@ impl Credentials {
         Self { nonce: nonce.iter().map(|b| format!("{b:02x}")).collect(), values }
     }
 
+    /// Whether `text` holds one of this call's placeholders.
+    pub fn mentioned_in(&self, text: &str) -> bool {
+        text.contains(&format!("zoocred-{}-", self.nonce))
+    }
+
     pub fn placeholder(&self, key: &str) -> Option<String> {
         self.values.contains_key(key).then(|| format!("zoocred-{}-{key}-", self.nonce))
     }
@@ -445,6 +450,11 @@ impl Net {
         Ok(Hop { status, headers, body })
     }
 
+    /// Whether `text` holds a credential placeholder.
+    pub fn mentions_credential(&self, text: &str) -> bool {
+        self.credentials.mentioned_in(text)
+    }
+
     /// Fills credential placeholders in the result and carries the session's cookies over to
     /// the download, unless the module set its own Cookie header.
     pub fn finish(&self, resolved: &mut Resolved) {
@@ -465,6 +475,8 @@ impl Net {
         let credentials = &self.credentials;
         let target = credentials.fill(&request.url, component);
         let mut url = Url::parse(&target).map_err(|e| format!("fetch: invalid url {:?}: {e}", request.url))?;
+        // Fragments never reach the server, and `Response.url` leaves them out (Fetch standard).
+        url.set_fragment(None);
         let mut method =
             Method::from_bytes(request.method.as_bytes()).map_err(|_| format!("fetch: bad method {}", request.method))?;
         let mut headers = HeaderMap::new();
@@ -485,7 +497,7 @@ impl Net {
         let mut body = request.body.map(|body| credentials.fill_bytes(&body, encode));
         let mut redirected = false;
         // The URL as the module wrote it (placeholders, not values), for traces and cassettes.
-        let mut shown = request.url.clone();
+        let mut shown = request.url.split('#').next().unwrap_or_default().to_string();
 
         for _ in 0..=MAX_REDIRECTS {
             if let Err(blocked) = self.policy.check_url(&url) {

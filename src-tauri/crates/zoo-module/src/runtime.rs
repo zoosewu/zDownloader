@@ -1,5 +1,5 @@
-//! One `resolve` call: a fresh V8 isolate with a heap cap and a time budget, the module loaded
-//! as ESM, its default export's `resolve(url, zoo)` awaited, the result validated.
+//! One call: a fresh V8 isolate with a heap cap and a time budget, the module loaded as ESM,
+//! its default export's `resolve(url, zoo)` (or `list(url, zoo)`) awaited, the result validated.
 //! A fresh isolate per call means nothing leaks between calls and a module that blows a limit
 //! takes down only its own isolate.
 
@@ -15,7 +15,7 @@ use deno_core::{
     ModuleSourceCode, ModuleSpecifier, ModuleType, PollEventLoopOptions, ResolutionKind, RuntimeOptions,
 };
 use serde::Deserialize;
-use zoo_module_client::protocol::{Limits, ModuleError, ModuleRef, Resolved};
+use zoo_module_client::protocol::{Limits, Listed, ModuleError, ModuleRef, Resolved, MAX_LISTED};
 
 use crate::budget::{Budget, TRIP_CANCELLED, TRIP_MEMORY, TRIP_NONE, TRIP_TIMEOUT};
 use crate::hooks::Hooks;
@@ -42,6 +42,8 @@ const MAIN_SPECIFIER: &str = "zoo:main";
 const SHAPE_HINT: &str = "export default defineModule({ async resolve(url, zoo) { ... } })";
 const RESULT_HINT: &str = "resolve must return { url, filename?, headers?, size?, maxConnections?, maxSegmentSize? } \
      with an absolute http(s) url";
+const LIST_HINT: &str = "list must return [{ url, filename, size?, folder? }], each url an absolute http(s) link \
+     that this module's resolve handles on its own";
 /// Smaller segments would cost one request per few KiB.
 const MIN_SEGMENT_SIZE: u64 = 64 * 1024;
 
@@ -49,34 +51,30 @@ const MIN_SEGMENT_SIZE: u64 = 64 * 1024;
 #[derive(Debug, Clone, Copy)]
 pub enum Work<'a> {
     Resolve(&'a str),
-    /// Load it and check its shape without calling `resolve` (`zoo-module check`).
+    /// The files behind the URL (`list`).
+    List(&'a str),
+    /// Load it and check its shape without calling it (`zoo-module check`).
     Load,
 }
 
-/// A `resolve` call for the app (`serve`).
-pub fn resolve(
-    module: &ModuleRef,
-    url: &str,
-    limits: Limits,
-    options: HostOptions,
-    link: CallLink,
-) -> Result<Resolved, ModuleError> {
+/// What a call produced, by `Work`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Done {
+    Resolved(Resolved),
+    Listed(Vec<Listed>),
+    Loaded,
+}
+
+/// A call for the app (`serve`).
+pub fn call(module: &ModuleRef, work: Work, limits: Limits, options: HostOptions, link: CallLink) -> Result<Done, ModuleError> {
     let policy = Policy::new(&module.grants.allow_domains, options.allow_loopback);
     let net = Net::new(policy, Credentials::new(&module.grants.credentials), Transport::Live, None)
         .map_err(|message| ModuleError::Crashed { message })?;
-    run_call(&module.entry, Work::Resolve(url), limits, Rc::new(net), Rc::new(link))
-        .map(|resolved| resolved.expect("a resolve call yields a result"))
+    run_call(&module.entry, work, limits, Rc::new(net), Rc::new(link))
 }
 
-/// Runs `work` on the module at `entry` in a fresh isolate on this thread. `Some` result for
-/// `Work::Resolve`, `None` for `Work::Load`.
-pub fn run_call(
-    entry: &Path,
-    work: Work,
-    limits: Limits,
-    net: Rc<Net>,
-    hooks: Rc<dyn Hooks>,
-) -> Result<Option<Resolved>, ModuleError> {
+/// Runs `work` on the module at `entry` in a fresh isolate on this thread.
+pub fn run_call(entry: &Path, work: Work, limits: Limits, net: Rc<Net>, hooks: Rc<dyn Hooks>) -> Result<Done, ModuleError> {
     let specifier = std::path::absolute(entry)
         .ok()
         .and_then(|path| ModuleSpecifier::from_file_path(path).ok())
@@ -97,7 +95,7 @@ async fn run(
     hooks: Rc<dyn Hooks>,
     work: Work<'_>,
     limits: Limits,
-) -> Result<Option<Resolved>, ModuleError> {
+) -> Result<Done, ModuleError> {
     let heap_bytes = limits.heap_mb as usize * 1024 * 1024;
     let mut runtime = JsRuntime::new(RuntimeOptions {
         module_loader: Some(Rc::new(Loader { entry: entry.clone(), code })),
@@ -132,16 +130,24 @@ async fn run(
         (TRIP_CANCELLED, _) => Err(ModuleError::Cancelled),
         (TRIP_MEMORY, _) => Err(ModuleError::OutOfMemory { limit_mb: limits.heap_mb }),
         (TRIP_TIMEOUT, _) | (_, None) => Err(ModuleError::Timeout { limit_ms: limits.timeout_ms }),
-        (_, Some(result)) => result.map(|resolved| {
-            resolved.map(|mut resolved| {
-                net.finish(&mut resolved);
-                resolved
-            })
-        }),
+        (_, Some(Ok(Done::Resolved(mut resolved)))) => {
+            net.finish(&mut resolved);
+            Ok(Done::Resolved(resolved))
+        }
+        // Listed URLs become the tasks' URLs, kept on disk: no credentials in them.
+        (_, Some(Ok(Done::Listed(items)))) => match items.iter().find(|item| net.mentions_credential(&item.url)) {
+            Some(item) => Err(ModuleError::Script {
+                message: format!("list returned a url with a credential placeholder: {:?}", item.url),
+                hint: Some("put credentials in the requests resolve makes, not in listed urls".into()),
+                stack: None,
+            }),
+            None => Ok(Done::Listed(items)),
+        },
+        (_, Some(result)) => result,
     }
 }
 
-async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, work: Work<'_>) -> Result<Option<Resolved>, ModuleError> {
+async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, work: Work<'_>) -> Result<Done, ModuleError> {
     for (name, code) in [("zoo:vendor", VENDOR), ("zoo:web", WEB), ("zoo:bootstrap", BOOTSTRAP)] {
         runtime
             .execute_script(name, code)
@@ -150,10 +156,11 @@ async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, work: Work<'_
 
     let main = ModuleSpecifier::parse(MAIN_SPECIFIER).expect("valid specifier");
     let wrapper = format!(
-        "import module from {};\nglobalThis.__zooResult = __zooRun(module, {});\n",
+        "import module from {};\nglobalThis.__zooResult = __zooRun(module, {}, {});\n",
         serde_json::to_string(entry.as_str()).expect("string"),
+        if matches!(work, Work::List(_)) { "\"list\"" } else { "\"resolve\"" },
         match work {
-            Work::Resolve(url) => serde_json::to_string(url).expect("string"),
+            Work::Resolve(url) | Work::List(url) => serde_json::to_string(url).expect("string"),
             Work::Load => "null".into(),
         },
     );
@@ -182,7 +189,7 @@ async fn execute(runtime: &mut JsRuntime, entry: &ModuleSpecifier, work: Work<'_
         deno_core::scope!(scope, runtime);
         v8::Local::new(scope, value).to_rust_string_lossy(scope)
     };
-    outcome(&json)
+    outcome(&json, work)
 }
 
 /// The JSON `__zooRun` settles with (see bootstrap.js).
@@ -195,10 +202,13 @@ enum Outcome {
     Checked(serde::de::IgnoredAny),
 }
 
-fn outcome(json: &str) -> Result<Option<Resolved>, ModuleError> {
+fn outcome(json: &str, work: Work) -> Result<Done, ModuleError> {
     match serde_json::from_str::<Outcome>(json) {
-        Ok(Outcome::Ok(value)) => validate(value).map(Some),
-        Ok(Outcome::Checked(_)) => Ok(None),
+        Ok(Outcome::Ok(value)) => match work {
+            Work::List(url) => validate_list(value, url).map(Done::Listed),
+            _ => validate(value).map(Done::Resolved),
+        },
+        Ok(Outcome::Checked(_)) => Ok(Done::Loaded),
         Ok(Outcome::Err { message, hint, stack }) => Err(ModuleError::Script { message, hint, stack }),
         Ok(Outcome::Invalid(why)) => Err(ModuleError::Load { message: why, hint: Some(SHAPE_HINT.into()) }),
         Err(e) => Err(ModuleError::Crashed { message: format!("unreadable module outcome: {e}") }),
@@ -221,6 +231,46 @@ fn validate(value: serde_json::Value) -> Result<Resolved, ModuleError> {
         Ok(url) if matches!(url.scheme(), "http" | "https") => Ok(resolved),
         _ => Err(invalid(format!("resolve returned a url that is not absolute http(s): {:?}", resolved.url))),
     }
+}
+
+/// `null` (no `list`) is the URL itself. Folders come back normalized (`a/b`, no empty parts).
+fn validate_list(value: serde_json::Value, url: &str) -> Result<Vec<Listed>, ModuleError> {
+    let invalid = |message: String| ModuleError::Script { message, hint: Some(LIST_HINT.into()), stack: None };
+    if value.is_null() {
+        return Ok(vec![Listed { url: url.into(), filename: None, size: None, folder: None }]);
+    }
+    let items: Vec<Listed> =
+        serde_json::from_value(value).map_err(|e| invalid(format!("list returned an invalid result: {e}")))?;
+    if items.len() > MAX_LISTED {
+        return Err(ModuleError::Script {
+            message: format!("this link holds {} files; at most {MAX_LISTED} can be added at once", items.len()),
+            hint: Some("share or add the files in smaller groups".into()),
+            stack: None,
+        });
+    }
+    let mut seen = std::collections::HashSet::new();
+    items
+        .into_iter()
+        .map(|mut item| {
+            if !deno_core::url::Url::parse(&item.url).is_ok_and(|u| matches!(u.scheme(), "http" | "https")) {
+                return Err(invalid(format!("list returned a url that is not absolute http(s): {:?}", item.url)));
+            }
+            if !seen.insert(item.url.clone()) {
+                return Err(invalid(format!("list returned {:?} twice; every file needs a url of its own", item.url)));
+            }
+            if item.filename.as_deref().is_none_or(|name| name.trim().is_empty()) {
+                return Err(invalid(format!("list returned no filename for {:?}", item.url)));
+            }
+            if let Some(folder) = item.folder.take() {
+                let parts: Vec<&str> = folder.split(['/', '\\']).map(str::trim).filter(|p| !p.is_empty()).collect();
+                if let Some(bad) = parts.iter().find(|p| matches!(**p, "." | "..") || p.contains(':')) {
+                    return Err(invalid(format!("list returned folder {folder:?}: {bad:?} is not a folder name")));
+                }
+                item.folder = (!parts.is_empty()).then(|| parts.join("/"));
+            }
+            Ok(item)
+        })
+        .collect()
 }
 
 fn load_error(message: String) -> ModuleError {

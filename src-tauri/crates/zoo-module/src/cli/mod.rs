@@ -202,6 +202,12 @@ fn print_report(report: &test::Report) {
                 }
             }
         }
+        if let Some(items) = &case.listed {
+            println!("  listed {} file(s):", items.len());
+            for item in items {
+                println!("    {}", serde_json::to_string(item).expect("serializes"));
+            }
+        }
         if let Some(resolved) = &case.resolved {
             println!("  result: {}", serde_json::to_string(resolved).expect("serializes"));
         }

@@ -12,6 +12,6 @@ pub mod supervisor;
 #[cfg(windows)]
 mod job;
 
-pub use protocol::{CallEvent, Captcha, Grants, Limits, ModuleError, ModuleRef, Resolved, Secret};
+pub use protocol::{CallEvent, Captcha, Grants, Limits, Listed, ModuleError, ModuleRef, Resolved, Secret};
 pub use supervisor::{Interaction, NoInteraction};
 pub use supervisor::Supervisor;

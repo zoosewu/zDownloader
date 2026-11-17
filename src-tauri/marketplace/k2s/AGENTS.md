@@ -58,6 +58,11 @@ starts requesting a page it did not request before; the test output tells you).
   when the user allows it. Leave it out for sites that usually ask for a captcha or a wait.
 - **Result fields** are exactly `url`, `filename`, `headers`, `size`, `maxConnections`,
   `maxSegmentSize` (see `Resolved` in `types/zoo-module.d.ts`). Unknown fields are an error.
+- **Links with several files** (shared folders) also export `list(url, zoo)`: one
+  `{ url, filename, size?, folder? }` per file (see `Listed`), at most 1000. The app shows them
+  for the user to pick; each picked file becomes a download whose URL is the item's `url`, so
+  `resolve` must turn that URL into just this file. The item URL must match `urlPatterns` and
+  hold no credential placeholders.
 
 ## Recipes
 
@@ -110,6 +115,27 @@ User-Agent on `fetch` and in the result:
 **Sites that refuse large ranges** (403 for big `Range` requests, small ones work):
 `return { url, maxSegmentSize: 4 * 1024 * 1024 };`
 
+**Shared folders.** Give each file a URL of its own with a `#fragment` (matching and `fetch`
+ignore it), and let `resolve` pick that file when the fragment is there:
+
+```ts
+export default defineModule({
+  async list(url, zoo) {
+    const files = await listShare(url); // [{ path: 'photos/a.jpg', size: 1 }, ...]
+    return files.map((f) => ({
+      url: `${url.split('#')[0]}#path=${encodeURIComponent(f.path)}`,
+      filename: f.path.split('/').pop()!,
+      folder: f.path.split('/').slice(0, -1).join('/') || undefined,
+      size: f.size,
+    }));
+  },
+  async resolve(url, zoo) {
+    const path = new URL(url).hash.match(/^#path=(.*)$/)?.[1];
+    // ...the direct link for decodeURIComponent(path), or for the only file when path is missing
+  },
+});
+```
+
 **Errors the user can act on**: `throw zoo.fail('file was deleted', { hint: 'ask the uploader for a new link' });`
 
 ## Reading `zoo-module test` output
@@ -120,6 +146,8 @@ User-Agent on `fetch` and in the result:
 | `... is not in the cassette` | The module now requests something new: `zoo-module test --record`. |
 | `credential 'k' is not available` | Declare `k` in `permissions.credentials`; for tests put it in `.credentials.json`. |
 | `resolve returned an invalid result` | Return exactly the fields in `Resolved`. |
+| `list returned ...` | Each item needs its own absolute `url` and a `filename`; fields are exactly those of `Listed`. |
+| `FAIL listed url` | An item's `url` does not match `urlPatterns`; the app would refuse the whole list. |
 | `resolve never settled` | A promise that never resolves; usually a missing `await` or a callback API. |
 | `exceeded its 30000 ms time limit` | A loop that never ends or a request that never answers. |
 | `module load failed: ... export named 'default'` | `export default defineModule({ async resolve(url, zoo) { ... } })` |
@@ -131,6 +159,11 @@ User-Agent on `fetch` and in the result:
 `expect.filename` are patterns (`*` matches anything; tokens in direct links change, so match
 the stable part); `expect.error` is text the error must contain, for pages that should fail
 (deleted files). Add a case per kind of page: normal, premium-only, deleted, folder.
+
+For `list`, add `"list": true` to the case; `expect.count` is the number of files and
+`expect.files` the `folder/filename` of each (any order), e.g.
+`{ "name": "folder", "url": "...", "list": true, "expect": { "count": 2, "files": ["a.txt", "sub/b.txt"] } }`.
+Add a `resolve` case for one listed file's `url` too.
 
 Recordings contain the site's responses, which may include session cookies of the account you
 recorded with (credential values themselves are never stored). Think before publishing them.

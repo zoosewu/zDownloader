@@ -78,4 +78,23 @@ describe('module SDK types', () => {
     // Typos name the field and list the valid ones.
     expect(errors[1]).toContain("'fileName' is not a Resolved field (url, filename, headers, size, maxConnections, maxSegmentSize)");
   });
+
+  test('list type-checks, and a file without a name is reported', () => {
+    expect(
+      typecheck(`
+        import { defineModule } from 'zoo-module';
+        export const m = defineModule({
+          resolve: (url) => ({ url }),
+          async list(url) { return [{ url: url + '#1', filename: 'a', size: 1, folder: 'x/y' }, { url: url + '#2', filename: 'b' }]; },
+        });
+      `),
+    ).toEqual([]);
+    // A file without a name. (Unknown fields are rejected by the host when the module runs.)
+    const errors = typecheck(`
+      import { defineModule } from 'zoo-module';
+      export const b = defineModule({ resolve: (url) => ({ url }), list: (url) => [{ url }] });
+    `);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("'filename'");
+  });
 });

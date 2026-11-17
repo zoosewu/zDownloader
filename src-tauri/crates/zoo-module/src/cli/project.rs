@@ -48,18 +48,24 @@ pub struct Case {
     /// Also the cassette's file name: letters, digits, '-' and '_'.
     pub name: String,
     pub url: String,
+    /// Call `list` instead of `resolve`.
+    #[serde(default)]
+    pub list: bool,
     #[serde(default)]
     pub expect: Expect,
 }
 
 /// What the result must look like. `url` and `filename` are patterns where `*` matches any run
 /// of characters; `error` is text the error message must contain (and means failure is expected).
+/// For `list` cases: `count` files, and `files` the exact `folder/filename` of each, in any order.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Expect {
     pub url: Option<String>,
     pub filename: Option<String>,
     pub error: Option<String>,
+    pub count: Option<usize>,
+    pub files: Option<Vec<String>>,
 }
 
 impl Project {

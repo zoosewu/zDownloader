@@ -187,7 +187,7 @@
 
 規格：[share-listing.md](../docs/architecture/share-listing.md)
 
-- [ ] 1 SDK `list` + host 驗證 + 協定 `List` + `zoo-module test` 的 list case
+- [x] 1 SDK `list` + host 驗證 + 協定 `List` + `zoo-module test` 的 list case（另修：host 的 fetch 不再把 #fragment 留在 Response.url）
 - [ ] 2 app `urls_list` 命令、bindings
 - [ ] 3 新增視窗展開成一組可勾選的列、資料夾結構
 - [ ] 4 自動開始遇到多檔時送進新增視窗

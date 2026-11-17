@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use common::{host, limits, module};
 use tempfile::TempDir;
-use zoo_module_client::{NoInteraction, Limits, ModuleError, ModuleRef, Supervisor};
+use zoo_module_client::{Limits, Listed, ModuleError, ModuleRef, NoInteraction, Secret, Supervisor};
 
 const OK: &str = r#"
 import { defineModule } from 'zoo-module';
@@ -250,4 +250,75 @@ async fn dropping_a_call_stops_it_in_the_host() {
     assert!(tokio::time::timeout(Duration::from_millis(300), call).await.is_err());
     tokio::time::sleep(Duration::from_millis(1500)).await;
     assert!(site.requests().is_empty(), "the dropped call went on");
+}
+
+const LISTS: &str = r#"
+export default {
+  resolve(url) { return { url: url + '/direct' }; },
+  list(url) {
+    return [
+      { url: url + '#path=a.zip', filename: 'a.zip', size: 1 },
+      { url: url + '#path=d%2Fe%2Fb.zip', filename: 'b.zip', folder: '/d\\ e /' },
+    ];
+  },
+};
+"#;
+
+#[tokio::test]
+async fn list_returns_files_with_normalized_folders() {
+    let dir = TempDir::new().unwrap();
+    let items = host().list(module(&dir, "lists", LISTS), "https://s/1", Limits::default(), &NoInteraction).await.unwrap();
+    assert_eq!(items.len(), 2);
+    assert_eq!((items[0].url.as_str(), items[0].filename.as_deref(), items[0].size, items[0].folder.as_deref()), ("https://s/1#path=a.zip", Some("a.zip"), Some(1), None));
+    assert_eq!(items[1].folder.as_deref(), Some("d/e"), "split on / and \\, trimmed, empty parts dropped");
+}
+
+#[tokio::test]
+async fn a_module_without_list_lists_the_url_itself() {
+    let dir = TempDir::new().unwrap();
+    let items = host().list(module(&dir, "ok", OK), "https://s/1", Limits::default(), &NoInteraction).await.unwrap();
+    assert_eq!(items, vec![Listed { url: "https://s/1".into(), filename: None, size: None, folder: None }]);
+}
+
+#[tokio::test]
+async fn invalid_lists_are_rejected() {
+    let dir = TempDir::new().unwrap();
+    let host = host();
+    for (name, result, says) in [
+        ("relative", "[{ url: '/a', filename: 'a' }]", "not absolute"),
+        ("twice", "[{ url: 'https://s/1#a', filename: 'a' }, { url: 'https://s/1#a', filename: 'b' }]", "twice"),
+        ("unnamed", "[{ url: 'https://s/1#a' }]", "no filename"),
+        ("blank", "[{ url: 'https://s/1#a', filename: ' ' }]", "no filename"),
+        ("escape", "[{ url: 'https://s/1#a', filename: 'a', folder: 'x/../../etc' }]", "not a folder name"),
+        ("drive", "[{ url: 'https://s/1#a', filename: 'a', folder: 'C:/x' }]", "not a folder name"),
+        ("typo", "[{ url: 'https://s/1#a', fileName: 'a' }]", "invalid result"),
+        ("object", "{ url: 'https://s/1' }", "invalid result"),
+        ("too-many", "Array.from({ length: 1001 }, (_, i) => ({ url: 'https://s/1#' + i, filename: 'f' + i }))", "at most 1000"),
+    ] {
+        let m = module(&dir, name, &format!("export default {{ resolve() {{}}, list() {{ return {result}; }} }};"));
+        match host.list(m, "https://s/1", Limits::default(), &NoInteraction).await {
+            Err(ModuleError::Script { message, .. }) => assert!(message.contains(says), "{name}: {message}"),
+            other => panic!("{name}: expected script error, got {other:?}"),
+        }
+    }
+
+    let not_a_function = module(&dir, "not-fn", "export default { resolve() {}, list: [] };");
+    assert!(matches!(host.list(not_a_function, "https://s/1", Limits::default(), &NoInteraction).await, Err(ModuleError::Load { .. })));
+}
+
+#[tokio::test]
+async fn listed_urls_never_carry_credentials() {
+    let dir = TempDir::new().unwrap();
+    let mut m = module(
+        &dir,
+        "leaky",
+        "export default { resolve() {}, list(url, zoo) { return [{ url: url + '?k=' + zoo.credentials.placeholder('key'), filename: 'a' }]; } };",
+    );
+    m.grants.credentials.insert("key".into(), Secret("s3cret-value".into()));
+    match host().list(m, "https://s/1", Limits::default(), &NoInteraction).await {
+        Err(ModuleError::Script { message, .. }) => {
+            assert!(message.contains("credential placeholder") && !message.contains("s3cret"), "{message}")
+        }
+        other => panic!("expected script error, got {other:?}"),
+    }
 }

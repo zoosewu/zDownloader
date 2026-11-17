@@ -11,15 +11,15 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use tokio::sync::oneshot;
-use zoo_module_client::manifest::glob;
-use zoo_module_client::protocol::{Captcha, Limits, ModuleError, Resolved, Secret};
+use zoo_module_client::manifest::{glob, handles, url_regex};
+use zoo_module_client::protocol::{Captcha, Limits, Listed, ModuleError, Resolved, Secret};
 
 use super::project::{Case, Diagnostic, Project};
 use crate::budget::Budget;
 use crate::cassette::{self, Cassette};
 use crate::hooks::{Hooks, Step, Trace};
 use crate::net::{Credentials, Net, Policy, Transport};
-use crate::runtime::{self, Work};
+use crate::runtime::{self, Done, Work};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,6 +41,8 @@ pub struct CaseReport {
     pub steps: Vec<Step>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resolved: Option<Resolved>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listed: Option<Vec<Listed>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ModuleError>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,7 +97,7 @@ pub fn run(dir: &std::path::Path, options: &Options) -> Report {
         }
     };
     let cases = match &options.url {
-        Some(url) => vec![Case { name: "url".into(), url: url.clone(), expect: Default::default() }],
+        Some(url) => vec![Case { name: "url".into(), url: url.clone(), list: false, expect: Default::default() }],
         None => match project.cases() {
             Ok(Some(cases)) => cases,
             Ok(None) => {
@@ -161,7 +163,8 @@ fn run_case(
         .map_err(|message| ModuleError::Crashed { message })
         .and_then(|net| {
             let net = Rc::new(net);
-            let result = runtime::run_call(&project.entry, Work::Resolve(&case.url), Limits::default(), net.clone(), hooks.clone());
+            let work = if case.list { Work::List(&case.url) } else { Work::Resolve(&case.url) };
+            let result = runtime::run_call(&project.entry, work, Limits::default(), net.clone(), hooks.clone());
             if mode == Mode::Record {
                 let cassette = Cassette {
                     version: cassette::VERSION,
@@ -173,14 +176,19 @@ fn run_case(
                     trace.push(Step::Log { level: "error".into(), message: e });
                 }
             }
-            result.map(|resolved| resolved.expect("resolve yields a result"))
+            result
         });
 
-    let (resolved, error) = match outcome {
-        Ok(resolved) => (Some(resolved), None),
-        Err(error) => (None, Some(error)),
+    let (resolved, listed, error) = match outcome {
+        Ok(Done::Resolved(resolved)) => (Some(resolved), None, None),
+        Ok(Done::Listed(items)) => (None, Some(items), None),
+        Ok(Done::Loaded) => unreachable!("cases resolve or list"),
+        Err(error) => (None, None, Some(error)),
     };
-    let checks = checks(case, resolved.as_ref(), error.as_ref());
+    let mut checks = checks(case, resolved.as_ref(), error.as_ref());
+    if let Some(items) = &listed {
+        checks.extend(list_checks(project, case, items));
+    }
     let expected_failure = case.expect.error.is_some();
     let passed = checks.iter().all(|c| c.ok) && (error.is_some() == expected_failure);
     CaseReport {
@@ -190,10 +198,38 @@ fn run_case(
         steps: trace.steps(),
         hint: error.as_ref().and_then(super::hint_for),
         resolved,
+        listed,
         error,
         checks,
         passed,
     }
+}
+
+/// Every listed URL must come back to this module (the app refuses the list otherwise), plus
+/// the case's `count` and `files`.
+fn list_checks(project: &Project, case: &Case, items: &[Listed]) -> Vec<Check> {
+    let manifest = &project.manifest;
+    let regex = manifest.url_regex.as_deref().and_then(|r| url_regex(r).ok());
+    let mut checks: Vec<Check> = items
+        .iter()
+        .filter(|item| !handles(&manifest.url_patterns, regex.as_ref(), &item.url))
+        .map(|item| Check { field: "listed url", expected: "matches urlPatterns".into(), actual: Some(item.url.clone()), ok: false })
+        .collect();
+    if let Some(count) = case.expect.count {
+        checks.push(Check { field: "count", expected: count.to_string(), actual: Some(items.len().to_string()), ok: items.len() == count });
+    }
+    if let Some(files) = &case.expect.files {
+        let path = |item: &Listed| {
+            let name = item.filename.clone().unwrap_or_default();
+            item.folder.as_ref().map_or(name.clone(), |folder| format!("{folder}/{name}"))
+        };
+        let (mut expected, mut actual) = (files.clone(), items.iter().map(path).collect::<Vec<_>>());
+        expected.sort();
+        actual.sort();
+        let ok = expected == actual;
+        checks.push(Check { field: "files", expected: expected.join(", "), actual: Some(actual.join(", ")), ok });
+    }
+    checks
 }
 
 fn checks(case: &Case, resolved: Option<&Resolved>, error: Option<&ModuleError>) -> Vec<Check> {

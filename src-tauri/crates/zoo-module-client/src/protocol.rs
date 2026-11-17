@@ -73,6 +73,24 @@ pub struct Resolved {
     pub max_segment_size: Option<u64>,
 }
 
+/// Most files one `list` call may return.
+pub const MAX_LISTED: usize = 1000;
+
+/// One file of a link that holds several (`list(url)`). Its own `url` resolves to just this file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Listed {
+    pub url: String,
+    /// `None` only for the item the host makes up for a module without `list`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filename: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    /// Folder inside the share (`a/b`, relative, `/`-separated); `None` at the top.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModuleError {
@@ -98,6 +116,8 @@ pub enum ModuleError {
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Request {
     Resolve { id: u64, module: ModuleRef, url: String, limits: Limits },
+    /// The files behind `url` (the module's `list`; one item, `url` itself, if it has none).
+    List { id: u64, module: ModuleRef, url: String, limits: Limits },
     /// The user's answer to a `CallEvent::Captcha`; `None` if they declined.
     Answer { id: u64, ticket: u64, solution: Option<String> },
     /// The app no longer wants the result: stop the call now.
@@ -107,24 +127,26 @@ pub enum Request {
 impl Request {
     pub fn id(&self) -> u64 {
         match self {
-            Request::Resolve { id, .. } | Request::Answer { id, .. } | Request::Cancel { id } => *id,
+            Request::Resolve { id, .. } | Request::List { id, .. } | Request::Answer { id, .. } | Request::Cancel { id } => *id,
         }
     }
 }
 
-/// `id` is the call's id. A call gets any number of `Event`s, then one `Resolved` or `Failed`.
+/// `id` is the call's id. A call gets any number of `Event`s, then one `Resolved` / `Listed`
+/// (matching its request) or `Failed`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Reply {
     Event { id: u64, event: CallEvent },
     Resolved { id: u64, resolved: Resolved },
+    Listed { id: u64, items: Vec<Listed> },
     Failed { id: u64, error: ModuleError },
 }
 
 impl Reply {
     pub fn id(&self) -> u64 {
         match self {
-            Reply::Event { id, .. } | Reply::Resolved { id, .. } | Reply::Failed { id, .. } => *id,
+            Reply::Event { id, .. } | Reply::Resolved { id, .. } | Reply::Listed { id, .. } | Reply::Failed { id, .. } => *id,
         }
     }
 }
@@ -195,6 +217,10 @@ mod tests {
                 },
             },
             Reply::Failed { id: 2, error: ModuleError::Timeout { limit_ms: 5 } },
+            Reply::Listed {
+                id: 4,
+                items: vec![Listed { url: "https://s/1#path=a%2Fb.zip".into(), filename: Some("b.zip".into()), size: Some(3), folder: Some("a".into()) }],
+            },
             Reply::Failed {
                 id: 3,
                 error: ModuleError::Script { message: "m".into(), hint: Some("h".into()), stack: None },
@@ -207,6 +233,10 @@ mod tests {
         assert_eq!(
             serde_json::to_value(&replies[1]).unwrap(),
             json!({ "type": "failed", "id": 2, "error": { "kind": "timeout", "limitMs": 5 } })
+        );
+        assert_eq!(
+            serde_json::to_value(&replies[2]).unwrap(),
+            json!({ "type": "listed", "id": 4, "items": [{ "url": "https://s/1#path=a%2Fb.zip", "filename": "b.zip", "size": 3, "folder": "a" }] })
         );
     }
 

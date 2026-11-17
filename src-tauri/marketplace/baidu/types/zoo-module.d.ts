@@ -3,7 +3,8 @@
  *
  * A site module is one ES module file whose default export is `defineModule({ resolve })`.
  * zoo-downloader calls `resolve` with a page URL the user pasted (one that matches the
- * manifest's `urlPatterns`) and downloads whatever direct URL it returns.
+ * manifest's `urlPatterns`) and downloads whatever direct URL it returns. Links that can hold
+ * several files (a shared folder) also implement `list`, which the app calls first.
  *
  * Runtime facts that matter when writing one:
  * - Only `import ... from 'zoo-module'` is allowed. Bundle everything else into the one file.
@@ -60,12 +61,36 @@ declare module "zoo-module" {
     maxSegmentSize?: number;
   }
 
+  /** One file of a link that holds several; what `list` returns. */
+  export interface Listed {
+    /**
+     * A URL for just this file, which `resolve` turns into its download. It must match the
+     * manifest's `urlPatterns`; a `#fragment` is a good place for the file's identity because
+     * matching and `fetch` ignore it. No credential placeholders: the app stores this URL.
+     * @example `${shareUrl}#path=${encodeURIComponent(path)}`
+     */
+    url: string;
+    /** The file's name. */
+    filename: string;
+    /** Size in bytes, if known. */
+    size?: number;
+    /** Folder inside the share, `/`-separated (`"photos/2024"`); leave out at the top. */
+    folder?: string;
+  }
+
   export interface SiteModule {
     /**
      * Turn a share page URL into a direct download. Throw (preferably `zoo.fail`) when it
      * cannot be done; the message is shown to the user.
      */
     resolve(url: string, zoo: Zoo): Resolved | Promise<Resolved>;
+    /**
+     * Only for links that can hold several files. Called when the user adds the link: every
+     * file you return becomes a download of its own (the user picks which), resolved later by
+     * `resolve` with the file's `url`. At most 1000 files. Same limits as `resolve`.
+     * Without `list`, a link is one file.
+     */
+    list?(url: string, zoo: Zoo): Listed[] | Promise<Listed[]>;
   }
 
   /** `R` with any field `Resolved` does not have turned into an error message (the host rejects them). */
@@ -76,6 +101,7 @@ declare module "zoo-module" {
   /** Marks the default export as a site module and type-checks it. Returns `module` unchanged. */
   export function defineModule<R extends Resolved>(module: {
     resolve(url: string, zoo: Zoo): OnlyResolvedFields<R> | Promise<OnlyResolvedFields<R>>;
+    list?(url: string, zoo: Zoo): Listed[] | Promise<Listed[]>;
   }): SiteModule;
 
   /** Platform features that have no Web API equivalent. Passed to `resolve`. */

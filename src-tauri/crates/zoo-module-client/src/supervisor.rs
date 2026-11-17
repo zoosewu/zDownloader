@@ -16,7 +16,7 @@ use tokio::process::{Child, ChildStderr, ChildStdin, Command};
 use tokio::sync::mpsc;
 use tokio::time::Instant;
 
-use crate::protocol::{CallEvent, Captcha, Limits, ModuleError, ModuleRef, Reply, Request, Resolved};
+use crate::protocol::{CallEvent, Captcha, Limits, Listed, ModuleError, ModuleRef, Reply, Request, Resolved};
 
 /// How long past a call's own time limit we wait before declaring the host hung.
 const RESPONSE_GRACE: Duration = Duration::from_secs(2);
@@ -67,8 +67,38 @@ impl Supervisor {
         limits: Limits,
         interaction: &dyn Interaction,
     ) -> Result<Resolved, ModuleError> {
+        let request = |id| Request::Resolve { id, module, url: url.into(), limits };
+        match self.call(request, limits, interaction).await? {
+            Reply::Resolved { resolved, .. } => Ok(resolved),
+            other => Err(crashed(format!("module host answered a resolve with {other:?}"))),
+        }
+    }
+
+    /// The files behind `url`; see `Request::List`.
+    pub async fn list(
+        &self,
+        module: ModuleRef,
+        url: &str,
+        limits: Limits,
+        interaction: &dyn Interaction,
+    ) -> Result<Vec<Listed>, ModuleError> {
+        let request = |id| Request::List { id, module, url: url.into(), limits };
+        match self.call(request, limits, interaction).await? {
+            Reply::Listed { items, .. } => Ok(items),
+            other => Err(crashed(format!("module host answered a list with {other:?}"))),
+        }
+    }
+
+    /// Sends the request `make(id)` builds and relays its events until the final reply, which
+    /// is returned unless it is `Failed`.
+    async fn call(
+        &self,
+        make: impl FnOnce(u64) -> Request,
+        limits: Limits,
+        interaction: &dyn Interaction,
+    ) -> Result<Reply, ModuleError> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let (generation, lines, mut replies) = self.send(Request::Resolve { id, module, url: url.into(), limits }).await?;
+        let (generation, lines, mut replies) = self.send(make(id)).await?;
         // If the caller gives up (drops this future), the host stops the call.
         let mut cancel = CancelOnDrop { id, lines: lines.clone(), armed: true };
         // Moves later by however long the site's countdown and the user take.
@@ -83,14 +113,6 @@ impl Supervisor {
                 }
             };
             match reply {
-                Reply::Resolved { resolved, .. } => {
-                    cancel.armed = false;
-                    return Ok(resolved);
-                }
-                Reply::Failed { error, .. } => {
-                    cancel.armed = false;
-                    return Err(error);
-                }
                 Reply::Event { event: CallEvent::Waiting { ms, reason }, .. } => {
                     deadline += Duration::from_millis(ms);
                     interaction.waiting(ms, reason.as_deref());
@@ -102,6 +124,14 @@ impl Supervisor {
                     if lines.send(to_line(&Request::Answer { id, ticket, solution })).is_err() {
                         return Err(crashed("module host exited"));
                     }
+                }
+                Reply::Failed { error, .. } => {
+                    cancel.armed = false;
+                    return Err(error);
+                }
+                done => {
+                    cancel.armed = false;
+                    return Ok(done);
                 }
             }
         }

@@ -7,8 +7,8 @@ use std::time::Duration;
 use zoo_core::resolve::{PhaseReport, Resolving};
 use zoo_core::{CoreError, Phase, Resolver, Source};
 
-use crate::manifest::url_matches;
-use crate::protocol::{Captcha, Limits, ModuleError, ModuleRef};
+use crate::manifest::handles;
+use crate::protocol::{Captcha, Limits, Listed, ModuleError, ModuleRef};
 use crate::supervisor::{Interaction, Supervisor};
 
 /// An enabled module, as the resolver needs it.
@@ -23,8 +23,7 @@ pub struct InstalledModule {
 
 impl InstalledModule {
     pub fn matches(&self, url: &str) -> bool {
-        let url = url.split('#').next().unwrap_or(url);
-        self.url_patterns.iter().any(|p| url_matches(p, url)) && self.url_regex.as_ref().is_none_or(|r| r.is_match(url))
+        handles(&self.url_patterns, self.url_regex.as_ref(), url)
     }
 }
 
@@ -50,6 +49,28 @@ impl ModuleResolver {
     pub fn module_for(&self, url: &str) -> Option<InstalledModule> {
         let modules = self.modules.read().unwrap();
         modules.iter().find(|m| m.matches(url)).cloned()
+    }
+
+    /// The files behind `url`, each with a URL of its own (see `Request::List`). A URL no module
+    /// handles is one file. Every item must go back to the same module, or `resolve` could not
+    /// download it.
+    pub async fn list(&self, url: &str) -> Result<Vec<Listed>, CoreError> {
+        let Some(installed) = self.module_for(url) else {
+            return Ok(vec![Listed { url: url.into(), filename: None, size: None, folder: None }]);
+        };
+        let id = installed.module.id.clone();
+        let report: PhaseReport = Box::new(|_| {});
+        let call = Reporting { user: self.user.as_ref(), report: &report, module: &id };
+        let items = self
+            .supervisor
+            .list(installed.module, url, installed.limits, &call)
+            .await
+            .map_err(|e| core_error(&id, e))?;
+        if let Some(stray) = items.iter().find(|item| self.module_for(&item.url).is_none_or(|m| m.module.id != id)) {
+            let message = format!("{id}: list returned {:?}, which this module's urlPatterns do not match", stray.url);
+            return Err(CoreError::Resolve { message, hint: None, retryable: false });
+        }
+        Ok(items)
     }
 }
 

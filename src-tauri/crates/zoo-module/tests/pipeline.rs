@@ -130,3 +130,45 @@ async fn pausing_stops_the_module_in_the_host() {
     let task = m.list().await.unwrap().into_iter().find(|t| t.id == id).unwrap();
     assert!(!paths.iter().any(|p| p == "/after-wait"), "the cancelled call went on: {paths:?} {task:#?}");
 }
+
+/// MODULE's resolve plus `list`: the page's file under two URLs, or (`?stray`) another site's.
+fn listing_module() -> String {
+    let list = r#"
+  list(url) {
+    if (url.includes('stray')) return [{ url: 'https://elsewhere.example/x', filename: 'x' }];
+    return [
+      { url: url + '#path=one', filename: 'one.mp4' },
+      { url: url + '#path=two', filename: 'two.mp4', folder: 'sub' },
+    ];
+  },
+  async resolve("#;
+    MODULE.replacen("  async resolve(", list, 1)
+}
+
+#[tokio::test]
+async fn listed_files_resolve_and_download_through_the_same_module() {
+    let site = share_site().await;
+    let dir = TempDir::new().unwrap();
+    let (m, resolver) = manager(&dir, &site);
+    resolver.set_modules(vec![InstalledModule {
+        module: module_allowing(&dir, "lister", &listing_module(), &["127.0.0.1"]),
+        url_patterns: vec![format!("http://{}/page/*", site.addr)],
+        url_regex: None,
+        limits: Limits::default(),
+    }]);
+
+    let items = resolver.list(&site.url("/page/abc")).await.unwrap();
+    assert_eq!(items.iter().map(|i| i.filename.as_deref().unwrap()).collect::<Vec<_>>(), ["one.mp4", "two.mp4"]);
+    // Each listed URL is a task of its own that the module resolves.
+    let id = m.add(add(&dir, items[1].url.clone())).await.unwrap().id;
+    let task = wait_until(&m, id, |t| matches!(t.state, TaskState::Completed | TaskState::Failed)).await;
+    assert_eq!(task.state, TaskState::Completed, "{:?}", task.error);
+    assert_eq!(std::fs::read(task.final_path.unwrap()).unwrap(), FILE);
+
+    let stray = resolver.list(&site.url("/page/abc?stray")).await.unwrap_err();
+    assert!(stray.to_string().contains("urlPatterns do not match"), "{stray}");
+
+    let plain = resolver.list(&site.url("/plain.bin")).await.unwrap();
+    assert_eq!(plain.len(), 1);
+    assert_eq!(plain[0].url, site.url("/plain.bin"));
+}

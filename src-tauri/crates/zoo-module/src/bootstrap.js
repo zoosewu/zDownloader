@@ -61,15 +61,20 @@
   });
 
   // Called by the generated entry module with the module's default export.
-  // Settles with a JSON string: {"ok": result} | {"err": {message, hint, stack}} | {"invalid": why},
-  // or {"checked": true} when `url` is null (load and shape check only).
-  const run = async (module, url) => {
+  // `work` is "resolve" or "list"; `url` null means load and shape check only ({"checked": true}).
+  // Otherwise settles with a JSON string: {"ok": result} | {"err": {message, hint, stack}} |
+  // {"invalid": why}; a list call on a module without `list` gives {"ok": null}.
+  const run = async (module, work, url) => {
     if (module === null || typeof module !== "object" || typeof module.resolve !== "function") {
       return JSON.stringify({ invalid: "the default export has no resolve function" });
     }
+    if (module.list !== undefined && typeof module.list !== "function") {
+      return JSON.stringify({ invalid: "the default export's list is not a function" });
+    }
     if (url === null) return JSON.stringify({ checked: true });
+    if (work === "list" && module.list === undefined) return JSON.stringify({ ok: null });
     try {
-      const result = await module.resolve(url, zoo);
+      const result = await (work === "list" ? module.list(url, zoo) : module.resolve(url, zoo));
       return JSON.stringify({ ok: result ?? null });
     } catch (e) {
       const isObject = e !== null && typeof e === "object";

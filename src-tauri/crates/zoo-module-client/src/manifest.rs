@@ -129,6 +129,13 @@ pub fn url_regex(source: &str) -> Result<regex::Regex, String> {
     regex::RegexBuilder::new(source).size_limit(1 << 20).build().map_err(|e| e.to_string())
 }
 
+/// Whether a module with these `urlPatterns` and compiled `urlRegex` handles `url`: a pattern
+/// and the regex must both match. The fragment is ignored.
+pub fn handles(patterns: &[String], regex: Option<&regex::Regex>, url: &str) -> bool {
+    let url = url.split('#').next().unwrap_or(url);
+    patterns.iter().any(|p| url_matches(p, url)) && regex.is_none_or(|r| r.is_match(url))
+}
+
 /// Whether `url` matches a `urlPatterns` entry. Scheme, host and the rest are compared apart:
 /// `*` matches any run of characters but never crosses from the host into the path, so
 /// `https://*.k2s.cc/*` cannot match `https://evil.com/x.k2s.cc/`. Host and scheme ignore
