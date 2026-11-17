@@ -33,13 +33,15 @@
 
 ## 3. 商店清單（Store listing，每種語言）
 
+描述與搜尋字詞不提任何網站模組或網站的名稱（使用者決定，2026-11-17）。
+
 擴充名稱取自 manifest（`Zoo Downloader`），不用填。
 
 ### English
 
 **Description**
 
-> Zoo Downloader sends your downloads to the Zoo Downloader desktop app, which downloads them faster and more reliably: several connections per file, pause and resume, automatic retries, scheduling, categories, and site modules for share sites such as Keep2Share and Baidu Netdisk.
+> Zoo Downloader sends your downloads to the Zoo Downloader desktop app, which downloads them faster and more reliably: several connections per file, pause and resume, automatic retries, scheduling, categories, and site modules for file-sharing sites.
 >
 > - Right-click a link, image, video or audio and choose "Download with Zoo Downloader".
 > - Or let it take over the downloads the browser starts (on by default; switch it off in the popup). If the app does not answer, the browser downloads as usual.
@@ -49,13 +51,13 @@
 >
 > The extension talks only to the app on your own computer (Native Messaging). It makes no network requests, collects nothing and sends nothing to us or anyone else. Private (InPrivate) windows are never taken over.
 
-**Search terms**（最多 7 個）：`download manager`, `downloader`, `accelerator`, `resume download`, `batch download`, `keep2share`, `baidu`
+**Search terms**（最多 7 個）：`download manager`, `downloader`, `accelerator`, `resume download`, `batch download`, `multi-connection download`
 
 ### 繁體中文
 
 **描述**
 
-> Zoo Downloader 把你的下載交給 Zoo Downloader 桌面 app，下載得更快、更穩：單一檔案多條連線、暫停與續傳、自動重試、排程、分類，還有 Keep2Share、百度網盤等分享網站的網站模組。
+> Zoo Downloader 把你的下載交給 Zoo Downloader 桌面 app，下載得更快、更穩：單一檔案多條連線、暫停與續傳、自動重試、排程、分類，也能透過網站模組處理分享網站的下載。
 >
 > - 在連結、圖片、影片或音訊上按右鍵，選「用 Zoo Downloader 下載」。
 > - 也可以讓它接管瀏覽器開始的下載（預設開啟，可在彈出視窗關閉）。app 沒有回應時，照常由瀏覽器下載。
@@ -65,13 +67,13 @@
 >
 > 擴充功能只和你電腦上的 app 溝通（原生訊息），本身不連網路、不收集任何資料，也不會把資料送給我們或任何人。InPrivate 視窗的下載不會被接管。
 
-**搜尋字詞**：`下載管理員`, `下載器`, `續傳`, `批次下載`, `百度網盤`, `keep2share`, `加速下載`
+**搜尋字詞**：`下載管理員`, `下載器`, `續傳`, `批次下載`, `加速下載`, `多線程下載`
 
 ### 日本語
 
 **説明**
 
-> Zoo Downloader は、ダウンロードを Zoo Downloader デスクトップ アプリに渡し、より速く確実にダウンロードします。1 ファイルを複数の接続で取得、一時停止と再開、自動リトライ、スケジュール、カテゴリ、Keep2Share や Baidu Netdisk などの共有サイト用モジュールに対応しています。
+> Zoo Downloader は、ダウンロードを Zoo Downloader デスクトップ アプリに渡し、より速く確実にダウンロードします。1 ファイルを複数の接続で取得、一時停止と再開、自動リトライ、スケジュール、カテゴリに対応し、サイト モジュールで共有サイトのダウンロードも扱えます。
 >
 > - リンク、画像、動画、音声を右クリックして「Zoo Downloader でダウンロード」を選びます。
 > - ブラウザーが始めたダウンロードを引き継ぐこともできます（既定でオン、ポップアップでオフにできます）。アプリが応答しない場合は、通常どおりブラウザーがダウンロードします。
@@ -81,7 +83,7 @@
 >
 > 拡張機能は同じコンピューター上のアプリとだけ通信し（ネイティブ メッセージング）、ネットワークには接続せず、データを収集・送信しません。InPrivate ウィンドウのダウンロードは引き継ぎません。
 
-**検索語句**：`ダウンロード マネージャー`, `ダウンローダー`, `レジューム`, `一括ダウンロード`, `keep2share`, `baidu`
+**検索語句**：`ダウンロード マネージャー`, `ダウンローダー`, `レジューム`, `一括ダウンロード`, `高速ダウンロード`
 
 ## 4. 給審查人員的說明（Notes for certification）
 
