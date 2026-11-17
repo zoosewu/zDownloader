@@ -2,7 +2,7 @@
 
 Zoo Downloader（桌面 app）與 Zoo Downloader 瀏覽器擴充功能（Microsoft Edge、Google Chrome）
 
-生效日期 / Effective date: 2026-11-17
+生效日期 / Effective date: 2026-11-17（更新 / updated: InPrivate）
 
 [繁體中文](#繁體中文) · [English](#english)
 
@@ -18,7 +18,9 @@ Zoo Downloader（桌面 app）與 Zoo Downloader 瀏覽器擴充功能（Microso
 
 - 要下載的檔案網址，以及瀏覽器建議的檔名；
 - 所在網頁的網址（做為 Referer）與瀏覽器的 User-Agent；
-- 瀏覽器為**該下載網址**保存的 Cookie。很多網站要登入後才能下載，app 需要它們才能代你下載。無痕視窗中的下載不會讀取 Cookie，也不會被接管。
+- 瀏覽器為**該下載網址**保存的 Cookie。很多網站要登入後才能下載，app 需要它們才能代你下載。
+
+**InPrivate／無痕視窗：** 只有在你於瀏覽器的擴充功能設定中允許它在 InPrivate 執行時，擴充功能才會在那裡運作；允許後，它在 InPrivate 視窗的行為與一般視窗相同，並使用該視窗自己的 Cookie（不會用一般視窗的）。交給 app 的下載會和其他下載一樣留在 app 的下載清單，直到你移除它；InPrivate 結束時不會自動清除。
 
 **資料去哪裡：** 只透過瀏覽器的「原生訊息」（Native Messaging）傳給同一台電腦上的 Zoo Downloader app。擴充功能本身不發出任何網路請求，不會把資料送到我們或任何第三方。
 
@@ -66,7 +68,9 @@ Zoo Downloader（桌面 app）與 Zoo Downloader 瀏覽器擴充功能（Microso
 
 - the URL of the file and the file name the browser suggests;
 - the URL of the page (as the Referer) and the browser's User-Agent;
-- the cookies the browser keeps **for that download URL**. Many sites only serve files to signed-in users, so the app needs them to download for you. Downloads in private (InPrivate/incognito) windows are never taken over and their cookies are never read.
+- the cookies the browser keeps **for that download URL**. Many sites only serve files to signed-in users, so the app needs them to download for you.
+
+**InPrivate / incognito windows:** the extension runs there only if you allow it in the browser's extension settings; then it works there as in other windows, using that window's own cookies (never the regular window's). Downloads handed to the app stay in the app's download list like any other until you remove them; they are not cleared when the InPrivate session ends.
 
 **Where it goes:** only to the Zoo Downloader app on the same computer, through the browser's Native Messaging. The extension makes no network requests and sends nothing to us or to any third party.
 

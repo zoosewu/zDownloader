@@ -29,14 +29,32 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]);
 }
 
-/** The `add` request for `url`, with the site's cookies unless it comes from an incognito window. */
-export async function addRequest(chrome, { url, filename, referer, userAgent, incognito }) {
+/**
+ * The cookie store a request comes from: an InPrivate window has its own. A context-menu click
+ * has a tab, which names its store; a download has only `incognito`. `undefined` is the regular
+ * store; `null` means an InPrivate request whose store is not found, which then sends no
+ * cookies rather than the regular window's (that would carry its sign-ins into InPrivate).
+ */
+async function cookieStore(chrome, { tabId, incognito }) {
+  if (!incognito) return undefined;
+  const stores = await chrome.cookies.getAllCookieStores().catch(() => []);
+  const own = stores.find((s) => tabId !== undefined && s.tabIds.includes(tabId)) ?? stores.find((s) => s.id !== '0');
+  return own?.id ?? null;
+}
+
+/**
+ * The `add` request for `url`, with the cookies the browser keeps for it, from the window's
+ * own store (InPrivate has a separate one). The extension runs in InPrivate windows only when
+ * the user allows it there; then it works the same as in other windows.
+ */
+export async function addRequest(chrome, { url, filename, referer, userAgent, tabId, incognito }) {
   const request = { type: 'add', url };
   if (filename) request.filename = filename;
   if (referer) request.referer = referer;
   if (userAgent) request.userAgent = userAgent;
-  if (!incognito) {
-    const cookies = await chrome.cookies.getAll({ url }).catch(() => []);
+  const store = await cookieStore(chrome, { tabId, incognito });
+  if (store !== null) {
+    const cookies = await chrome.cookies.getAll(store === undefined ? { url } : { url, storeId: store }).catch(() => []);
     if (cookies.length) request.cookie = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
   }
   return request;
@@ -72,6 +90,7 @@ export async function onMenuClick(chrome, info, tab, userAgent) {
     url,
     referer: info.frameUrl || info.pageUrl,
     userAgent,
+    tabId: tab?.id,
     incognito: Boolean(tab?.incognito),
   });
   const answer = await send(chrome, request);
@@ -103,10 +122,11 @@ export async function takeoverEnabled(chrome) {
 
 const basename = (path) => path.split(/[\\/]/).pop() ?? '';
 
-/** Whether a new browser download should go to the app instead. */
+/** Whether a new browser download should go to the app instead (InPrivate ones too, when the
+ * user allowed the extension there). */
 export function shouldTakeOver(item, { enabled, fallbacks, now }) {
   const url = item.finalUrl || item.url;
-  if (!enabled || item.incognito || item.byExtensionId) return false;
+  if (!enabled || item.byExtensionId) return false;
   // blob:, data:, file: and browser-internal URLs only exist inside the browser.
   if (!/^https?:/i.test(url)) return false;
   return !(fallbacks.get(url) > now);
@@ -134,7 +154,13 @@ export function createTakeover(chrome, { userAgent, now = Date.now, timeoutMs = 
       const enabled = await takeoverEnabled(chrome);
       if (!shouldTakeOver(item, { enabled, fallbacks, now: now() })) return keep();
       const url = item.finalUrl || item.url;
-      const request = await addRequest(chrome, { url, filename: basename(item.filename), referer: item.referrer, userAgent });
+      const request = await addRequest(chrome, {
+        url,
+        filename: basename(item.filename),
+        referer: item.referrer,
+        userAgent,
+        incognito: Boolean(item.incognito),
+      });
       const answer = await withTimeout(send(chrome, request), timeoutMs);
       if (!answer.ok) {
         fallbacks.set(url, now() + FALLBACK_MS);

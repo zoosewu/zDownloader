@@ -72,7 +72,7 @@ Zoo Downloader（shell 的 browser_bridge 模組）
   - host 連上後在 Windows 檢查 pipe 另一端的程序路徑是 app 本身（`GetNamedPipeServerProcessId`，透過 interprocess 的 `peer_creds`），防止別的程式先佔名稱騙取 Cookie。
   - host 啟動 app 前把自己的 std handle 設為不可繼承：否則 app 會一直握著瀏覽器給 host 的 pipe。
 - **Cookie**：只在送出當下讀取 `chrome.cookies.getAll({ url })`，交給 app 後存在任務的 headers（下載紀錄明文，和手動輸入 Cookie 相同，UI 已有提示）。不記 log。
-- **無痕視窗**：不接管、右鍵選單也不附 Cookie（無痕的 Cookie 不該進下載紀錄）。
+- **無痕／InPrivate 視窗**（2026-11-17 使用者決定）：擴充只有在使用者於瀏覽器允許它在 InPrivate 執行時才會在那裡運作，這個瀏覽器開關就是唯一的控制；允許後行為與一般視窗相同（接管、右鍵），Cookie 讀該視窗自己的儲存區（`cookies.getAllCookieStores` 找分頁所屬的 store；下載只有 `incognito` 時用非 "0" 的 store），找不到 InPrivate 的 store 就不附 Cookie，絕不退回讀一般視窗的。app 不分辨私密與否：這些下載照常留在 app 的下載紀錄（隱私權政策已說明）。
 
 ## 擴充
 
@@ -92,7 +92,6 @@ MV3，純 JavaScript ES module（不需建置），可測的邏輯放在獨立�
   - 符合條件就把網址、檔名、Referer、Cookie 送給 app。成功就 `cancel` 並 `erase`，瀏覽器的下載列表不留紀錄；失敗或逾時（15 秒）就照瀏覽器的建議檔名繼續下載。
   - 不接管的情況：
     - 開關關閉；
-    - 無痕；
     - `blob:`、`data:`、`file:` 網址；
     - 其他擴充發起的下載（`byExtensionId`）；
     - 這次是使用者對 app 失敗後回退的同一個網址（避免循環）。
@@ -124,7 +123,7 @@ MV3，純 JavaScript ES module（不需建置），可測的邏輯放在獨立�
   - host manifest 內容（Windows 路徑正確跳脫、`allowed_origins` 是固定 ID）。
 - **擴充（vitest）**：
   - 接管條件（每一種不接管的情況）；
-  - 送出訊息的組成（Cookie 串接、無痕不附 Cookie）；
+  - 送出訊息的組成（Cookie 串接；InPrivate 用自己的 Cookie，找不到就不附，絕不用一般視窗的）；
   - app 失敗時回退繼續下載；
   - 右鍵選單只建立一次。
 - **實機**：

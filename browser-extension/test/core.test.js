@@ -20,7 +20,13 @@ const dir = join(import.meta.dirname, '..');
 const read = (path) => JSON.parse(readFileSync(join(dir, path), 'utf8'));
 
 /** A fake `chrome` whose native host answers with `answer` (or fails with `lastError`). */
-function fakeChrome({ answer = { ok: true, name: 'a.zip' }, lastError, cookies = [], storage = {} } = {}) {
+/** Cookie stores as Chromium has them with one InPrivate window open: regular "0" (tab 1), InPrivate "1" (tab 2). */
+const STORES = [
+  { id: '0', tabIds: [1] },
+  { id: '1', tabIds: [2] },
+];
+
+function fakeChrome({ answer = { ok: true, name: 'a.zip' }, lastError, cookies = [], privateCookies = [], stores = STORES, storage = {} } = {}) {
   const chrome = {
     sent: [],
     runtime: {
@@ -32,7 +38,10 @@ function fakeChrome({ answer = { ok: true, name: 'a.zip' }, lastError, cookies =
         chrome.runtime.lastError = undefined;
       }),
     },
-    cookies: { getAll: vi.fn(async () => cookies) },
+    cookies: {
+      getAll: vi.fn(async ({ storeId = '0' }) => (storeId === '0' ? cookies : privateCookies)),
+      getAllCookieStores: vi.fn(async () => stores),
+    },
     storage: { local: { get: vi.fn(async (key) => (key in storage ? { [key]: storage[key] } : {})), set: vi.fn() } },
     i18n: { getMessage: vi.fn((key, subs) => `${key}${subs?.length ? `(${subs.join(',')})` : ''}`) },
     contextMenus: { removeAll: vi.fn((done) => done()), create: vi.fn() },
@@ -107,10 +116,17 @@ describe('addRequest', () => {
     expect(chrome.cookies.getAll).toHaveBeenCalledWith({ url: 'https://a/f.zip' });
   });
 
-  test('never reads cookies for incognito windows', async () => {
-    const chrome = fakeChrome({ cookies: [{ name: 'a', value: '1' }] });
-    expect(await addRequest(chrome, { url: 'https://a/', incognito: true })).toEqual({ type: 'add', url: 'https://a/' });
-    expect(chrome.cookies.getAll).not.toHaveBeenCalled();
+  test("InPrivate uses its own cookies, never the regular window's", async () => {
+    const both = { cookies: [{ name: 'regular', value: '1' }], privateCookies: [{ name: 'private', value: '2' }] };
+    // A download knows only that it is InPrivate; a menu click also has its tab.
+    expect((await addRequest(fakeChrome(both), { url: 'https://a/', incognito: true })).cookie).toBe('private=2');
+    const chrome = fakeChrome(both);
+    expect((await addRequest(chrome, { url: 'https://a/', tabId: 2, incognito: true })).cookie).toBe('private=2');
+    expect(chrome.cookies.getAll).toHaveBeenCalledWith({ url: 'https://a/', storeId: '1' });
+    // No InPrivate store to be found: no cookies at all, rather than the regular ones.
+    const lost = fakeChrome({ ...both, stores: [{ id: '0', tabIds: [1] }] });
+    expect(await addRequest(lost, { url: 'https://a/', incognito: true })).toEqual({ type: 'add', url: 'https://a/' });
+    expect(lost.cookies.getAll).not.toHaveBeenCalled();
   });
 });
 
@@ -151,9 +167,9 @@ describe('context menu', () => {
   test('uses the media URL and a frame referer; failures become a notification', async () => {
     const chrome = fakeChrome({ answer: { ok: false, code: 'invalid', message: 'nope' } });
     const info = { menuItemId: MENU_ID, srcUrl: 'https://a/v.mp4', frameUrl: 'https://a/frame', pageUrl: 'https://a/page' };
-    await onMenuClick(chrome, info, { incognito: true }, 'UA');
+    await onMenuClick(chrome, info, { id: 2, incognito: true }, 'UA');
     expect(chrome.sent[0].message).toMatchObject({ url: 'https://a/v.mp4', referer: 'https://a/frame' });
-    expect(chrome.cookies.getAll).not.toHaveBeenCalled();
+    expect(chrome.cookies.getAll).toHaveBeenCalledWith({ url: 'https://a/v.mp4', storeId: '1' });
     expect(chrome.notifications.create.mock.calls[0][0].message).toBe('error_invalid(nope)');
   });
 });
@@ -163,7 +179,6 @@ describe('takeover', () => {
 
   test.each([
     ['turned off', item(), { enabled: false }],
-    ['incognito', item({ incognito: true }), {}],
     ['started by an extension', item({ byExtensionId: 'abc' }), {}],
     ['blob URL', item({ url: 'blob:https://a/1', finalUrl: 'blob:https://a/1' }), {}],
     ['data URL', item({ url: 'data:text/plain,hi', finalUrl: 'data:text/plain,hi' }), {}],
@@ -173,8 +188,9 @@ describe('takeover', () => {
     expect(shouldTakeOver(downloadItem, { ...base, ...options })).toBe(false);
   });
 
-  test('takes over plain http(s) downloads, and a fallback expires', () => {
+  test('takes over plain http(s) downloads, InPrivate ones too, and a fallback expires', () => {
     expect(shouldTakeOver(item(), base)).toBe(true);
+    expect(shouldTakeOver(item({ incognito: true }), base)).toBe(true);
     expect(shouldTakeOver(item({ finalUrl: undefined, url: 'http://a/b' }), base)).toBe(true);
     expect(shouldTakeOver(item(), { ...base, fallbacks: new Map([['https://cdn.example/files/a.zip', 10]]), now: 10 })).toBe(true);
   });
@@ -194,6 +210,13 @@ describe('takeover', () => {
     expect(chrome.downloads.cancel).toHaveBeenCalledWith(7);
     expect(chrome.downloads.erase).toHaveBeenCalledWith({ id: 7 });
     expect(suggest.mock.calls.length).toBeLessThanOrEqual(1);
+  });
+
+  test('an InPrivate download goes with the InPrivate cookies', async () => {
+    const chrome = fakeChrome({ cookies: [{ name: 'regular', value: '1' }], privateCookies: [{ name: 'private', value: '2' }] });
+    await takeOver(chrome, item({ incognito: true }));
+    expect(chrome.sent[0].message.cookie).toBe('private=2');
+    expect(chrome.downloads.erase).toHaveBeenCalledWith({ id: 7 });
   });
 
   test('is on unless turned off', async () => {
