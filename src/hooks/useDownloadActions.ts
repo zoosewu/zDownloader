@@ -3,11 +3,13 @@
 import { useMemo } from 'react';
 import { useSetAtom } from 'jotai';
 import { backend, type Task, type TaskId } from '../backend';
-import { applyEventAtom, upsertTaskAtom } from '../stores/downloadStore';
+import { applyEventAtom, mergeSnapshotAtom, moveLocallyAtom, upsertTaskAtom } from '../stores/downloadStore';
 
 export function useDownloadActions() {
   const upsert = useSetAtom(upsertTaskAtom);
   const apply = useSetAtom(applyEventAtom);
+  const moveLocally = useSetAtom(moveLocallyAtom);
+  const mergeSnapshot = useSetAtom(mergeSnapshotAtom);
 
   return useMemo(() => {
     const one = async (request: Promise<Task>) => upsert(await request);
@@ -25,10 +27,19 @@ export function useDownloadActions() {
         await backend.downloads.remove(id, deleteFile);
         removed(id);
       },
-      move: (id: TaskId, before: TaskId | null) => one(backend.downloads.move(id, before)),
+      /** Shown at once (a dropped row stays where it was dropped); undone from the backend's list if refused. */
+      move: async (id: TaskId, before: TaskId | null) => {
+        moveLocally(id, before);
+        try {
+          await one(backend.downloads.move(id, before));
+        } catch (e) {
+          mergeSnapshot(await backend.downloads.list());
+          throw e;
+        }
+      },
       pauseAll: () => many(backend.downloads.pauseAll()),
       resumeAll: () => many(backend.downloads.resumeAll()),
       clearFinished: async () => (await backend.downloads.clearFinished()).forEach(removed),
     };
-  }, [upsert, apply]);
+  }, [upsert, apply, moveLocally, mergeSnapshot]);
 }

@@ -72,6 +72,28 @@ export function orderedIds(tasks: TaskMap): TaskId[] {
 }
 export const taskIdsAtom = selectAtom(tasksByIdAtom, orderedIds, sameItems);
 
+/**
+ * The `order` that puts `id` in front of `before` (or at the end): halfway between its new
+ * neighbours. Used to show a drag at once; the backend's answer then replaces it.
+ */
+export function orderBefore(tasks: TaskMap, id: TaskId, before: TaskId | null): number {
+  const queue = orderedIds(tasks).filter((x) => x !== id);
+  const at = before === null ? queue.length : queue.indexOf(before);
+  const prev = at > 0 ? tasks[queue[at - 1]].order : undefined;
+  const next = at >= 0 && at < queue.length ? tasks[queue[at]].order : undefined;
+  if (prev === undefined && next === undefined) return 0;
+  if (prev === undefined) return next! - 1;
+  if (next === undefined) return prev + 1;
+  return (prev + next) / 2;
+}
+
+/** Show `id` in front of `before` right away (same `rev`, so the backend's copy wins). */
+export const moveLocallyAtom = atom(null, (get, set, id: TaskId, before: TaskId | null) => {
+  const tasks = get(tasksByIdAtom);
+  if (!tasks[id]) return;
+  set(tasksByIdAtom, { ...tasks, [id]: { ...tasks[id], order: orderBefore(tasks, id, before) } });
+});
+
 /** One task (undefined once removed). A view per id; create it with useMemo. */
 export const taskAtom = (id: TaskId) => selectAtom(tasksByIdAtom, (tasks) => tasks[id]);
 

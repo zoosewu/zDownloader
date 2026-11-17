@@ -7,6 +7,8 @@ import { createStore } from 'jotai';
 import {
   applyEvent,
   mergeSnapshot,
+  moveLocallyAtom,
+  orderBefore,
   sourceChangedTasksAtom,
   taskAtom,
   taskCountsAtom,
@@ -156,5 +158,34 @@ describe('store views re-render only what changed', () => {
     expect(added).toEqual(['c', 'a', 'b']);
     store.set(tasksByIdAtom, applyEvent(store.get(tasksByIdAtom), { type: 'removed', data: 'a' }));
     expect(store.get(taskIdsAtom)).toEqual(['c', 'b']);
+  });
+});
+
+describe('dragging a row', () => {
+  const queue = (): TaskMap => ({
+    a: task('a', 1, { order: 1 }),
+    b: task('b', 2, { order: 2 }),
+    c: task('c', 3, { order: 3 }),
+  });
+
+  test('the new place is between its new neighbours', () => {
+    expect(orderBefore(queue(), 'c', 'a')).toBe(0); // to the front
+    expect(orderBefore(queue(), 'a', 'c')).toBe(2.5); // between b and c
+    expect(orderBefore(queue(), 'a', null)).toBe(4); // to the end
+    expect(orderBefore({ a: task('a', 1) }, 'a', null)).toBe(0);
+  });
+
+  test('shows at once, and the backend copy replaces it', () => {
+    const store = createStore();
+    store.set(tasksByIdAtom, queue());
+    store.set(moveLocallyAtom, 'c', 'a');
+    expect(store.get(taskIdsAtom)).toEqual(['c', 'a', 'b']);
+    // The backend answers with its own order (and a higher rev): that one stays.
+    store.set(tasksByIdAtom, applyEvent(store.get(tasksByIdAtom), { type: 'upserted', data: task('c', 9, { order: 0.5 }) }));
+    expect(store.get(tasksByIdAtom).c.order).toBe(0.5);
+    // Refused: the list from the backend puts it back (same rev as the guess).
+    store.set(moveLocallyAtom, 'a', null);
+    store.set(tasksByIdAtom, mergeSnapshot(store.get(tasksByIdAtom), Object.values(queue()).map((t) => (t.id === 'c' ? task('c', 9, { order: 0.5 }) : t))));
+    expect(store.get(taskIdsAtom)).toEqual(['c', 'a', 'b']);
   });
 });
