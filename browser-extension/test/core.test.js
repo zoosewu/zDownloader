@@ -78,7 +78,7 @@ describe('manifest', () => {
     const hex = createHash('sha256').update(Buffer.from(key, 'base64')).digest('hex').slice(0, 32);
     const id = [...hex].map((h) => String.fromCharCode(97 + parseInt(h, 16))).join('');
     const rust = readFileSync(join(dir, '..', 'src-tauri', 'crates', 'zoo-native-host', 'src', 'lib.rs'), 'utf8');
-    expect(rust).toContain(`pub const EXTENSION_ID: &str = "${id}";`);
+    expect(rust.match(/pub const EXTENSION_IDS: \[&str; \d+\] = \["([a-p]{32})"/)?.[1]).toBe(id);
   });
 
   test('asks only for what it uses and injects nothing into pages', () => {

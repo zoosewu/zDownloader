@@ -19,7 +19,7 @@
 
 1. Partner Center → **建立新的擴充功能**，上傳 zip，先不要送審。
 2. 在擴充的總覽頁抄下商店給的**擴充 ID**（32 個小寫字母）。
-3. 把 ID 交給開發（Claude）：加進 `zoo-native-host` 的允許清單與 host manifest 的 `allowed_origins`，app 發一版。
+3. 把 ID 交給開發（Claude）：加進 `zoo-native-host` 的允許清單與 host manifest 的 `allowed_origins`，app 發一版。（已完成：`bhgmngdlfelamchfhlahkkclffhpgfma`，商店識別碼 0RDCKBKMXKR6。）
 4. 回 Partner Center 填完下面各頁，**送審**（審查通常數個工作天）。
 5. 通過後：設定頁的「瀏覽器擴充」改成直接連到商店頁面（開發）。
 

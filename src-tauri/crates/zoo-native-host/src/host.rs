@@ -2,7 +2,7 @@
 //! it forwards the JSON to the app as one line and passes the one-line answer back, starting
 //! the app first when it is not running.
 
-use crate::{socket_name, ErrorCode, Response, EXTENSION_ID, MAX_LINE};
+use crate::{extension_origins, socket_name, ErrorCode, Response, MAX_LINE};
 use interprocess::local_socket::{prelude::*, Name, Stream};
 use serde_json::Value;
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -43,8 +43,7 @@ pub fn write_message(output: &mut impl Write, json: &[u8]) -> io::Result<()> {
 /// The browser passes the calling extension's origin as an argument. The host manifest already
 /// allows only ours; this is the second lock.
 pub fn is_our_extension(args: impl IntoIterator<Item = String>) -> bool {
-    let ours = format!("chrome-extension://{EXTENSION_ID}/");
-    args.into_iter().any(|arg| arg == ours)
+    args.into_iter().any(|arg| extension_origins().any(|ours| arg == ours))
 }
 
 pub struct Bridge {
@@ -233,8 +232,9 @@ mod tests {
 
     #[test]
     fn only_our_extension_may_start_the_host() {
-        let ours = format!("chrome-extension://{EXTENSION_ID}/");
-        assert!(is_our_extension([ours, "--parent-window=0".into()]));
+        for ours in extension_origins() {
+            assert!(is_our_extension([ours, "--parent-window=0".into()]));
+        }
         assert!(!is_our_extension(["chrome-extension://abcdefghijklmnopabcdefghijklmnop/".to_string()]));
         assert!(!is_our_extension(Vec::<String>::new()));
     }

@@ -4,7 +4,7 @@
 use serde_json::json;
 use std::io;
 use std::path::{Path, PathBuf};
-use zoo_native_host::{EXTENSION_ID, HOST_NAME};
+use zoo_native_host::{extension_origins, HOST_NAME};
 
 const HOST_EXE: &str = if cfg!(windows) { "zoo-native-host.exe" } else { "zoo-native-host" };
 
@@ -44,7 +44,7 @@ fn manifest(host: &Path) -> String {
         "description": "Zoo Downloader",
         "path": host,
         "type": "stdio",
-        "allowed_origins": [format!("chrome-extension://{EXTENSION_ID}/")],
+        "allowed_origins": extension_origins().collect::<Vec<_>>(),
     });
     serde_json::to_string_pretty(&manifest).expect("a manifest always serializes")
 }
@@ -99,7 +99,10 @@ mod tests {
         let json: serde_json::Value = serde_json::from_str(&text).unwrap();
         assert_eq!(json["name"], "com.zoo.downloader");
         assert_eq!(json["type"], "stdio");
-        assert_eq!(json["allowed_origins"], json!(["chrome-extension://oibblcgobgdenncecbfgdcpeegliejcj/"]));
+        assert_eq!(
+            json["allowed_origins"],
+            json!(["chrome-extension://oibblcgobgdenncecbfgdcpeegliejcj/", "chrome-extension://bhgmngdlfelamchfhlahkkclffhpgfma/"])
+        );
     }
 
     #[test]

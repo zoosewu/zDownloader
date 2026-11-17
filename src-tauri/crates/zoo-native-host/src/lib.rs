@@ -14,8 +14,14 @@ use std::io;
 /// The native messaging host name the extension asks the browser for.
 pub const HOST_NAME: &str = "com.zoo.downloader";
 
-/// The only extension allowed to start the host (fixed by the `key` in its manifest).
-pub const EXTENSION_ID: &str = "oibblcgobgdenncecbfgdcpeegliejcj";
+/// The extensions allowed to start the host: the copy loaded from the app's folder (ID fixed by
+/// the `key` in its manifest) and the Edge Add-ons listing.
+pub const EXTENSION_IDS: [&str; 2] = ["oibblcgobgdenncecbfgdcpeegliejcj", "bhgmngdlfelamchfhlahkkclffhpgfma"];
+
+/// `chrome-extension://<id>/` of each allowed extension, as browsers name the caller.
+pub fn extension_origins() -> impl Iterator<Item = String> {
+    EXTENSION_IDS.iter().map(|id| format!("chrome-extension://{id}/"))
+}
 
 pub const PROTOCOL_VERSION: u64 = 1;
 

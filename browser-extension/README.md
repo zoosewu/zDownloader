@@ -11,7 +11,7 @@ Chrome 與 Edge（Manifest V3）。設計與協定見 [docs/architecture/browser
 2. 開啟 `chrome://extensions`（Edge：`edge://extensions`），打開「開發人員模式」。
 3. 「載入未封裝項目」，選這個資料夾。
 
-`manifest.json` 的 `key` 固定了擴充 ID（`oibblcgobgdenncecbfgdcpeegliejcj`），app 只接受這個 ID。不要刪掉或更換 `key`；若要更換，同步改 `src-tauri/crates/zoo-native-host/src/lib.rs` 的 `EXTENSION_ID`（測試會檢查兩者一致）。
+`manifest.json` 的 `key` 固定了擴充 ID（`oibblcgobgdenncecbfgdcpeegliejcj`）。app 只接受 `src-tauri/crates/zoo-native-host/src/lib.rs` 的 `EXTENSION_IDS`：這個 ID 與 Edge 商店版的 `bhgmngdlfelamchfhlahkkclffhpgfma`。不要刪掉或更換 `key`；若要更換，同步改 `EXTENSION_IDS` 的第一個（測試會檢查兩者一致）。上架其他商店時把新的 ID 加進去。
 
 ## 結構
 
