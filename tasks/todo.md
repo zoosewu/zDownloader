@@ -182,3 +182,14 @@
 - v0.2.3 四個平台建置、`latest.json`、發布全部成功；CI 三平台通過
 - 未處理：zoo-module 在 Windows 連結時的 LNK4098 警告（新版 v8，測試全過）
 - 未驗證：已安裝的 app 實際自動更新一次（等下一版）
+
+# 分享連結展開成多個檔案（2026-11-17，規格待確認）
+
+規格：[share-listing.md](../docs/architecture/share-listing.md)
+
+- [ ] 1 SDK `list` + host 驗證 + 協定 `List` + `zoo-module test` 的 list case
+- [ ] 2 app `urls_list` 命令、bindings
+- [ ] 3 新增視窗展開成一組可勾選的列、資料夾結構
+- [ ] 4 自動開始遇到多檔時送進新增視窗
+- [ ] 5 百度模組 `list` 與 `#path=` 的 resolve；錄製多檔、子資料夾分享
+- [ ] 6 實機：全選、部分勾選、子資料夾、過期重新解析
