@@ -1,7 +1,6 @@
-//! Helping the user load the browser extension: the app ships the extension folder (bundle
-//! resources), knows which supported browsers are installed, and opens a browser's extensions
-//! page. The user then turns on developer mode and loads the folder ("Load unpacked"): browsers
-//! do not let a program install an extension that is not from their store.
+//! Helping the user install the browser extension: from the Edge Add-ons page, or by loading the
+//! folder the app ships (bundle resources) on a browser's extensions page with developer mode on
+//! ("Load unpacked"): browsers do not let a program install an extension by itself.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -61,6 +60,9 @@ const BROWSERS: [Known; 2] = [
     },
 ];
 
+/// The extension's Edge Add-ons page (its ID is `zoo_native_host::EXTENSION_IDS[1]`).
+const STORE_PAGE: &str = "https://microsoftedge.microsoft.com/addons/detail/bhgmngdlfelamchfhlahkkclffhpgfma";
+
 #[tauri::command]
 pub fn extension_setup(app: AppHandle) -> CmdResult<ExtensionSetup> {
     let folder = folder(&app)?;
@@ -80,8 +82,19 @@ pub async fn extension_open_page(browser: String, app: AppHandle) -> CmdResult<S
     let known = BROWSERS.iter().find(|b| b.id == browser).ok_or_else(|| CommandError::invalid(format!("unknown browser {browser:?}")))?;
     let exe = program(known).ok_or_else(|| CommandError::new("notFound", format!("{} is not installed", known.name)))?;
     crate::commands::clipboard::clipboard_copy(known.page.into(), app).await.map_err(|e| CommandError::new("io", e))?;
-    launch(&exe).map_err(|e| CommandError::new("io", format!("cannot start {}: {e}", known.name)))?;
+    launch(&exe, None).map_err(|e| CommandError::new("io", format!("cannot start {}: {e}", known.name)))?;
     Ok(known.page.into())
+}
+
+/// Open the store page in `browser`, or in the default browser when none is given.
+#[tauri::command]
+pub fn extension_open_store(browser: Option<String>, app: AppHandle) -> CmdResult<()> {
+    let Some(browser) = browser else {
+        return app.opener().open_url(STORE_PAGE, None::<&str>).map_err(|e| CommandError::new("io", format!("cannot open {STORE_PAGE}: {e}")));
+    };
+    let known = BROWSERS.iter().find(|b| b.id == browser).ok_or_else(|| CommandError::invalid(format!("unknown browser {browser:?}")))?;
+    let exe = program(known).ok_or_else(|| CommandError::new("notFound", format!("{} is not installed", known.name)))?;
+    launch(&exe, Some(STORE_PAGE)).map_err(|e| CommandError::new("io", format!("cannot start {}: {e}", known.name)))
 }
 
 /// Show the extension folder, to pick in "Load unpacked".
@@ -132,18 +145,23 @@ fn program(browser: &Known) -> Option<PathBuf> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn launch(exe: &Path) -> std::io::Result<()> {
-    Command::new(exe).spawn().map(drop)
+fn launch(exe: &Path, url: Option<&str>) -> std::io::Result<()> {
+    Command::new(exe).args(url).spawn().map(drop)
 }
 
 #[cfg(target_os = "macos")]
-fn launch(app: &Path) -> std::io::Result<()> {
-    Command::new("open").arg("-a").arg(app).spawn().map(drop)
+fn launch(app: &Path, url: Option<&str>) -> std::io::Result<()> {
+    Command::new("open").arg("-a").arg(app).args(url).spawn().map(drop)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_store_page_is_the_listed_extension() {
+        assert!(STORE_PAGE.ends_with(&format!("/{}", zoo_native_host::EXTENSION_IDS[1])));
+    }
 
     /// The bundle carries every file the extension loads (not its tests or README).
     #[test]

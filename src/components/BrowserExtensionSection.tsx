@@ -1,8 +1,8 @@
-// Settings: loading the browser extension. Browsers only install store extensions by themselves,
-// so the user loads the folder the app ships, in two steps, each with the button that does it.
+// Settings: installing the browser extension, from the Edge Add-ons page (in either browser), or
+// by loading the folder the app ships, in two steps, each with the button that does it.
 import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, Stack, Typography } from '@mui/material';
-import { FolderOpen as FolderIcon, OpenInNew as OpenIcon } from '@mui/icons-material';
+import { FolderOpen as FolderIcon, OpenInNew as OpenIcon, Storefront as StoreIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { backend, type ExtensionSetup } from '../backend';
 
@@ -18,18 +18,37 @@ const BrowserExtensionSection: React.FC = () => {
     backend.extension.setup().then(setSetup).catch(fail);
   }, []);
 
-  const step = (n: number, text: string, actions: React.ReactNode) => (
+  const row = (text: string, actions: React.ReactNode) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
       <Typography variant="body2" sx={{ minWidth: 0 }}>
-        {n}. {text}
+        {text}
       </Typography>
       {actions}
     </Box>
   );
+  const step = (n: number, text: string, actions: React.ReactNode) => row(`${n}. ${text}`, actions);
+  const openStore = (browser?: string) => backend.extension.openStore(browser).catch(fail);
 
   return (
     <Stack spacing={1}>
       {error && <Alert severity="error">{error}</Alert>}
+      {row(
+        t('settings.extension.store'),
+        setup?.browsers.length
+          ? setup.browsers.map((b) => (
+              <Button key={b.id} color="inherit" startIcon={<StoreIcon fontSize="small" />} onClick={() => openStore(b.id)}>
+                {b.name}
+              </Button>
+            ))
+          : setup && (
+              <Button color="inherit" startIcon={<StoreIcon fontSize="small" />} onClick={() => openStore()}>
+                {t('settings.extension.openStore')}
+              </Button>
+            ),
+      )}
+      <Typography variant="subtitle2" sx={{ pt: 1 }}>
+        {t('settings.extension.manual')}
+      </Typography>
       {setup && setup.browsers.length === 0 && <Alert severity="info">{t('settings.extension.noBrowser')}</Alert>}
       {step(
         1,

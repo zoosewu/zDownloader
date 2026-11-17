@@ -170,6 +170,9 @@
     "autoStartLinks": "Start links from the clipboard and the browser at once (no add window)",
     "extension": {
       "title": "Browser extension",
+      "store": "Install from the Edge Add-ons store",
+      "openStore": "Open the store page",
+      "manual": "Load manually",
       "step1": "Open the extensions page and turn on Developer mode",
       "step2": "Click \"Load unpacked\" and pick this folder",
       "showFolder": "Show folder",

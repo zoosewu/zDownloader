@@ -173,6 +173,8 @@ export const backend = {
     setup: () => call<ExtensionSetup>('extension_setup'),
     /** Start a browser (`edge` or `chrome`) with its extensions page address on the clipboard; resolves to that address. */
     openPage: (browser: string) => call<string>('extension_open_page', { browser }),
+    /** Open the extension's store page in `browser` (`edge` or `chrome`), or the default browser. */
+    openStore: (browser?: string) => call<null>('extension_open_store', { browser: browser ?? null }),
     /** Show the extension folder in the file manager. */
     showFolder: () => call<null>('extension_show_folder'),
   },

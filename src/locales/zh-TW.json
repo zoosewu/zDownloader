@@ -170,6 +170,9 @@
     "autoStartLinks": "剪貼簿與瀏覽器送來的連結直接開始下載（不開新增視窗）",
     "extension": {
       "title": "瀏覽器擴充",
+      "store": "從 Edge 商店安裝",
+      "openStore": "開啟商店頁面",
+      "manual": "手動載入",
       "step1": "打開擴充頁面，開啟「開發人員模式」",
       "step2": "按「載入解壓縮」，選這個資料夾",
       "showFolder": "顯示資料夾",
