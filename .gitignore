@@ -67,3 +67,6 @@ yarn.lock
 
 # Per-developer Claude notes (machine paths, secrets locations)
 CLAUDE.local.md
+
+# Store uploads (scripts/package-extension.mjs)
+dist-store/
