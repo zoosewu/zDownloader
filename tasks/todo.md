@@ -183,7 +183,7 @@
 - 未處理：zoo-module 在 Windows 連結時的 LNK4098 警告（新版 v8，測試全過）
 - 未驗證：已安裝的 app 實際自動更新一次（等下一版）
 
-# 分享連結展開成多個檔案（2026-11-17，規格待確認）
+# 分享連結展開成多個檔案（2026-11-17，規格已確認）
 
 規格：[share-listing.md](../docs/architecture/share-listing.md)
 
