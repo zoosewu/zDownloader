@@ -34,6 +34,9 @@ export function applyEvent(tasks: TaskMap, event: DownloadEvent): TaskMap {
       }
       return next;
     }
+    // For notifications; the `upserted` before it already carried the task.
+    case 'finished':
+      return tasks;
   }
 }
 

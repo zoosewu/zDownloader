@@ -864,11 +864,15 @@ impl Actor {
     /// Mutate a task and announce the change.
     fn set(&mut self, id: TaskId, f: impl FnOnce(&mut Task)) -> Result<Task, CoreError> {
         let task = self.tasks.iter_mut().find(|t| t.id == id).ok_or(CoreError::NotFound)?;
+        let was_finished = finished(task);
         f(task);
         self.rev += 1;
         task.rev = self.rev;
         let task = task.clone();
         self.emit(Event::Upserted(task.clone()));
+        if !was_finished && finished(&task) {
+            self.emit(Event::Finished(task.clone()));
+        }
         Ok(task)
     }
 
@@ -985,6 +989,11 @@ fn merge_headers(mut resolved: Vec<(String, String)>, own: &[(String, String)]) 
     let missing: Vec<_> = own.iter().filter(|(name, _)| !has_header(&resolved, name)).cloned().collect();
     resolved.extend(missing);
     resolved
+}
+
+/// Done for good: completed, or failed with no automatic retry coming (see `Event::Finished`).
+fn finished(task: &Task) -> bool {
+    task.state == TaskState::Completed || (task.state == TaskState::Failed && task.next_retry_at.is_none())
 }
 
 fn part_path_of(task: &Task) -> PathBuf {

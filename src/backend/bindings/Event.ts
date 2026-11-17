@@ -3,4 +3,4 @@ import type { ProgressTick } from "./ProgressTick";
 import type { Task } from "./Task";
 import type { TaskId } from "./TaskId";
 
-export type Event = { "type": "upserted", "data": Task } | { "type": "removed", "data": TaskId } | { "type": "progress", "data": Array<ProgressTick> };
+export type Event = { "type": "upserted", "data": Task } | { "type": "removed", "data": TaskId } | { "type": "progress", "data": Array<ProgressTick> } | { "type": "finished", "data": Task };

@@ -167,6 +167,10 @@ pub enum Event {
     Removed(TaskId),
     /// Counters of running tasks, batched a few times per second.
     Progress(Vec<ProgressTick>),
+    /// The task just finished: it completed, or failed with no automatic retry left. Sent once
+    /// per such change, after its `Upserted`; later edits of a finished task (categories, a
+    /// rename) do not send it again.
+    Finished(Task),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

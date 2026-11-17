@@ -437,3 +437,32 @@ async fn segment_map_follows_the_task_through_running_paused_and_completed() {
     assert_eq!(m.segments(id).await.unwrap().done, vec![(0, size)]);
     assert!(matches!(m.segments(TaskId::new()).await, Err(CoreError::NotFound)));
 }
+
+/// `Finished` comes once, when a download completes; changing a finished download later (its
+/// categories, also after the app restarted) never sends it again.
+#[tokio::test]
+async fn finished_is_sent_once_and_not_for_edits_of_finished_tasks() {
+    let fx = Fixture::start().await;
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    use zoo_core::category::{Category, Matching};
+    let both: Vec<Category> =
+        ["a", "b"].iter().map(|id| Category { id: id.to_string(), name: id.to_string(), matching: Matching::Any, rules: vec![] }).collect();
+    let config = || Config { categories: zoo_core::Classifier::new(&both).unwrap(), ..config() };
+    let finished = |events: &mut tokio::sync::broadcast::Receiver<Event>| {
+        std::iter::from_fn(|| events.try_recv().ok()).filter(|e| matches!(e, Event::Finished(_))).count()
+    };
+
+    let m = start(config(), store.path());
+    let mut events = m.subscribe();
+    let id = m.add(req(fx.url("/file/1000"), dir.path(), StartMode::Now)).await.unwrap().id;
+    wait_state(&m, id, TaskState::Completed).await;
+    m.set_tags(id, vec!["a".into()]).await.unwrap();
+    assert_eq!(finished(&mut events), 1);
+    m.shutdown().await;
+
+    // The app starts again with the finished download in its list.
+    let m = start(config(), store.path());
+    let mut events = m.subscribe();
+    m.set_tags(id, vec!["b".into()]).await.unwrap();
+    assert_eq!(finished(&mut events), 0);
+}

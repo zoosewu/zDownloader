@@ -2,7 +2,6 @@
 //! notifications.
 
 use crate::models::settings::AppSettings;
-use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
@@ -10,7 +9,7 @@ use tauri_plugin_notification::NotificationExt;
 use tokio::sync::broadcast::error::RecvError;
 use zoo_core::connection::{ConnectionSource, Direct};
 use zoo_core::proxy_pool::ProxyPool;
-use zoo_core::{CoreError, DownloadManager, Event, TaskId, TaskState};
+use zoo_core::{CoreError, DownloadManager, Event, TaskState};
 use zoo_core::Resolver;
 
 /// Frontend event carrying a `zoo_core::Event`.
@@ -54,22 +53,16 @@ impl Downloads {
     }
 }
 
-/// Relay every core event to the frontend; notify on completion and on final failure.
+/// Relay every core event to the frontend; notify when a download finishes (the core says when:
+/// `Event::Finished`, so editing a finished download never notifies again).
 pub fn forward_events(app: AppHandle) {
     let mut rx = app.state::<Downloads>().manager.subscribe();
     tauri::async_runtime::spawn(async move {
-        let mut last_state: HashMap<TaskId, TaskState> = HashMap::new();
         loop {
             match rx.recv().await {
                 Ok(event) => {
-                    if let Event::Upserted(task) = &event {
-                        let previous = last_state.insert(task.id, task.state);
-                        if previous != Some(task.state) {
-                            notify(&app, task).await;
-                        }
-                    }
-                    if let Event::Removed(id) = &event {
-                        last_state.remove(id);
+                    if let Event::Finished(task) = &event {
+                        notify(&app, task).await;
                     }
                     if let Err(e) = app.emit(DOWNLOAD_EVENT, &event) {
                         log::warn!("failed to emit {DOWNLOAD_EVENT}: {e}");
@@ -88,8 +81,7 @@ pub fn forward_events(app: AppHandle) {
 async fn notify(app: &AppHandle, task: &zoo_core::Task) {
     let (title, body) = match task.state {
         TaskState::Completed => ("下載完成", task.name.clone()),
-        // A failure that will be retried automatically is not final yet.
-        TaskState::Failed if task.next_retry_at.is_none() => (
+        TaskState::Failed => (
             "下載失敗",
             format!("{}: {}", task.name, task.error.as_ref().map(ToString::to_string).unwrap_or_default()),
         ),
