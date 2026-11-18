@@ -239,7 +239,8 @@
       "title": "帳號",
       "optional": "選填",
       "stored": "已儲存（留空保持不變）",
-      "clear": "清除"
+      "clear": "清除",
+      "more": "說明"
     },
     "match": {
       "resolvedBy": "由「{{name}}」模組解析",

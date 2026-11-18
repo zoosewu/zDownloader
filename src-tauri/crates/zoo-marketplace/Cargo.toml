@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 zoo-core = { path = "../zoo-core" }
-zoo-module-client = { path = "../zoo-module-client", features = ["core"] }
+zoo-module-client = { path = "../zoo-module-client", features = ["core", "ts"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

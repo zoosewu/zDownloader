@@ -35,6 +35,7 @@ import { useSiteModules } from '../../hooks/useSiteModules';
 import { settingsAtom } from '../../stores/settingsStore';
 import { useInstall } from './ConsentDialog';
 import CredentialsDialog from './CredentialsDialog';
+import { localized } from '../../utils/localized';
 
 export default function ModulesSettings() {
   const { t } = useTranslation();
@@ -90,7 +91,7 @@ function Installed({
   install: (key: string) => void;
   busy: string | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [settings, setSettings] = useAtom(settingsAtom);
   const [credentials, setCredentials] = useState<InstalledInfo | null>(null);
   const [removing, setRemoving] = useState<InstalledInfo | null>(null);
@@ -192,7 +193,7 @@ function Installed({
             )}
             {missing.length > 0 && (
               <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
-                {t('modules.installed.missingCredentials', { fields: missing.map((c) => c.label).join(', ') })}
+                {t('modules.installed.missingCredentials', { fields: missing.map((c) => localized(c.label, i18n.language)).join(', ') })}
               </Typography>
             )}
           </Paper>

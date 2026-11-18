@@ -165,6 +165,18 @@ fn schema_and_parser_agree() {
         ("prerelease", variant(&["version"], Some(json!("1.0.0-beta.1"))), true),
         ("wildcard domain", variant(&["permissions", "network", "allowDomains"], Some(json!(["*.example.com"]))), true),
         ("no credentials", variant(&["permissions", "credentials"], None), true),
+        ("translated label and help", variant(&["permissions", "credentials"], Some(json!([{
+            "key": "token", "label": { "en": "Token", "zh-TW": "權杖" },
+            "help": { "en": "Account → API", "ja": "アカウント → API" }, "helpUrl": "https://example.com/help"
+        }]))), true),
+        ("module help", variant(&["credentialsHelp"], Some(json!({ "en": "Sign in first." }))), true),
+        ("module help page", variant(&["credentialsHelpUrl"], Some(json!("https://example.com/help"))), true),
+        ("no languages", variant(&["permissions", "credentials"], Some(json!([{ "key": "t", "label": {} }]))), false),
+        ("bad language tag", variant(&["permissions", "credentials"], Some(json!([{ "key": "t", "label": { "English": "T" } }]))), false),
+        ("blank label", variant(&["permissions", "credentials"], Some(json!([{ "key": "t", "label": "  " }]))), false),
+        ("long translated help", variant(&["permissions", "credentials"], Some(json!([{ "key": "t", "label": "T", "help": { "en": "x".repeat(301) } }]))), false),
+        ("long module help", variant(&["credentialsHelp"], Some(json!("x".repeat(501)))), false),
+        ("help page not https", variant(&["credentialsHelpUrl"], Some(json!("http://example.com/help"))), false),
         ("api 2", variant(&["apiVersion"], Some(json!(2))), false),
         ("unknown field", variant(&["className"], Some(json!("X"))), false),
         ("uppercase id", variant(&["id"], Some(json!("Example"))), false),

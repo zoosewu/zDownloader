@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { backend, type PlanSummary } from '../../backend';
+import { localized } from '../../utils/localized';
 
 /** `install(key)` plans, asks if needed, installs. Render `dialog` somewhere. */
 export function useInstall(onError: (message: string) => void) {
@@ -58,7 +59,7 @@ interface ConsentDialogProps {
 }
 
 function ConsentDialog({ plan, onAccept, onDecline }: ConsentDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // On an update, what was not granted before stands out.
   const isNewDomain = (domain: string) => plan.currentVersion !== null && plan.added.allowDomains.includes(domain);
   const isNewKey = (key: string) => plan.currentVersion !== null && plan.added.credentials.some((c) => c.key === key);
@@ -98,7 +99,7 @@ function ConsentDialog({ plan, onAccept, onDecline }: ConsentDialogProps) {
               {plan.permissions.credentials.map((c) => (
                 <ListItem key={c.key} disableGutters>
                   <ListItemText
-                    primary={c.label}
+                    primary={localized(c.label, i18n.language)}
                     secondary={c.optional ? t('modules.credentials.optional') : undefined}
                     slotProps={{ primary: { color: isNewKey(c.key) ? 'warning.main' : undefined } }}
                   />

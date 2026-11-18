@@ -69,6 +69,14 @@
       "default": false,
       "description": "A copied link may start downloading at once instead of opening the add-download page, when the user allows it. Leave false for sites that usually ask for a captcha."
     },
+    "credentialsHelp": {
+      "$ref": "#/$defs/longHelp",
+      "description": "Optional. Shown above the account fields: where the values come from (e.g. which page to sign in to)."
+    },
+    "credentialsHelpUrl": {
+      "$ref": "#/$defs/helpUrl",
+      "description": "Optional. A page explaining the account fields further; the user opens it from the account dialog."
+    },
     "permissions": {
       "type": "object",
       "additionalProperties": false,
@@ -106,13 +114,34 @@
                 "description": "Name used in zoo.credentials.placeholder(key).",
                 "examples": ["username", "password", "apiKey"]
               },
-              "label": { "type": "string", "minLength": 1, "description": "Field label shown to the user." },
+              "label": { "$ref": "#/$defs/label", "description": "Field label shown to the user." },
               "secret": { "type": "boolean", "default": true, "description": "Mask the input (passwords, API keys)." },
-              "optional": { "type": "boolean", "default": false, "description": "The module works without it (e.g. free downloads); check zoo.credentials.has(key)." }
+              "optional": { "type": "boolean", "default": false, "description": "The module works without it (e.g. free downloads); check zoo.credentials.has(key)." },
+              "help": { "$ref": "#/$defs/help", "description": "Optional. Shown under the field: how to get the value." },
+              "helpUrl": { "$ref": "#/$defs/helpUrl", "description": "Optional. A page explaining how to get this value." }
             }
           }
         }
       }
     }
+  },
+  "$defs": {
+    "label": { "$ref": "#/$defs/text", "$comment": "at most 80 characters: maxLength for a string, additionalProperties for one per language", "maxLength": 80, "additionalProperties": { "maxLength": 80 } },
+    "help": { "$ref": "#/$defs/text", "$comment": "at most 300 characters: maxLength for a string, additionalProperties for one per language", "maxLength": 300, "additionalProperties": { "maxLength": 300 } },
+    "longHelp": { "$ref": "#/$defs/text", "$comment": "at most 500 characters: maxLength for a string, additionalProperties for one per language", "maxLength": 500, "additionalProperties": { "maxLength": 500 } },
+    "text": {
+      "description": "Text shown to the user: one string, or one per language, e.g. { \"en\": \"Password\", \"zh-TW\": \"密碼\", \"ja\": \"パスワード\" }. The app shows the user's language, else en, else the first.",
+      "anyOf": [
+        { "$ref": "#/$defs/line" },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$" },
+          "additionalProperties": { "$ref": "#/$defs/line" }
+        }
+      ]
+    },
+    "line": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "helpUrl": { "type": "string", "pattern": "^https://\\S+$" }
   }
 }

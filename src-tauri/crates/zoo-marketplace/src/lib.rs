@@ -19,7 +19,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use zoo_core::store::JsonStore;
-use zoo_module_client::manifest::{url_regex, Manifest, Permissions};
+use zoo_module_client::manifest::{url_regex, CredentialField, Manifest, Permissions, Text};
 use zoo_module_client::resolver::InstalledModule;
 use zoo_module_client::{Grants, Limits, ModuleRef, Secret};
 
@@ -71,20 +71,34 @@ pub struct PermissionSummary {
 #[serde(rename_all = "camelCase")]
 pub struct CredentialSpec {
     pub key: String,
-    pub label: String,
+    pub label: Text,
     pub secret: bool,
     pub optional: bool,
+    /// How to get the value (shown under the field).
+    #[serde(default)]
+    pub help: Option<Text>,
+    #[serde(default)]
+    pub help_url: Option<String>,
+}
+
+impl From<&CredentialField> for CredentialSpec {
+    fn from(c: &CredentialField) -> Self {
+        Self {
+            key: c.key.clone(),
+            label: c.label.clone(),
+            secret: c.secret,
+            optional: c.optional,
+            help: c.help.clone(),
+            help_url: c.help_url.clone(),
+        }
+    }
 }
 
 impl PermissionSummary {
     fn of(p: &Permissions) -> Self {
         Self {
             allow_domains: p.network.allow_domains.clone(),
-            credentials: p
-                .credentials
-                .iter()
-                .map(|c| CredentialSpec { key: c.key.clone(), label: c.label.clone(), secret: c.secret, optional: c.optional })
-                .collect(),
+            credentials: p.credentials.iter().map(CredentialSpec::from).collect(),
         }
     }
 
@@ -147,6 +161,9 @@ pub struct InstalledInfo {
     /// What the module may use now: requested and consented.
     pub permissions: PermissionSummary,
     pub credentials: Vec<CredentialStatus>,
+    /// Shown above the account fields (the manifest's `credentialsHelp`).
+    pub credentials_help: Option<Text>,
+    pub credentials_help_url: Option<String>,
     /// The module's manifest asks for more than the user consented to (a local module changed).
     pub needs_consent: bool,
     /// A newer version in the catalog.
@@ -156,10 +173,8 @@ pub struct InstalledInfo {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct CredentialStatus {
-    pub key: String,
-    pub label: String,
-    pub secret: bool,
-    pub optional: bool,
+    #[serde(flatten)]
+    pub spec: CredentialSpec,
     /// A value is stored (values are never shown).
     pub set: bool,
 }
@@ -615,10 +630,7 @@ impl Marketplace {
             .credentials
             .iter()
             .map(|c| CredentialStatus {
-                key: c.key.clone(),
-                label: c.label.clone(),
-                secret: c.secret,
-                optional: c.optional,
+                spec: c.clone(),
                 set: matches!(self.secrets.get(&account(&key, &c.key)), Ok(Some(_))),
             })
             .collect();
@@ -637,6 +649,8 @@ impl Marketplace {
             needs_consent: !requested.beyond(&PermissionSummary::of(&m.granted)).is_empty(),
             update: m.update.clone(),
             credentials,
+            credentials_help: m.manifest.credentials_help.clone(),
+            credentials_help_url: m.manifest.credentials_help_url.clone(),
             permissions,
             key,
         }

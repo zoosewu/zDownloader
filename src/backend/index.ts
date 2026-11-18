@@ -33,6 +33,7 @@ export type { CaptchaEvent } from './bindings/CaptchaEvent';
 export type { CaptchaRequest } from './bindings/CaptchaRequest';
 export type { CatalogModule } from './bindings/CatalogModule';
 export type { CredentialStatus } from './bindings/CredentialStatus';
+export type { Text } from './bindings/Text';
 export type { InstalledInfo } from './bindings/InstalledInfo';
 export type { PermissionSummary } from './bindings/PermissionSummary';
 export type { PlanSummary } from './bindings/PlanSummary';

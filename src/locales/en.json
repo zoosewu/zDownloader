@@ -239,7 +239,8 @@
       "title": "Account",
       "optional": "Optional",
       "stored": "Stored (leave empty to keep)",
-      "clear": "Clear"
+      "clear": "Clear",
+      "more": "How to get these"
     },
     "match": {
       "resolvedBy": "Resolved by the \"{{name}}\" module",

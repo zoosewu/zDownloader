@@ -227,7 +227,8 @@
       "title": "アカウント",
       "optional": "任意",
       "stored": "保存済み（空欄なら変更なし）",
-      "clear": "クリア"
+      "clear": "クリア",
+      "more": "取得方法"
     },
     "match": {
       "resolvedBy": "「{{name}}」モジュールが解析します",

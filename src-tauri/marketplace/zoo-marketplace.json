@@ -10,7 +10,7 @@
     },
     {
       "id": "baidu",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "source": "baidu",
       "description": "百度网盘 (pan.baidu.com share links)"
     }

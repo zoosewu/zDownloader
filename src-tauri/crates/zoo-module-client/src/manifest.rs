@@ -2,6 +2,8 @@
 //! The editor-facing contract is `crates/zoo-module/sdk/manifest.schema.json`; tests keep the
 //! two in agreement.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 pub const API_VERSION: u32 = 1;
@@ -32,7 +34,60 @@ pub struct Manifest {
     /// it. Leave it off for sites that usually ask for a captcha.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub auto_start: bool,
+    /// Shown above the account fields: where the values come from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credentials_help: Option<Text>,
+    /// A page explaining it further (https).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credentials_help_url: Option<String>,
     pub permissions: Permissions,
+}
+
+/// Text shown to the user: one string, or one per language (`{"en": "...", "zh-TW": "..."}`);
+/// the app shows the user's language, else English, else the first.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(untagged)]
+pub enum Text {
+    Plain(String),
+    Translated(BTreeMap<String, String>),
+}
+
+impl Text {
+    /// Every value is 1 to `max` characters; languages are tags such as `en` or `zh-TW`.
+    fn check(&self, what: &str, max: usize) -> Result<(), String> {
+        let values: Vec<&String> = match self {
+            Text::Plain(s) => vec![s],
+            Text::Translated(by_language) => {
+                check(!by_language.is_empty(), || format!("{what}: give at least one language"))?;
+                for language in by_language.keys() {
+                    check(is_language(language), || format!("{what}: {language:?} is not a language tag such as en or zh-TW"))?;
+                }
+                by_language.values().collect()
+            }
+        };
+        let ok = values.iter().all(|v| !v.trim().is_empty() && v.chars().count() <= max);
+        check(ok, || format!("{what}: 1 to {max} characters"))
+    }
+}
+
+impl From<&str> for Text {
+    fn from(s: &str) -> Self {
+        Text::Plain(s.into())
+    }
+}
+
+fn is_language(tag: &str) -> bool {
+    let mut parts = tag.split('-');
+    let primary = parts.next().unwrap_or_default();
+    (2..=3).contains(&primary.len())
+        && primary.bytes().all(|b| b.is_ascii_lowercase())
+        && parts.all(|p| (2..=8).contains(&p.len()) && p.bytes().all(|b| b.is_ascii_alphanumeric()))
+}
+
+fn check_help_url(what: &str, url: &Option<String>) -> Result<(), String> {
+    let ok = url.as_ref().is_none_or(|u| u.strip_prefix("https://").is_some_and(|rest| !rest.is_empty() && !rest.contains(char::is_whitespace)));
+    check(ok, || format!("{what}: an https:// URL"))
 }
 
 fn default_entry() -> String {
@@ -57,11 +112,17 @@ pub struct Network {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CredentialField {
     pub key: String,
-    pub label: String,
+    pub label: Text,
     #[serde(default = "yes")]
     pub secret: bool,
     #[serde(default)]
     pub optional: bool,
+    /// Shown under the field: how to get the value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub help: Option<Text>,
+    /// A page explaining it further (https).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub help_url: Option<String>,
 }
 
 fn yes() -> bool {
@@ -111,8 +172,17 @@ impl Manifest {
         for field in &m.permissions.credentials {
             let key_ok = !field.key.is_empty() && field.key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
             check(key_ok, || format!("credentials key {:?}: letters, digits and '_' only", field.key))?;
-            check(!field.label.is_empty(), || format!("credentials {:?}: label is empty", field.key))?;
+            let what = |name: &str| format!("credentials {:?}: {name}", field.key);
+            field.label.check(&what("label"), 80)?;
+            if let Some(help) = &field.help {
+                help.check(&what("help"), 300)?;
+            }
+            check_help_url(&what("helpUrl"), &field.help_url)?;
         }
+        if let Some(help) = &m.credentials_help {
+            help.check("credentialsHelp", 500)?;
+        }
+        check_help_url("credentialsHelpUrl", &m.credentials_help_url)?;
         Ok(manifest)
     }
 }
@@ -221,9 +291,12 @@ mod tests {
         "homepage": "https://example.com",
         "entry": "dist/index.js",
         "urlPatterns": ["https://example.com/file/*"],
+        "credentialsHelp": { "en": "Sign in at example.com first.", "zh-TW": "先登入 example.com。" },
+        "credentialsHelpUrl": "https://example.com/help",
         "permissions": {
             "network": { "allowDomains": ["example.com"] },
-            "credentials": [{ "key": "password", "label": "Password", "secret": true, "optional": true }]
+            "credentials": [{ "key": "password", "label": { "en": "Password", "ja": "パスワード" }, "secret": true, "optional": true,
+                              "help": "Account settings → API", "helpUrl": "https://example.com/help#password" }]
         }
     }"#;
 
@@ -253,6 +326,8 @@ mod tests {
         let m = Manifest::parse(FULL).unwrap();
         assert_eq!(m.permissions.credentials[0].key, "password");
         assert!(m.permissions.credentials[0].optional);
+        assert_eq!(m.permissions.credentials[0].help, Some("Account settings → API".into()));
+        assert!(matches!(&m.credentials_help, Some(Text::Translated(t)) if t["zh-TW"] == "先登入 example.com。"));
     }
 
     #[test]
@@ -275,5 +350,21 @@ mod tests {
         assert!(Manifest::parse(&with(r#""urlRegex": "(?=x)""#)).unwrap_err().contains("urlRegex"), "no lookaround");
         let long = format!(r#""urlRegex": "{}""#, "a".repeat(MAX_URL_REGEX + 1));
         assert!(Manifest::parse(&with(&long)).unwrap_err().contains("urlRegex"));
+    }
+
+    #[test]
+    fn help_texts_are_checked() {
+        let with_field = |field: &str| FULL.replace(r#""key": "password", "label": { "en": "Password", "ja": "パスワード" }"#, field);
+        for (bad, why) in [
+            (with_field(r#""key": "password", "label": """#), "empty label"),
+            (with_field(r#""key": "password", "label": {}"#), "no language"),
+            (with_field(r#""key": "password", "label": { "English": "Password" }"#), "not a language tag"),
+            (with_field(r#""key": "password", "label": { "en": " " }"#), "blank translation"),
+            (FULL.replace("https://example.com/help#password", "http://example.com/help"), "help page not https"),
+            (FULL.replace(r#""https://example.com/help","#, r#""javascript:alert(1)","#), "credentialsHelpUrl not https"),
+            (FULL.replace("Account settings → API", &"x".repeat(301)), "help too long"),
+        ] {
+            assert!(Manifest::parse(&bad).is_err(), "{why} should be rejected");
+        }
     }
 }

@@ -1,9 +1,24 @@
-// Account details a module logs in with. Stored values are never shown: leave a field empty
-// to keep it, or clear it.
+// Account details a module logs in with, with the module's own help on getting them. Stored
+// values are never shown: leave a field empty to keep it, or clear it.
 import { useEffect, useState } from 'react';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, InputAdornment, TextField } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  InputAdornment,
+  Link,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import { HelpOutlined as HelpIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { backend, type InstalledInfo } from '../../backend';
+import { localized } from '../../utils/localized';
 
 interface CredentialsDialogProps {
   module: InstalledInfo | null;
@@ -11,7 +26,8 @@ interface CredentialsDialogProps {
 }
 
 export default function CredentialsDialog({ module, onClose }: CredentialsDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const text = (value: Parameters<typeof localized>[0]) => localized(value, i18n.language);
   /** Typed values; `null` clears a stored one. Untouched fields are absent. */
   const [values, setValues] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<string | null>(null);
@@ -38,30 +54,54 @@ export default function CredentialsDialog({ module, onClose }: CredentialsDialog
       <DialogTitle>{module.name}</DialogTitle>
       <DialogContent>
         {error && <Alert severity="error">{error}</Alert>}
+        {(module.credentialsHelp || module.credentialsHelpUrl) && (
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+            {module.credentialsHelp && text(module.credentialsHelp)}
+            {module.credentialsHelpUrl && (
+              <>
+                {module.credentialsHelp && ' '}
+                <Link href={module.credentialsHelpUrl} target="_blank" rel="noreferrer">
+                  {t('modules.credentials.more')}
+                </Link>
+              </>
+            )}
+          </Typography>
+        )}
         {module.credentials.map((field, index) => {
           const stored = field.set && values[field.key] !== null;
+          const helper = [field.help && text(field.help), field.optional && t('modules.credentials.optional')].filter(Boolean).join(' · ');
           return (
             <TextField
               key={field.key}
-              label={field.label}
+              label={text(field.label)}
               type={field.secret ? 'password' : 'text'}
               value={values[field.key] ?? ''}
               onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
               placeholder={stored ? t('modules.credentials.stored') : undefined}
-              helperText={field.optional ? t('modules.credentials.optional') : undefined}
+              helperText={helper || undefined}
               autoFocus={index === 0}
               autoComplete="off"
               fullWidth
               margin="normal"
               slotProps={{
                 input: {
-                  endAdornment: stored ? (
-                  <InputAdornment position="end">
-                    <Button size="small" onClick={() => setValues((v) => ({ ...v, [field.key]: null }))}>
-                      {t('modules.credentials.clear')}
-                    </Button>
-                  </InputAdornment>
-                  ) : undefined,
+                  endAdornment:
+                    stored || field.helpUrl ? (
+                      <InputAdornment position="end">
+                        {stored && (
+                          <Button size="small" onClick={() => setValues((v) => ({ ...v, [field.key]: null }))}>
+                            {t('modules.credentials.clear')}
+                          </Button>
+                        )}
+                        {field.helpUrl && (
+                          <Tooltip title={t('modules.credentials.more')}>
+                            <IconButton size="small" edge="end" href={field.helpUrl} target="_blank" rel="noreferrer">
+                              <HelpIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </InputAdornment>
+                    ) : undefined,
                 },
               }}
             />

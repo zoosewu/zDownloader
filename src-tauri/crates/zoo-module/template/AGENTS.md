@@ -96,6 +96,21 @@ if (zoo.credentials.has('password')) {
 Placeholders work in URLs, headers, form and JSON bodies. Do not transform them (`btoa`,
 slicing, hashing): the host will not recognize the result.
 
+Tell the user how to get each value when it is not obvious (a cookie, an API key):
+`credentialsHelp` shows above the fields, a field's `help` under it, and `credentialsHelpUrl` /
+`helpUrl` (https) link to a longer guide. `label` and the help texts take one string or one per
+language:
+
+```json
+"credentialsHelp": { "en": "Sign in at example.com first.", "zh-TW": "先在瀏覽器登入 example.com。" },
+"permissions": {
+  "credentials": [{
+    "key": "session", "label": { "en": "Session cookie", "zh-TW": "Session cookie" },
+    "help": { "en": "F12 → Application → Cookies → example.com: copy the Value of SESSION", "zh-TW": "F12 → 應用程式 → Cookie → example.com：複製 SESSION 的值" }
+  }]
+}
+```
+
 **Session cookies and Referer.** Cookies persist for the call automatically and are sent with
 the download. Many sites also want the page as Referer:
 `return { url: direct, headers: { Referer: page.url } };`
