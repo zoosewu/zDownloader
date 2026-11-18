@@ -11,7 +11,6 @@ import {
   Switch,
   TextField,
   Typography,
-  Alert,
 } from '@mui/material';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +20,7 @@ import { backend, type AppSettings, type Theme } from '../backend';
 import { open } from '@tauri-apps/plugin-dialog';
 import AppUpdateSection from './AppUpdateSection';
 import BrowserExtensionSection from './BrowserExtensionSection';
+import Toast, { type ToastMessage } from './Toast';
 
 export default function GeneralSettings() {
   const { t, i18n } = useTranslation();
@@ -29,7 +29,7 @@ export default function GeneralSettings() {
   // the backend is the only place they are written.
   const [settings, setSettings] = useState<AppSettings>(saved);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<ToastMessage | null>(null);
 
   async function handleSave() {
     try {
@@ -43,10 +43,10 @@ export default function GeneralSettings() {
         await i18n.changeLanguage(settings.language);
       }
 
-      setMessage({ type: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
+      setMessage({ severity: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
     } catch (error) {
       console.error('Failed to save settings:', error);
-      setMessage({ type: 'error', text: t('settings.errors.saveFailed') || 'Failed to save settings' });
+      setMessage({ severity: 'error', text: t('settings.errors.saveFailed') || 'Failed to save settings' });
     } finally {
       setSaving(false);
     }
@@ -74,12 +74,6 @@ export default function GeneralSettings() {
   return (
     <Box>
       <Stack spacing={2.5}>
-        {message && (
-          <Alert severity={message.type} onClose={() => setMessage(null)}>
-            {message.text}
-          </Alert>
-        )}
-
         {/* Language */}
         <FormControl fullWidth>
           <InputLabel>{t('settings.language')}</InputLabel>
@@ -166,13 +160,15 @@ export default function GeneralSettings() {
               label={t('settings.clipboardMonitor')}
             />
             <FormControlLabel
+              sx={{ pl: 4 }}
+              disabled={!settings.enableClipboardMonitoring}
               control={
                 <Switch
-                  checked={settings.autoStartLinks}
-                  onChange={(e) => setSettings({ ...settings, autoStartLinks: e.target.checked })}
+                  checked={settings.autoStartCopied}
+                  onChange={(e) => setSettings({ ...settings, autoStartCopied: e.target.checked })}
                 />
               }
-              label={t('settings.autoStartLinks')}
+              label={t('settings.autoStartCopied')}
             />
             <FormControlLabel
               control={
@@ -199,6 +195,16 @@ export default function GeneralSettings() {
           <Typography variant="subtitle2" gutterBottom>
             {t('settings.extension.title')}
           </Typography>
+          <FormControlLabel
+            sx={{ mb: 1, ml: 0 }}
+            control={
+              <Switch
+                checked={settings.autoStartBrowser}
+                onChange={(e) => setSettings({ ...settings, autoStartBrowser: e.target.checked })}
+              />
+            }
+            label={t('settings.autoStartBrowser')}
+          />
           <BrowserExtensionSection />
         </Box>
 
@@ -230,6 +236,7 @@ export default function GeneralSettings() {
           </Button>
         </Box>
       </Stack>
+      <Toast message={message} onClose={() => setMessage(null)} />
     </Box>
   );
 }

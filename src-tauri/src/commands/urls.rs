@@ -25,8 +25,8 @@ pub struct UrlInfo {
     pub module: Option<InstalledInfo>,
     /// Worth offering as a download: a module resolves it or it names a common file type.
     pub downloadable: bool,
-    /// Start it at once instead of showing it in the add window: the app-wide switch is on
-    /// and the resolving module, if any, allows it.
+    /// Start it at once when copied, instead of showing it in the add window: the switch for
+    /// copied links is on and the resolving module, if any, allows it.
     pub auto_start: bool,
 }
 
@@ -55,15 +55,15 @@ pub async fn urls_list(url: String, modules: State<'_, SiteModules>) -> CmdResul
 
 #[tauri::command]
 pub async fn urls_inspect(url: String, modules: State<'_, SiteModules>, settings: State<'_, SettingsState>) -> CmdResult<UrlInfo> {
-    let allowed = settings.settings.lock().await.auto_start_links;
+    let allowed = settings.settings.lock().await.auto_start_copied;
     Ok(inspect(&url, module_for(&url, &modules), allowed))
 }
 
-/// Whether a link from outside (the browser) starts at once: `UrlInfo::auto_start`, and the
-/// link is one file. A shared folder waits in the add window for the user to pick its files,
+/// Whether a download the browser extension sends starts at once: the switch for the browser
+/// is on, the link's module (if any) allows it, and the link is one file. A shared folder waits in the add window for the user to pick its files,
 /// and so does a link its module cannot list (the add window shows why).
 pub async fn starts_at_once(url: &str, modules: &SiteModules, settings: &SettingsState) -> bool {
-    let allowed = settings.settings.lock().await.auto_start_links;
+    let allowed = settings.settings.lock().await.auto_start_browser;
     allowed && module_for(url, modules).is_none_or(|m| m.auto_start) && matches!(modules.resolver.list(url).await.as_deref(), Ok([_]))
 }
 
@@ -72,7 +72,8 @@ fn module_for(url: &str, modules: &SiteModules) -> Option<InstalledInfo> {
     modules.market.installed().into_iter().find(|i| i.key == key)
 }
 
-/// `auto_start_allowed`: the app-wide switch; without it nothing starts by itself.
+/// `auto_start_allowed`: the switch for where the link came from; without it nothing starts by
+/// itself.
 fn inspect(url: &str, module: Option<InstalledInfo>, auto_start_allowed: bool) -> UrlInfo {
     let filename = match tauri::Url::parse(url) {
         Ok(parsed) if matches!(parsed.scheme(), "http" | "https") => {

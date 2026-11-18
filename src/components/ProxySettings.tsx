@@ -22,6 +22,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import Toast, { type ToastMessage } from './Toast';
 import {
   Upload as ImportIcon,
   RestartAlt as ResetIcon,
@@ -71,7 +72,7 @@ export default function ProxySettings() {
   const clearAllProxies = useSetAtom(clearAllProxiesAtom);
   const resetFailedProxies = useSetAtom(resetFailedProxiesAtom);
 
-  const [notice, setNotice] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
+  const [notice, setNotice] = useState<ToastMessage | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
   // The list follows the backend while the page is open: health and counters change with
@@ -152,11 +153,6 @@ export default function ProxySettings() {
       </Box>
 
       {error && <Alert severity="error">{error}</Alert>}
-      {notice && (
-        <Alert severity={notice.severity} onClose={() => setNotice(null)}>
-          {notice.text}
-        </Alert>
-      )}
       {loading && <LinearProgress />}
 
       {!loading && proxies.length === 0 ? (
@@ -246,6 +242,7 @@ export default function ProxySettings() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Toast message={notice} onClose={() => setNotice(null)} />
     </Box>
   );
 }

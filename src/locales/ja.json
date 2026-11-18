@@ -167,7 +167,8 @@
     "proxyFallbackDirect": "使用できるプロキシがない場合は直接接続する",
     "userAgentHelp": "ダウンロードが User-Agent を指定しないときに使います。モジュールやタスクの指定が優先されます。",
     "title": "設定",
-    "autoStartLinks": "クリップボードとブラウザからのリンクをすぐダウンロード（追加ウィンドウなし）",
+    "autoStartBrowser": "ブラウザーでクリックしたダウンロードをすぐ開始（追加ウィンドウなし）",
+    "autoStartCopied": "コピーしたリンクをすぐダウンロード（追加ウィンドウなし）",
     "extension": {
       "title": "ブラウザー拡張機能",
       "store": "Edge アドオン ストアからインストール",

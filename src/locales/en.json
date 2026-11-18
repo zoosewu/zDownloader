@@ -167,7 +167,8 @@
     "proxyFallbackDirect": "Connect directly when no proxy is usable",
     "userAgentHelp": "Used when a download sets no User-Agent; a module's or the task's own wins.",
     "title": "Settings",
-    "autoStartLinks": "Start links from the clipboard and the browser at once (no add window)",
+    "autoStartBrowser": "Start downloads clicked in the browser at once (no add window)",
+    "autoStartCopied": "Start copied links at once (no add window)",
     "extension": {
       "title": "Browser extension",
       "store": "Install from the Edge Add-ons store",

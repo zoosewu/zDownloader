@@ -11,7 +11,6 @@ import {
   Switch,
   TextField,
   Typography,
-  Alert,
   InputAdornment,
 } from '@mui/material';
 import { useState } from 'react';
@@ -21,6 +20,7 @@ import { backend, type AppSettings, type SpeedLimitMode } from '../backend';
 import { settingsAtom } from '../stores/settingsStore';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import UserAgentField from './UserAgentField';
+import Toast, { type ToastMessage } from './Toast';
 
 export default function AdvancedSettings() {
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ export default function AdvancedSettings() {
   // the backend is the only place they are written.
   const [settings, setSettings] = useState<AppSettings>(saved);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<ToastMessage | null>(null);
 
   async function handleSave() {
     try {
@@ -37,10 +37,10 @@ export default function AdvancedSettings() {
       const next = await backend.settings.update(settings);
       setGlobalSettings(next);
       setSettings(next);
-      setMessage({ type: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
+      setMessage({ severity: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
     } catch (error) {
       console.error('Failed to save settings:', error);
-      setMessage({ type: 'error', text: t('settings.errors.saveFailed') || 'Failed to save settings' });
+      setMessage({ severity: 'error', text: t('settings.errors.saveFailed') || 'Failed to save settings' });
     } finally {
       setSaving(false);
     }
@@ -55,10 +55,10 @@ export default function AdvancedSettings() {
       const defaultSettings = await backend.settings.reset();
       setGlobalSettings(defaultSettings);
       setSettings(defaultSettings);
-      setMessage({ type: 'success', text: t('settings.resetSuccess') || 'Settings reset to defaults' });
+      setMessage({ severity: 'success', text: t('settings.resetSuccess') || 'Settings reset to defaults' });
     } catch (error) {
       console.error('Failed to reset settings:', error);
-      setMessage({ type: 'error', text: t('settings.errors.resetFailed') || 'Failed to reset settings' });
+      setMessage({ severity: 'error', text: t('settings.errors.resetFailed') || 'Failed to reset settings' });
     }
   }
 
@@ -74,11 +74,11 @@ export default function AdvancedSettings() {
 
       if (exportPath) {
         await backend.settings.export(exportPath as string);
-        setMessage({ type: 'success', text: t('settings.exportSuccess') || 'Settings exported successfully' });
+        setMessage({ severity: 'success', text: t('settings.exportSuccess') || 'Settings exported successfully' });
       }
     } catch (error) {
       console.error('Failed to export settings:', error);
-      setMessage({ type: 'error', text: t('settings.errors.exportFailed') || 'Failed to export settings' });
+      setMessage({ severity: 'error', text: t('settings.errors.exportFailed') || 'Failed to export settings' });
     }
   }
 
@@ -96,23 +96,17 @@ export default function AdvancedSettings() {
         const imported = await backend.settings.import(importPath as string);
         setGlobalSettings(imported);
         setSettings(imported);
-        setMessage({ type: 'success', text: t('settings.importSuccess') || 'Settings imported successfully' });
+        setMessage({ severity: 'success', text: t('settings.importSuccess') || 'Settings imported successfully' });
       }
     } catch (error) {
       console.error('Failed to import settings:', error);
-      setMessage({ type: 'error', text: t('settings.errors.importFailed') || 'Failed to import settings' });
+      setMessage({ severity: 'error', text: t('settings.errors.importFailed') || 'Failed to import settings' });
     }
   }
 
   return (
     <Box>
       <Stack spacing={2.5}>
-        {message && (
-          <Alert severity={message.type} onClose={() => setMessage(null)}>
-            {message.text}
-          </Alert>
-        )}
-
         {/* Download Settings */}
         <Box>
           <Typography variant="h6" gutterBottom>
@@ -277,6 +271,7 @@ export default function AdvancedSettings() {
           </Button>
         </Box>
       </Stack>
+      <Toast message={message} onClose={() => setMessage(null)} />
     </Box>
   );
 }

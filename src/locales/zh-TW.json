@@ -167,7 +167,8 @@
     "proxyFallbackDirect": "所有代理都無法使用時改用直接連線",
     "userAgentHelp": "下載沒有指定 User-Agent 時使用；模組回傳的與任務自訂的優先。",
     "title": "設定",
-    "autoStartLinks": "剪貼簿與瀏覽器送來的連結直接開始下載（不開新增視窗）",
+    "autoStartBrowser": "在瀏覽器點的下載直接開始（不開新增視窗）",
+    "autoStartCopied": "複製的連結直接開始下載（不開新增視窗）",
     "extension": {
       "title": "瀏覽器擴充",
       "store": "從 Edge 商店安裝",
