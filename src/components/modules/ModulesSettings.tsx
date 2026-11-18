@@ -130,9 +130,9 @@ function Installed({
               </Box>
               {m.trust === 'official' && <Chip size="small" label={t('modules.trust.official')} color="primary" variant="outlined" />}
               {m.local && <Chip size="small" label={t('modules.installed.local')} variant="outlined" />}
-              {m.update && (
+              {(m.update || m.missing) && (
                 <Button size="small" variant="contained" disabled={busy === m.key} onClick={() => install(m.key)}>
-                  {t('modules.installed.update', { version: m.update })}
+                  {m.update ? t('modules.installed.update', { version: m.update }) : t('modules.installed.downloadAgain')}
                 </Button>
               )}
               {!m.update && m.updateNeedsNewerApp && (

@@ -336,10 +336,10 @@ async fn names_collide_and_the_official_marketplace_stays() {
     let (data, secrets) = (tempfile::tempdir().unwrap(), Arc::new(MemorySecrets::default()));
     let market = open(data.path(), &secrets);
 
-    assert_eq!(market.set_official(official.path()).await.unwrap().trust, Trust::Official);
+    assert_eq!(market.set_official(&official.path().to_string_lossy()).await.unwrap().trust, Trust::Official);
     assert!(matches!(market.add_source(&site.catalog_url()).await, Err(MarketError::Invalid(m)) if m.contains("already added")));
     assert!(matches!(market.remove_source("zoo"), Err(MarketError::Invalid(_))));
-    assert!(market.set_official(official.path()).await.is_ok(), "set again on every start");
+    assert!(market.set_official(&official.path().to_string_lossy()).await.is_ok(), "set again on every start");
     assert!(matches!(market.add_source("not a source").await, Err(MarketError::Invalid(_))));
 }
 
@@ -416,4 +416,61 @@ async fn a_version_for_a_newer_app_is_shown_but_not_offered() {
     let refused = market.plan_install("demo@zoo").await.err().expect("refused").to_string();
     assert!(refused.contains("needs a newer Zoo Downloader"), "{refused}");
     assert!(entry_code(&market).contains("v1.0.0"), "the installed version keeps running");
+}
+
+/// Write `modules` as a marketplace folder (what older apps shipped as the official one).
+fn folder_marketplace(dir: &Path, name: &str, modules: &[&Module]) {
+    for m in modules {
+        std::fs::create_dir_all(dir.join(m.id).join("dist")).unwrap();
+        std::fs::write(dir.join(m.id).join("manifest.json"), m.manifest()).unwrap();
+        std::fs::write(dir.join(m.id).join("dist/index.js"), &m.code).unwrap();
+    }
+    std::fs::write(dir.join("zoo-marketplace.json"), catalog(name, modules, false)).unwrap();
+}
+
+#[tokio::test]
+async fn modules_the_app_no_longer_ships_are_downloaded_again() {
+    // An older app: the official marketplace is a folder in its resources, run in place.
+    let shipped = tempfile::tempdir().unwrap();
+    let mut demo = Module::demo("1.0.0", &["demo.example"]);
+    demo.credentials = vec!["password"];
+    let wider = Module { id: "wider", ..Module::demo("1.0.0", &["wider.example"]) };
+    folder_marketplace(shipped.path(), "zoo", &[&demo, &wider]);
+    let (data, secrets) = (tempfile::tempdir().unwrap(), Arc::new(MemorySecrets::default()));
+    let market = open(data.path(), &secrets);
+    market.set_official(&shipped.path().to_string_lossy()).await.unwrap();
+    for key in ["demo@zoo", "wider@zoo"] {
+        market.install(market.plan_install(key).await.unwrap()).unwrap();
+    }
+    market.set_credentials("demo@zoo", BTreeMap::from([("password".into(), Some("s3cret".into()))])).unwrap();
+    market.set_enabled("demo@zoo", false).unwrap();
+    market.set_enabled("demo@zoo", true).unwrap();
+    market.set_auto_start("demo@zoo", true).unwrap();
+
+    // The official marketplace is now published remotely, where "wider" asks for another domain.
+    // The update may leave the old copy (demo still runs from it) or delete it (wider).
+    std::fs::remove_dir_all(shipped.path().join("wider")).unwrap();
+    let site = Site::start().await;
+    let wider_now = Module { id: "wider", ..Module::demo("1.0.0", &["wider.example", "cdn.example"]) };
+    for m in [&demo, &wider_now] {
+        site.put(&format!("/m/{}/manifest.json", m.id), m.manifest());
+        site.put(&format!("/m/{}/dist/index.js", m.id), m.code.clone());
+    }
+    site.put("/m/zoo-marketplace.json", catalog("zoo", &[&demo, &wider_now], true));
+    let market = open(data.path(), &secrets);
+    let missing = |m: &Marketplace| m.installed().into_iter().filter(|i| i.missing).map(|i| i.key).collect::<Vec<_>>();
+    assert_eq!(missing(&market), ["wider@zoo"]);
+    let running = |m: &Marketplace| m.resolver_modules().iter().map(|r| r.module.id.clone()).collect::<Vec<_>>();
+    assert_eq!(running(&market), ["demo@zoo"], "a module without its files does not run");
+    market.set_official(&site.catalog_url()).await.unwrap();
+
+    assert_eq!(market.restore_missing().await, ["wider@zoo"], "new permissions wait for the user");
+    let demo_now = market.installed().into_iter().find(|m| m.key == "demo@zoo").unwrap();
+    assert!(!demo_now.missing && !demo_now.local && demo_now.auto_start && demo_now.credentials[0].set);
+    assert_eq!(running(&market), ["demo@zoo"]);
+    assert_eq!(missing(&market), ["wider@zoo"]);
+    let plan = market.plan_install("wider@zoo").await.unwrap();
+    assert!(plan.summary.needs_consent);
+    market.install(plan).unwrap();
+    assert!(market.restore_missing().await.is_empty());
 }

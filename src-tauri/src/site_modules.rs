@@ -106,20 +106,20 @@ fn module_host() -> Supervisor {
     Supervisor::new(path, ["serve"])
 }
 
-/// Register the official marketplace, check for updates if the user wants that, relay
-/// captchas to the frontend and re-read local modules when their folders change.
+/// Register the official marketplace, bring back modules whose files are gone, check for
+/// updates if the user wants that, relay captchas to the frontend and re-read local modules
+/// when their folders change.
 pub fn start(app: AppHandle, check_updates: bool) {
-    let official = official_dir(&app);
     let handle = app.clone();
     tauri::async_runtime::spawn(async move {
         let modules = handle.state::<SiteModules>();
-        match official {
-            Some(dir) => {
-                if let Err(e) = modules.market.set_official(&dir).await {
-                    log::warn!("cannot load the official marketplace from {}: {e}", dir.display());
-                }
-            }
-            None => log::warn!("the official marketplace is missing from the app's resources"),
+        let official = official_marketplace();
+        if let Err(e) = modules.market.set_official(&official).await {
+            log::warn!("cannot load the official marketplace from {official}: {e}");
+        }
+        let missing = modules.market.restore_missing().await;
+        if !missing.is_empty() {
+            log::warn!("modules to download again later: {missing:?}");
         }
         if check_updates {
             modules.market.refresh().await;
@@ -163,11 +163,14 @@ pub fn start(app: AppHandle, check_updates: bool) {
     });
 }
 
-/// `marketplace/` from the bundle's resources; the source tree in development builds.
-fn official_dir(app: &AppHandle) -> Option<PathBuf> {
-    let bundled = app.path().resource_dir().ok().map(|dir| dir.join("marketplace"));
-    let source = cfg!(debug_assertions).then(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("marketplace"));
-    [bundled, source].into_iter().flatten().find(|dir| dir.join(zoo_marketplace::catalog::FILE).is_file()).map(plain_path)
+/// Where the official marketplace is published (docs/architecture/official-marketplace-repo.md).
+pub const OFFICIAL_MARKETPLACE: &str = "zoosewu/zoo-downloader-marketplace";
+
+/// The official marketplace; development builds may read a local clone instead
+/// (`ZOO_OFFICIAL_MARKETPLACE=<folder>`), whose module edits then reload at once.
+fn official_marketplace() -> String {
+    let local = cfg!(debug_assertions).then(|| std::env::var("ZOO_OFFICIAL_MARKETPLACE").ok()).flatten();
+    local.unwrap_or_else(|| OFFICIAL_MARKETPLACE.into())
 }
 
 /// Without Windows' `\\?\` prefix (resource paths have it), so the folder reads as people type it.
@@ -178,30 +181,14 @@ pub(crate) fn plain_path(path: PathBuf) -> PathBuf {
     }
 }
 
-/// Every module of the shipped catalog installs, and the bundle carries the files it needs.
+/// Release builds always use the published official marketplace.
 #[cfg(test)]
-#[tokio::test]
-async fn the_official_marketplace_installs_and_is_bundled() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let conf: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dir.join("tauri.conf.json")).unwrap()).unwrap();
-    let bundled = &conf["bundle"]["resources"];
-    let catalog = zoo_marketplace::Catalog::parse(&std::fs::read(dir.join("marketplace").join(zoo_marketplace::catalog::FILE)).unwrap()).unwrap();
-    assert!(bundled.get(format!("marketplace/{}", zoo_marketplace::catalog::FILE)).is_some());
-
-    let data = tempfile::tempdir().unwrap();
-    let market = Marketplace::open(data.path(), Arc::new(zoo_marketplace::MemorySecrets::default())).unwrap();
-    market.set_official(&dir.join("marketplace")).await.unwrap();
-    for module in &catalog.modules {
-        let plan = market.plan_install(&format!("{}@official", module.id)).await.unwrap();
-        market.install(plan).unwrap();
-        let manifest = zoo_module_client::manifest::Manifest::parse(&std::fs::read_to_string(dir.join("marketplace").join(&module.source).join("manifest.json")).unwrap()).unwrap();
-        assert_eq!(manifest.version, module.version, "{}: catalog and manifest versions differ", module.id);
-        for file in ["manifest.json", manifest.entry.as_str()] {
-            let path = format!("marketplace/{}/{file}", module.source);
-            assert_eq!(bundled[&path], path, "tauri.conf.json bundle.resources must list {path}");
-        }
+#[test]
+fn the_official_marketplace_is_the_github_repository() {
+    assert_eq!(OFFICIAL_MARKETPLACE, "zoosewu/zoo-downloader-marketplace");
+    if std::env::var_os("ZOO_OFFICIAL_MARKETPLACE").is_none() {
+        assert_eq!(official_marketplace(), OFFICIAL_MARKETPLACE);
     }
-    assert_eq!(market.installed().len(), catalog.modules.len());
 }
 
 #[cfg(test)]

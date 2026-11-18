@@ -229,7 +229,7 @@ export default defineModule({
       - token 藉由導向到 `zoo-captcha.invalid` 取得；
       - 使用者關掉視窗就視為拒絕。
   - 帳密存在 keyring，service 是 `zoo-downloader.site-modules`。
-  - 官方 marketplace 放在 `src-tauri/marketplace/`，以 bundle resources 隨附；debug 建置找不到時改讀原始碼目錄。
+  - 官方 marketplace 放在 `src-tauri/marketplace/`，以 bundle resources 隨附；debug 建置找不到時改讀原始碼目錄。（2026-11-18 起移到 `zoosewu/zoo-downloader-marketplace`，見 `official-marketplace-repo.md`。）
   - 本機模組每 2 秒重新讀一次 manifest。只讀 manifest，成本很低，所以不用檔案監看。
   - 設定 `checkModuleUpdates` 預設開啟：只在啟動時檢查更新，不會自動安裝。
   - 舊的 `get_pending_captchas` 等 command 與舊模組系統一起在 4f 刪除。

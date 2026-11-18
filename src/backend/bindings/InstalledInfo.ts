@@ -37,4 +37,8 @@ update: string | null,
 /**
  * A newer version in the catalog that needs a newer Zoo Downloader.
  */
-updateNeedsNewerApp: string | null, };
+updateNeedsNewerApp: string | null, 
+/**
+ * Its files are gone; it does not run until it is downloaded again (`install`).
+ */
+missing: boolean, };

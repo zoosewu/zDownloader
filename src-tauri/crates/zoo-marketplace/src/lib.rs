@@ -170,6 +170,8 @@ pub struct InstalledInfo {
     pub update: Option<String>,
     /// A newer version in the catalog that needs a newer Zoo Downloader.
     pub update_needs_newer_app: Option<String>,
+    /// Its files are gone; it does not run until it is downloaded again (`install`).
+    pub missing: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -260,6 +262,11 @@ impl InstalledRecord {
         format!("{}@{}", self.id, self.marketplace)
     }
 
+    /// The module's files are there (an app update removes the copy older versions ran in place).
+    fn has_files(&self) -> bool {
+        self.dir.join(&self.manifest.entry).is_file()
+    }
+
     fn effective(&self) -> PermissionSummary {
         PermissionSummary::of(&self.manifest.permissions).within(&PermissionSummary::of(&self.granted))
     }
@@ -307,9 +314,10 @@ impl Marketplace {
         self.add(input.trim(), Trust::Community).await
     }
 
-    /// The marketplace shipped with the app (a folder). Set on every start; it cannot be removed.
-    pub async fn set_official(&self, dir: &Path) -> Result<SourceInfo, MarketError> {
-        self.add(&dir.to_string_lossy(), Trust::Official).await
+    /// The official marketplace (GitHub, or a folder in development). Set on every start; it
+    /// cannot be removed.
+    pub async fn set_official(&self, location: &str) -> Result<SourceInfo, MarketError> {
+        self.add(location, Trust::Official).await
     }
 
     async fn add(&self, input: &str, trust: Trust) -> Result<SourceInfo, MarketError> {
@@ -474,6 +482,35 @@ impl Marketplace {
             added,
         };
         Ok(Plan { summary, id: id.into(), marketplace: marketplace.into(), manifest, files })
+    }
+
+    /// Download again, keeping the user's settings and accounts, the modules whose files are
+    /// gone or that still run in place from a folder their marketplace no longer is: those that
+    /// ran from the app's own copy of the official marketplace before it moved to GitHub (an
+    /// update may or may not delete that copy). One asking for more than the user consented to
+    /// waits for them. Returns the modules not brought back.
+    pub async fn restore_missing(&self) -> Vec<String> {
+        let stale: Vec<String> = {
+            let st = self.state.lock().unwrap();
+            let moved = |m: &InstalledRecord| {
+                m.local
+                    && st.sources.iter().find(|s| s.name == m.marketplace).is_some_and(|s| Location::parse(&s.location).is_ok_and(|l| !l.is_local()))
+            };
+            st.installed.iter().filter(|m| !m.has_files() || moved(m)).map(|m| m.key()).collect()
+        };
+        let mut left = Vec::new();
+        for key in stale {
+            let restored = match self.plan_install(&key).await {
+                Ok(plan) if !plan.summary.needs_consent => self.install(plan).map(drop),
+                Ok(_) => Err(MarketError::Invalid(format!("{key} asks for new permissions"))),
+                Err(e) => Err(e),
+            };
+            if let Err(e) = restored {
+                log::warn!("cannot download {key} again: {e}");
+                left.push(key);
+            }
+        }
+        left
     }
 
     /// Install (or update to) a planned module: the user consented to its permissions.
@@ -664,6 +701,7 @@ impl Marketplace {
             needs_consent: !requested.beyond(&PermissionSummary::of(&m.granted)).is_empty(),
             update: m.update.clone(),
             update_needs_newer_app: m.update_needs_newer_app.clone(),
+            missing: !m.has_files(),
             credentials,
             credentials_help: m.manifest.credentials_help.clone(),
             credentials_help_url: m.manifest.credentials_help_url.clone(),
@@ -684,7 +722,7 @@ impl Marketplace {
         let st = self.state.lock().unwrap();
         st.installed
             .iter()
-            .filter(|m| m.enabled)
+            .filter(|m| m.enabled && m.has_files())
             .filter_map(|m| {
                 let key = m.key();
                 let allowed = m.effective();

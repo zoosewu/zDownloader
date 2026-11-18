@@ -1,4 +1,4 @@
-# 官方 marketplace 獨立成 repo（規格，2026-11-18 待確認）
+# 官方 marketplace 獨立成 repo（2026-11-18）
 
 ## 決定
 
@@ -46,8 +46,9 @@ scripts/sync-sdk.mjs      # 從 app repo 的某個 tag 取 sdk/ 到各模組 typ
 - `src/__tests__/official-modules.test.ts` 與 `build-official-modules.mjs` 搬到新 repo；app repo 改用
   一個最小的範例模組測 SDK 範本（已有 `module-sdk.test.ts`）。
 
-## 順序
+## 進度
 
-1. 新 repo 推上目前的 baidu 1.1.1、k2s 1.0.0 與 catalog（含 sha256），CI 綠燈。
-2. app：官方來源改遠端、遷移、移除打包；release workflow 附 `zoo-module` 執行檔。發 0.2.5。
-3. app repo 刪除 `src-tauri/marketplace/`。
+1. ✅ 新 repo 推上 baidu 1.1.1、k2s 1.0.0 與 catalog（含 sha256），CI 通過。
+2. ✅ app：官方來源改遠端（`site_modules::OFFICIAL_MARKETPLACE`）、`restore_missing` 遷移、移除打包；
+   app repo 刪除 `src-tauri/marketplace/`。
+3. 待做：release workflow 附 `zoo-module` 執行檔，新 repo 的 CI 加跑 `zoo-module test`（目前在本機跑）。

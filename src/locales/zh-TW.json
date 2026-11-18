@@ -198,6 +198,7 @@
     "needsNewerApp": "{{version}} 需要較新版的 Zoo Downloader",
     "title": "網站模組",
     "installed": {
+      "downloadAgain": "重新下載",
       "title": "已安裝",
       "checkOnStart": "啟動時檢查更新",
       "autoStart": "這個網站的連結直接開始下載",

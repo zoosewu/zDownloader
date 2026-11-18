@@ -187,7 +187,7 @@ zoo-module test                                # replay offline
 
 `AGENTS.md` in the template explains the API and the workflow (it is written so an AI agent can
 write the module). The full design is in `docs/architecture/phase-4-site-modules.md`;
-`src-tauri/marketplace/k2s/` is a complete example.
+The official modules in [zoo-downloader-marketplace](https://github.com/zoosewu/zoo-downloader-marketplace) are complete examples.
 
 ## 🏗️ Architecture
 
@@ -239,7 +239,6 @@ zoo-downloader/
 │   │   ├── zoo-module/           # Site-module host and the zoo-module CLI (SDK, template)
 │   │   ├── zoo-module-client/    # Runs the host from the app: protocol, manifest, resolver
 │   │   └── zoo-marketplace/      # Sources, catalogs, install, permissions, credentials
-│   ├── marketplace/              # The official marketplace shipped with the app (k2s)
 │   └── Cargo.toml
 │
 ├── browser-extension/            # Chrome / Edge extension (MV3, native messaging)
