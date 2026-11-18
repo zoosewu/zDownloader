@@ -128,6 +128,8 @@ impl Root {
                         source: ".".into(),
                         description: manifest.description,
                         sha256: None,
+                        api_version: Some(manifest.api_version),
+                        needs_newer_app: false,
                     }],
                 });
             }

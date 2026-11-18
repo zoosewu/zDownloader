@@ -195,6 +195,7 @@
     "decline": "Skip"
   },
   "modules": {
+    "needsNewerApp": "{{version}} needs a newer Zoo Downloader",
     "title": "Site modules",
     "installed": {
       "title": "Installed",

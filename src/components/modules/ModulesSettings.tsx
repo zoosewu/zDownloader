@@ -135,6 +135,9 @@ function Installed({
                   {t('modules.installed.update', { version: m.update })}
                 </Button>
               )}
+              {!m.update && m.updateNeedsNewerApp && (
+                <Chip size="small" variant="outlined" label={t('modules.needsNewerApp', { version: m.updateNeedsNewerApp })} />
+              )}
               <Tooltip title={t('modules.installed.moveUp')}>
                 <span>
                   <IconButton size="small" disabled={index === 0} onClick={run(() => backend.modules.move(m.key, index - 1))}>
@@ -347,7 +350,9 @@ function Browse({
               )}
             </Box>
             {source.trust === 'official' && <Chip size="small" label={t('modules.trust.official')} color="primary" variant="outlined" />}
-            {current && !current.update ? (
+            {module.needsNewerApp ? (
+              <Chip size="small" variant="outlined" label={t('modules.needsNewerApp', { version: module.version })} />
+            ) : current && !current.update ? (
               <Chip size="small" label={t('modules.browse.installed')} />
             ) : (
               <Button variant="contained" size="small" disabled={busy === key} onClick={() => install(key)}>

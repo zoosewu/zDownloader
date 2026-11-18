@@ -1,4 +1,7 @@
-//! `manifest.json` of a site module, apiVersion 1.
+//! `manifest.json` of a site module. `apiVersion` is the API level the module is written
+//! against; this app runs levels `MIN_API_VERSION..=API_VERSION`. A level adds to the one
+//! before it (level 2: help texts and translations for account fields); a change that breaks
+//! old modules would raise `MIN_API_VERSION`.
 //! The editor-facing contract is `crates/zoo-module/sdk/manifest.schema.json`; tests keep the
 //! two in agreement.
 
@@ -6,7 +9,21 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-pub const API_VERSION: u32 = 1;
+/// The newest API level this app runs (the SDK's).
+pub const API_VERSION: u32 = 2;
+/// The oldest API level this app still runs.
+pub const MIN_API_VERSION: u32 = 1;
+
+/// Whether this app runs modules written against `level`, and if not, why.
+pub fn check_api_version(level: u32) -> Result<(), String> {
+    if level > API_VERSION {
+        Err(format!("apiVersion {level} needs a newer Zoo Downloader (this one runs apiVersion {MIN_API_VERSION} to {API_VERSION})"))
+    } else if level < MIN_API_VERSION {
+        Err(format!("apiVersion {level} is no longer supported (this app runs apiVersion {MIN_API_VERSION} to {API_VERSION})"))
+    } else {
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -132,14 +149,23 @@ fn yes() -> bool {
 impl Manifest {
     /// Parses and checks what serde cannot; errors say how to fix the file.
     pub fn parse(json: &str) -> Result<Self, String> {
-        let manifest: Manifest = serde_json::from_str(json).map_err(|e| format!("manifest.json: {e}"))?;
-        if manifest.api_version != API_VERSION {
-            return Err(format!(
-                "manifest.json: apiVersion {} is not supported; this app runs apiVersion {API_VERSION}",
-                manifest.api_version
-            ));
+        // The level first: a newer module may use fields this app does not know, and "needs a
+        // newer app" says more than "unknown field".
+        #[derive(Deserialize)]
+        struct Level {
+            #[serde(rename = "apiVersion")]
+            api_version: u32,
         }
+        let level: Level = serde_json::from_str(json).map_err(|e| format!("manifest.json: {e}"))?;
+        check_api_version(level.api_version).map_err(|e| format!("manifest.json: {e}"))?;
+        let manifest: Manifest = serde_json::from_str(json).map_err(|e| format!("manifest.json: {e}"))?;
         let m = &manifest;
+        if m.api_version < 2 {
+            let uses = m.credentials_help.is_some()
+                || m.credentials_help_url.is_some()
+                || m.permissions.credentials.iter().any(|c| c.help.is_some() || c.help_url.is_some() || matches!(c.label, Text::Translated(_)));
+            check(!uses, || "credentialsHelp, help, helpUrl and translated labels need \"apiVersion\": 2".into())?;
+        }
         let id_ok = m.id.len() <= 63
             && m.id.starts_with(|c: char| c.is_ascii_lowercase() || c.is_ascii_digit())
             && m.id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
@@ -282,7 +308,7 @@ mod tests {
 
     const FULL: &str = r#"{
         "$schema": "./types/manifest.schema.json",
-        "apiVersion": 1,
+        "apiVersion": 2,
         "id": "example-host",
         "name": "Example Host",
         "version": "1.2.3",
@@ -339,7 +365,11 @@ mod tests {
         assert_eq!(m.entry, "dist/index.js");
         assert!(m.permissions.credentials[0].secret);
 
-        assert!(Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 2")).unwrap_err().contains("apiVersion"));
+        let newer = Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 3")).unwrap_err();
+        assert!(newer.contains("needs a newer Zoo Downloader"), "{newer}");
+        let newer_with_new_fields = minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 3").replace("\"id\"", "\"futureField\": 1, \"id\"");
+        assert!(Manifest::parse(&newer_with_new_fields).unwrap_err().contains("needs a newer Zoo Downloader"), "the level is checked first");
+        assert!(Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 0")).unwrap_err().contains("no longer supported"));
         assert!(Manifest::parse(&minimal.replace("\"id\"", "\"className\": \"X\", \"id\"")).is_err(), "unknown fields fail");
         assert!(!m.auto_start && m.url_regex.is_none());
 
@@ -366,5 +396,12 @@ mod tests {
         ] {
             assert!(Manifest::parse(&bad).is_err(), "{why} should be rejected");
         }
+    }
+
+    #[test]
+    fn level_2_fields_need_api_version_2() {
+        assert!(FULL.contains("\"apiVersion\": 2"));
+        let err = Manifest::parse(&FULL.replace("\"apiVersion\": 2", "\"apiVersion\": 1")).unwrap_err();
+        assert!(err.contains("apiVersion\": 2"), "{err}");
     }
 }

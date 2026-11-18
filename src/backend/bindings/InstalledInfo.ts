@@ -31,6 +31,10 @@ credentialsHelp: Text | null, credentialsHelpUrl: string | null,
  */
 needsConsent: boolean, 
 /**
- * A newer version in the catalog.
+ * A newer version in the catalog that this app runs.
  */
-update: string | null, };
+update: string | null, 
+/**
+ * A newer version in the catalog that needs a newer Zoo Downloader.
+ */
+updateNeedsNewerApp: string | null, };

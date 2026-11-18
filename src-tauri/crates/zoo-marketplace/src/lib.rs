@@ -166,8 +166,10 @@ pub struct InstalledInfo {
     pub credentials_help_url: Option<String>,
     /// The module's manifest asks for more than the user consented to (a local module changed).
     pub needs_consent: bool,
-    /// A newer version in the catalog.
+    /// A newer version in the catalog that this app runs.
     pub update: Option<String>,
+    /// A newer version in the catalog that needs a newer Zoo Downloader.
+    pub update_needs_newer_app: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -247,6 +249,9 @@ struct InstalledRecord {
     dir: PathBuf,
     local: bool,
     update: Option<String>,
+    /// A newer version this app is too old to run.
+    #[serde(default)]
+    update_needs_newer_app: Option<String>,
     installed_at: DateTime<Utc>,
 }
 
@@ -415,6 +420,9 @@ impl Marketplace {
             let current = st.installed.iter().find(|m| m.key() == key).cloned();
             (source.location.clone(), listed, source.trust, current)
         };
+        if let Some(why) = listed.unsupported() {
+            return Err(MarketError::Invalid(format!("{key} {}: {why}", listed.version)));
+        }
         let location = Location::parse(&location)?;
         let root = match &location {
             // Use the checkout the catalog came from.
@@ -429,6 +437,12 @@ impl Marketplace {
         let manifest = Manifest::parse(&String::from_utf8_lossy(&manifest_bytes)).map_err(MarketError::Invalid)?;
         if manifest.id != id {
             return Err(MarketError::Invalid(format!("{key}: its manifest.json says id {:?}", manifest.id)));
+        }
+        if listed.api_version.is_some_and(|level| level != manifest.api_version) {
+            return Err(MarketError::Invalid(format!(
+                "{key}: the catalog says apiVersion {:?} but its manifest.json says {}",
+                listed.api_version, manifest.api_version
+            )));
         }
         if !catalog::is_relative(&manifest.entry) {
             return Err(MarketError::Invalid(format!("{key}: entry {:?} must stay inside the module", manifest.entry)));
@@ -487,6 +501,7 @@ impl Marketplace {
                 dir,
                 local,
                 update: None,
+                update_needs_newer_app: None,
                 installed_at: Utc::now(),
             };
             match st.installed.iter_mut().find(|m| m.key() == summary.key) {
@@ -648,6 +663,7 @@ impl Marketplace {
             url_patterns: m.manifest.url_patterns.clone(),
             needs_consent: !requested.beyond(&PermissionSummary::of(&m.granted)).is_empty(),
             update: m.update.clone(),
+            update_needs_newer_app: m.update_needs_newer_app.clone(),
             credentials,
             credentials_help: m.manifest.credentials_help.clone(),
             credentials_help_url: m.manifest.credentials_help_url.clone(),
@@ -712,7 +728,7 @@ fn source_info(s: &SourceRecord) -> SourceInfo {
         location: s.location.clone(),
         trust: s.trust,
         owner: s.catalog.owner.clone(),
-        modules: s.catalog.modules.clone(),
+        modules: s.catalog.modules.iter().map(|m| CatalogModule { needs_newer_app: m.unsupported().is_some(), ..m.clone() }).collect(),
         refreshed_at: s.refreshed_at,
         commit: s.commit.clone(),
         error: s.error.clone(),
@@ -723,7 +739,9 @@ fn source_info(s: &SourceRecord) -> SourceInfo {
 fn mark_updates(st: &mut State) {
     for module in &mut st.installed {
         let listed = st.sources.iter().find(|s| s.name == module.marketplace).and_then(|s| s.catalog.module(&module.id));
-        module.update = listed.filter(|l| catalog::is_newer(&l.version, &module.manifest.version)).map(|l| l.version.clone());
+        let newer = listed.filter(|l| catalog::is_newer(&l.version, &module.manifest.version));
+        module.update = newer.filter(|l| l.unsupported().is_none()).map(|l| l.version.clone());
+        module.update_needs_newer_app = newer.filter(|l| l.unsupported().is_some()).map(|l| l.version.clone());
     }
 }
 

@@ -1,0 +1,52 @@
+# 模組版本與 app 版本（2026-11-18）
+
+## 問題
+
+marketplace 的模組會比使用者的 app 新：模組用了新的 manifest 欄位或 host API，舊 app 讀不懂。
+以前的結果是舊 app 照樣顯示「更新」，按下去才報 `unknown field`；catalog 多一個欄位，舊 app 連整個
+marketplace 都讀不了。官方 marketplace 打包在 app 裡、不受影響，問題在遠端（GitHub、git）的 marketplace。
+
+## API level
+
+- manifest 的 `apiVersion` 是 **API level**（整數），即模組照哪一版 SDK 寫的。SDK 的 level 寫在
+  `zoo-module.d.ts` 開頭與 `manifest.schema.json`（`const`），模組作者照抄。
+- app 支援 `MIN_API_VERSION..=API_VERSION`（`zoo-module-client::manifest`）。新增功能（欄位、API）時
+  `API_VERSION` 加一，舊 level 的模組照常執行；不相容的改動才調高 `MIN_API_VERSION`。
+- 新 level 的功能只給宣告該 level 的模組用（`Manifest::parse` 檢查），作者不會不小心寫出舊 app
+  「看起來能裝、其實不能跑」的模組。
+- `Manifest::parse` 先讀 `apiVersion` 再完整解析，level 太新時的錯誤是「需要較新的 Zoo Downloader」，
+  而不是不認得某個欄位。
+
+| level | 加入 |
+|---|---|
+| 1 | 第一版 |
+| 2 | `credentialsHelp`、`credentialsHelpUrl`、欄位的 `help`、`helpUrl`、可多語言的 `label`（app 0.2.5） |
+
+## catalog
+
+- `zoo-marketplace.json` 忽略不認得的欄位（0.2.5 起），之後 catalog 再加欄位不會讓舊 app 讀不了。
+  0.2.4 以前的 app 仍拒絕新欄位：要相容它們的 marketplace 不要用 `apiVersion`、`releases`。
+- 模組可寫 `apiVersion`（選填，給了就必須與 manifest 相同）。app 不必下載就知道能不能用：
+  - 已安裝的模組有新版但 level 太新：不顯示「更新」，顯示「X 需要較新版的 Zoo Downloader」
+    （`InstalledInfo.updateNeedsNewerApp`）；已安裝的版本照常執行。
+  - 瀏覽頁同樣顯示，不給安裝（`CatalogModule.needsNewerApp`，由 app 算，不讀 catalog）。
+  - 沒寫 `apiVersion` 時照舊：下載 manifest 後才知道，錯誤訊息同上。
+
+### 多個版本（格式先定，等需要時實作）
+
+新版放棄舊 app 時，catalog 可同時列出給舊 app 的版本：
+
+```json
+{
+  "id": "baidu",
+  "version": "1.2.0", "apiVersion": 3, "source": "baidu", "sha256": "…",
+  "releases": [
+    { "version": "1.1.1", "apiVersion": 2, "source": "baidu@1.1.1", "sha256": "…" }
+  ]
+}
+```
+
+- 頂層是最新版；`releases` 由新到舊，每筆和頂層同樣的欄位。舊版本放在另一個資料夾，
+  只有新版提高 level 時才需要保留。
+- app 取「自己能執行的最新版」：頂層、再依序 `releases`。已安裝的版本比它新時不動。
+- 不懂 `releases` 的 app（0.2.5）會忽略它，只看頂層：顯示「需要較新版」，不會裝錯版本。

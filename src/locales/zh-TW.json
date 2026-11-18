@@ -195,6 +195,7 @@
     "decline": "略過"
   },
   "modules": {
+    "needsNewerApp": "{{version}} 需要較新版的 Zoo Downloader",
     "title": "網站模組",
     "installed": {
       "title": "已安裝",

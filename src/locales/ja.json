@@ -183,6 +183,7 @@
     }
   },
   "modules": {
+    "needsNewerApp": "{{version}} には新しい Zoo Downloader が必要",
     "title": "サイトモジュール",
     "installed": {
       "title": "インストール済み",

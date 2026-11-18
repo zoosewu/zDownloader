@@ -1,5 +1,5 @@
 /**
- * zoo-downloader site module API, apiVersion 1.
+ * zoo-downloader site module API, level 2 (manifest `apiVersion`).
  *
  * A site module is one ES module file whose default export is `defineModule({ resolve })`.
  * zoo-downloader calls `resolve` with a page URL the user pasted (one that matches the

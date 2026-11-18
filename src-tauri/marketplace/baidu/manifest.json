@@ -1,6 +1,6 @@
 {
   "$schema": "./types/manifest.schema.json",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "id": "baidu",
   "name": "百度网盘",
   "version": "1.1.1",

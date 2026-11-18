@@ -12,4 +12,14 @@ source: string, description?: string | null,
 /**
  * SHA-256 of the entry (the bundled JS), lowercase hex. Required for remote marketplaces.
  */
-sha256?: string | null, };
+sha256?: string | null, 
+/**
+ * The manifest's `apiVersion`, so an app can tell it needs a newer version of itself
+ * without downloading the module. Must match the manifest when given.
+ */
+apiVersion?: number | null, 
+/**
+ * Set by the app when it lists the catalog (whatever the file says): this app is too old
+ * for the module.
+ */
+needsNewerApp: boolean, };

@@ -389,3 +389,31 @@ async fn a_git_marketplace_is_cloned_and_pulled() {
     market.install(market.plan_install("demo@gitzoo").await.unwrap()).unwrap();
     assert!(entry_code(&market).contains("v1.1.0"));
 }
+
+#[tokio::test]
+async fn a_version_for_a_newer_app_is_shown_but_not_offered() {
+    let site = Site::start().await;
+    site.publish(&Module::demo("1.0.0", &["demo.example"]));
+    let (data, secrets) = (tempfile::tempdir().unwrap(), Arc::new(MemorySecrets::default()));
+    let market = open(data.path(), &secrets);
+    market.add_source(&site.catalog_url()).await.unwrap();
+    market.install(market.plan_install("demo@zoo").await.unwrap()).unwrap();
+
+    // 2.0.0 is written against an API level this app does not run, with a field it does not know.
+    let mut v2 = Module::demo("2.0.0", &["demo.example"]);
+    v2.extra = json!({ "apiVersion": 99, "featureOfLevel99": true });
+    site.publish(&v2);
+    let mut listed: serde_json::Value = serde_json::from_str(&catalog("zoo", &[&v2], true)).unwrap();
+    listed["modules"][0]["apiVersion"] = json!(99);
+    listed["releases"] = json!("a field of a newer catalog format");
+    site.put("/m/zoo-marketplace.json", listed.to_string());
+    let sources = market.refresh().await;
+
+    assert!(sources[0].error.is_none(), "a newer catalog still lists: {:?}", sources[0].error);
+    assert!(sources[0].modules[0].needs_newer_app);
+    let installed = &market.installed()[0];
+    assert_eq!((installed.update.as_deref(), installed.update_needs_newer_app.as_deref()), (None, Some("2.0.0")));
+    let refused = market.plan_install("demo@zoo").await.err().expect("refused").to_string();
+    assert!(refused.contains("needs a newer Zoo Downloader"), "{refused}");
+    assert!(entry_code(&market).contains("v1.0.0"), "the installed version keeps running");
+}

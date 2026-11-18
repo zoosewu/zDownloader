@@ -1,6 +1,6 @@
 {
   "$schema": "./types/manifest.schema.json",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "id": "example-host",
   "name": "Example Host",
   "version": "0.1.0",

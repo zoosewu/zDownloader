@@ -1,4 +1,5 @@
-//! `zoo-marketplace.json`: what a marketplace offers.
+//! `zoo-marketplace.json`: what a marketplace offers. Unknown fields are ignored, so a catalog
+//! written for a newer app still lists its modules here (docs/architecture/module-versions.md).
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -6,7 +7,7 @@ use ts_rs::TS;
 pub const FILE: &str = "zoo-marketplace.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
 pub struct Catalog {
     /// Identifies the marketplace: modules are `id@name`.
     pub name: String,
@@ -18,7 +19,7 @@ pub struct Catalog {
 /// One module a marketplace offers. Its URL patterns and permissions come from its own
 /// manifest.json, never from here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
 pub struct CatalogModule {
     pub id: String,
     pub version: String,
@@ -29,6 +30,21 @@ pub struct CatalogModule {
     /// SHA-256 of the entry (the bundled JS), lowercase hex. Required for remote marketplaces.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sha256: Option<String>,
+    /// The manifest's `apiVersion`, so an app can tell it needs a newer version of itself
+    /// without downloading the module. Must match the manifest when given.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_version: Option<u32>,
+    /// Set by the app when it lists the catalog (whatever the file says): this app is too old
+    /// for the module.
+    #[serde(default)]
+    pub needs_newer_app: bool,
+}
+
+impl CatalogModule {
+    /// Why this app cannot run the listed version, if it cannot.
+    pub fn unsupported(&self) -> Option<String> {
+        self.api_version.and_then(|level| zoo_module_client::manifest::check_api_version(level).err())
+    }
 }
 
 impl Catalog {
@@ -99,7 +115,6 @@ mod tests {
             r#"{ "name": "zoo", "modules": [{ "id": "a", "version": "1.0.0", "source": "/abs" }] }"#,
             r#"{ "name": "zoo", "modules": [{ "id": "a", "version": "1.0.0", "source": "a", "sha256": "XYZ" }] }"#,
             r#"{ "name": "zoo", "modules": [{ "id": "a", "version": "1.0.0", "source": "a" }, { "id": "a", "version": "1.0.0", "source": "b" }] }"#,
-            r#"{ "name": "zoo", "modules": [], "extra": 1 }"#,
         ] {
             assert!(Catalog::parse(bad.as_bytes()).is_err(), "{bad}");
         }
@@ -114,5 +129,15 @@ mod tests {
         assert!(!is_newer("1.0.0", "1.0.0"));
         assert!(!is_newer("0.9.0", "1.0.0"));
         assert!(!is_newer("x", "1.0.0"));
+    }
+
+    #[test]
+    fn fields_for_newer_apps_are_ignored() {
+        let catalog = Catalog::parse(br#"{ "name": "m", "futureField": 1, "modules": [
+            { "id": "a", "version": "2.0.0", "source": "a", "apiVersion": 9, "releases": [] }
+        ] }"#)
+        .unwrap();
+        let a = catalog.module("a").unwrap();
+        assert!(a.unsupported().unwrap().contains("needs a newer Zoo Downloader"));
     }
 }

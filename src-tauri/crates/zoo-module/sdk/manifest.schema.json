@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://zoo-downloader.dev/schemas/module-manifest-v1.json",
   "title": "zoo-downloader site module manifest",
-  "description": "manifest.json of a zoo-downloader site module (apiVersion 1). The user sees name, description and the permissions before installing.",
+  "description": "manifest.json of a zoo-downloader site module (API level 2). The user sees name, description and the permissions before installing.",
   "type": "object",
   "additionalProperties": false,
   "required": ["apiVersion", "id", "name", "version", "urlPatterns", "permissions"],
@@ -12,8 +12,8 @@
       "description": "Path or URL of this schema, for editor completion. Ignored by the app."
     },
     "apiVersion": {
-      "const": 1,
-      "description": "Version of the module API (zoo-module.d.ts) the module is written against."
+      "const": 2,
+      "description": "The API level the module is written against: this SDK's (2). An app runs every level from the oldest it supports up to its own, so a module on a newer level than an app shows there as needing a newer Zoo Downloader. Level 2 added credentialsHelp, help, helpUrl and translated labels."
     },
     "id": {
       "type": "string",
