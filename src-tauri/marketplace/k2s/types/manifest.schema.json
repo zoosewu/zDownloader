@@ -130,7 +130,7 @@
     "help": { "$ref": "#/$defs/text", "$comment": "at most 300 characters: maxLength for a string, additionalProperties for one per language", "maxLength": 300, "additionalProperties": { "maxLength": 300 } },
     "longHelp": { "$ref": "#/$defs/text", "$comment": "at most 500 characters: maxLength for a string, additionalProperties for one per language", "maxLength": 500, "additionalProperties": { "maxLength": 500 } },
     "text": {
-      "description": "Text shown to the user: one string, or one per language, e.g. { \"en\": \"Password\", \"zh-TW\": \"密碼\", \"ja\": \"パスワード\" }. The app shows the user's language, else en, else the first.",
+      "description": "Text shown to the user: one string, or one per language, e.g. { \"en\": \"Password\", \"zh-TW\": \"密碼\", \"ja\": \"パスワード\" }. The app shows the user's language, else en, else the first. Line breaks (\n) and spaces are shown as written.",
       "anyOf": [
         { "$ref": "#/$defs/line" },
         {

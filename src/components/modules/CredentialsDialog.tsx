@@ -55,7 +55,7 @@ export default function CredentialsDialog({ module, onClose }: CredentialsDialog
       <DialogContent>
         {error && <Alert severity="error">{error}</Alert>}
         {(module.credentialsHelp || module.credentialsHelpUrl) && (
-          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
             {module.credentialsHelp && text(module.credentialsHelp)}
             {module.credentialsHelpUrl && (
               <>
@@ -84,6 +84,7 @@ export default function CredentialsDialog({ module, onClose }: CredentialsDialog
               fullWidth
               margin="normal"
               slotProps={{
+                formHelperText: { sx: { whiteSpace: 'pre-wrap' } },
                 input: {
                   endAdornment:
                     stored || field.helpUrl ? (

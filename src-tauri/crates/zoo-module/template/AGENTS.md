@@ -99,7 +99,7 @@ slicing, hashing): the host will not recognize the result.
 Tell the user how to get each value when it is not obvious (a cookie, an API key):
 `credentialsHelp` shows above the fields, a field's `help` under it, and `credentialsHelpUrl` /
 `helpUrl` (https) link to a longer guide. `label` and the help texts take one string or one per
-language:
+language; line breaks (`\n`) and spaces show as written:
 
 ```json
 "credentialsHelp": { "en": "Sign in at example.com first.", "zh-TW": "先在瀏覽器登入 example.com。" },
