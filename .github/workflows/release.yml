@@ -2,7 +2,7 @@
 #   prepare  check the versions, create a draft release with generated notes, attach the
 #            browser extension
 #   build    one job per platform: installers plus updater bundles signed with
-#            TAURI_SIGNING_PRIVATE_KEY, uploaded to the draft
+#            TAURI_SIGNING_PRIVATE_KEY, and the zoo-module CLI, uploaded to the draft
 #   publish  write latest.json from all signatures at once, then publish; installed apps
 #            find the update through releases/latest/download/latest.json
 # A failed build leaves the release as a draft: users see nothing until every platform is in.
@@ -94,6 +94,13 @@ jobs:
           updaterJsonPreferNsis: true
           tauriScript: pnpm tauri
           args: --config src-tauri/tauri.bundle.json --target ${{ matrix.target }}
+      # The site-module CLI on its own, for module developers and the marketplace's CI
+      # (`zoo-module test` replays recorded cases), built by the step above as a sidecar.
+      - name: zoo-module
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" src-tauri/binaries/zoo-module-${{ matrix.target }}*
 
   publish:
     needs: [prepare, build]
