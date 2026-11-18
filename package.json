@@ -1,6 +1,7 @@
 {
   "name": "zoo-downloader",
   "private": true,
+  "license": "MIT",
   "version": "0.2.5",
   "type": "module",
   "packageManager": "pnpm@12.21.0",
