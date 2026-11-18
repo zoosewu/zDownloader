@@ -52,7 +52,7 @@ Zoo Downloader（桌面 app）與 Zoo Downloader 瀏覽器擴充功能（Microso
 
 ### 聯絡
 
-問題或要求請在 GitHub 提出：<https://github.com/zoosewu/zDownloader/issues>
+問題或要求請在 GitHub 提出：<https://github.com/zoosewu/zoo-downloader/issues>
 
 政策若有變更，會更新本頁並修改生效日期。
 
@@ -102,6 +102,6 @@ Zoo Downloader（桌面 app）與 Zoo Downloader 瀏覽器擴充功能（Microso
 
 ### Contact
 
-Questions or requests: <https://github.com/zoosewu/zDownloader/issues>
+Questions or requests: <https://github.com/zoosewu/zoo-downloader/issues>
 
 If this policy changes, this page is updated along with its effective date.

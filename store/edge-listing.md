@@ -8,7 +8,7 @@
 |---|---|
 | Microsoft 合作夥伴中心的開發人員帳號（Edge 免費） | 使用者註冊：<https://partner.microsoft.com/dashboard/microsoftedge/> |
 | 上架用壓縮檔 | `pnpm package:extension` → `dist-store/zoo-downloader-extension-<版本>.zip`（不含 manifest `key`、測試、README） |
-| 隱私權政策網址 | `PRIVACY.md` 推送後：<https://github.com/zoosewu/zDownloader/blob/main/PRIVACY.md> |
+| 隱私權政策網址 | `PRIVACY.md` 推送後：<https://github.com/zoosewu/zoo-downloader/blob/main/PRIVACY.md> |
 | 商店標誌 300×300 | `store/logo-300.png`（`pwsh scripts/make-store-assets.ps1` 產生） |
 | 小型宣傳圖塊 440×280（選填） | `store/tile-440x280.png` |
 | 螢幕擷取畫面 1280×800 或 640×400（選填，建議 1–3 張） | 使用者擷取，見第 5 節 |
@@ -27,8 +27,8 @@
 
 - **類別（Category）**：Productivity（生產力）
 - **隱私權政策**：此擴充功能**會**存取個人資訊（Cookie）→ 填上方隱私權政策網址
-- **網站**：<https://github.com/zoosewu/zDownloader>
-- **支援聯絡**：<https://github.com/zoosewu/zDownloader/issues>
+- **網站**：<https://github.com/zoosewu/zoo-downloader>
+- **支援聯絡**：<https://github.com/zoosewu/zoo-downloader/issues>
 - **成熟度**：一般（無成人內容）
 
 ## 3. 商店清單（Store listing，每種語言）
@@ -47,7 +47,7 @@
 > - Or let it take over the downloads the browser starts (on by default; switch it off in the popup). If the app does not answer, the browser downloads as usual.
 > - The site's cookies, Referer and User-Agent go along, so downloads that need a sign-in work.
 >
-> Requires the free Zoo Downloader app for Windows, macOS or Linux: https://github.com/zoosewu/zDownloader/releases
+> Requires the free Zoo Downloader app for Windows, macOS or Linux: https://github.com/zoosewu/zoo-downloader/releases
 >
 > The extension talks only to the app on your own computer (Native Messaging). It makes no network requests, collects nothing and sends nothing to us or anyone else.
 
@@ -63,7 +63,7 @@
 > - 也可以讓它接管瀏覽器開始的下載（預設開啟，可在彈出視窗關閉）。app 沒有回應時，照常由瀏覽器下載。
 > - 會一併帶上網站的 Cookie、Referer 與 User-Agent，需要登入的下載也能成功。
 >
-> 需要免費的 Zoo Downloader app（Windows、macOS、Linux）：https://github.com/zoosewu/zDownloader/releases
+> 需要免費的 Zoo Downloader app（Windows、macOS、Linux）：https://github.com/zoosewu/zoo-downloader/releases
 >
 > 擴充功能只和你電腦上的 app 溝通（原生訊息），本身不連網路、不收集任何資料，也不會把資料送給我們或任何人。
 
@@ -79,7 +79,7 @@
 > - ブラウザーが始めたダウンロードを引き継ぐこともできます（既定でオン、ポップアップでオフにできます）。アプリが応答しない場合は、通常どおりブラウザーがダウンロードします。
 > - サイトの Cookie、Referer、User-Agent も渡すので、ログインが必要なダウンロードも成功します。
 >
-> 無料の Zoo Downloader アプリ（Windows、macOS、Linux）が必要です: https://github.com/zoosewu/zDownloader/releases
+> 無料の Zoo Downloader アプリ（Windows、macOS、Linux）が必要です: https://github.com/zoosewu/zoo-downloader/releases
 >
 > 拡張機能は同じコンピューター上のアプリとだけ通信し（ネイティブ メッセージング）、ネットワークには接続せず、データを収集・送信しません。
 
@@ -90,7 +90,7 @@
 > This extension hands downloads to a companion desktop app through Native Messaging (host name `com.zoo.downloader`); without the app installed it only shows "Zoo Downloader not found" in its popup.
 >
 > To test:
-> 1. Install the Windows app (zoo-downloader_<version>_x64-setup.exe) from https://github.com/zoosewu/zDownloader/releases/latest and start it once; it registers the native messaging host for Edge.
+> 1. Install the Windows app (zoo-downloader_<version>_x64-setup.exe) from https://github.com/zoosewu/zoo-downloader/releases/latest and start it once; it registers the native messaging host for Edge.
 > 2. Install this extension. Its popup shows "Connected".
 > 3. On the releases page above, right-click any asset link (for example the browser extension .zip) → "Download with Zoo Downloader": the app comes forward with the link in its Add downloads dialog; click "Add" and it downloads.
 > 4. Click an asset link normally: with "Take over browser downloads" on (the default), the browser's download is cancelled and removed, and the link goes to the app the same way.
