@@ -3,7 +3,7 @@
 A powerful, feature-rich download manager built with Tauri, React, and Rust. Zoo Downloader provides multi-threaded downloads, proxy support, Chrome browser integration, and intelligent download management.
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 
 ## ✨ Features
 
@@ -348,7 +348,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The code is licensed under the [GNU AGPL-3.0](LICENSE). Bundled third-party libraries keep their own licenses.
 
 ## 🙏 Acknowledgments
 
