@@ -2,10 +2,13 @@
 #   prepare  check the versions, create a draft release with generated notes, attach the
 #            browser extension
 #   build    one job per platform: installers plus updater bundles signed with
-#            TAURI_SIGNING_PRIVATE_KEY, and the zoo-module CLI, uploaded to the draft
-#   publish  write latest.json from all signatures at once, then publish; installed apps
-#            find the update through releases/latest/download/latest.json
-# A failed build leaves the release as a draft: users see nothing until every platform is in.
+#            TAURI_SIGNING_PRIVATE_KEY, and the zoo-module CLI; then the platform adds itself to
+#            latest.json and publishes the release (the first one to finish makes it public), so
+#            a slow or failed platform does not hold back the others. Installed apps find the
+#            update through releases/latest/download/latest.json
+#   finish   after every build, even failed ones: rewrite latest.json from all bundles (an entry
+#            can be lost when two builds write at once) and fail if a platform is missing.
+#            "Re-run failed jobs" builds the missing platform and runs this again.
 name: Release
 
 on:
@@ -57,7 +60,7 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: macos-latest
+          - os: macos-15-intel
             target: x86_64-apple-darwin
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
@@ -101,9 +104,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" src-tauri/binaries/zoo-module-${{ matrix.target }}*
+      - name: Publish
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          node scripts/updater-json.mjs
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
 
-  publish:
+  finish:
     needs: [prepare, build]
+    if: always() && needs.prepare.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -115,8 +129,4 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           TAG: ${{ github.ref_name }}
-        run: node scripts/updater-json.mjs
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+        run: node scripts/updater-json.mjs --all

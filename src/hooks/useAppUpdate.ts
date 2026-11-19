@@ -10,6 +10,14 @@ import { settingsAtom } from '../stores/settingsStore';
 
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * A release is published as soon as one platform is built, and latest.json lists the others as
+ * they finish: until this platform is in, there is no update for it yet (not an error).
+ */
+export function isPlatformNotReleased(message: string): boolean {
+  return message.includes('was not found on the response `platforms` object');
+}
+
 export type UpdateState =
   | { kind: 'idle' }
   | { kind: 'checking' }
@@ -37,7 +45,9 @@ export function useAppUpdate() {
         setState(update ? { kind: 'available', update } : { kind: 'upToDate' });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
-        if (quiet) {
+        if (isPlatformNotReleased(message)) {
+          setState({ kind: 'upToDate' });
+        } else if (quiet) {
           console.warn('[update] check failed:', message);
           setState({ kind: 'idle' });
         } else {

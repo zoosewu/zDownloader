@@ -43,7 +43,7 @@ pnpm release 0.2.0                  # 或 patch / minor / major：改版本、co
 pnpm version:check                  # package.json、Cargo.toml、Cargo.lock 的版本一致
 ```
 
-**發布與自動更新**：版本只寫在 `package.json`（`tauri.conf.json` 引用它，`Cargo.toml`/`Cargo.lock` 由 `scripts/version.mjs` 同步）。推送 `vX.Y.Z` tag 觸發 `.github/workflows/release.yml`：建草稿 Release（自動產生說明、附瀏覽器擴充 zip）→ Windows x64、macOS arm64/x64、Linux x64 各自建置並用 `TAURI_SIGNING_PRIVATE_KEY` 簽更新檔 → 全部成功後由 `scripts/updater-json.mjs` 一次產生 `latest.json` 再發布；任一平台失敗就停在草稿。app 從 `releases/latest/download/latest.json` 檢查更新（`tauri-plugin-updater`，公鑰在 `tauri.conf.json`），安裝前呼叫 `app_prepare_update` 停止下載並存檔。私鑰在開發者電腦（位置記在不入庫的 `CLAUDE.local.md`）與 GitHub secret，遺失就無法再推更新給已安裝的使用者。`createUpdaterArtifacts` 只在 `tauri.bundle.json`，開發建置不需要私鑰。
+**發布與自動更新**：版本只寫在 `package.json`（`tauri.conf.json` 引用它，`Cargo.toml`/`Cargo.lock` 由 `scripts/version.mjs` 同步）。推送 `vX.Y.Z` tag 觸發 `.github/workflows/release.yml`：建草稿 Release（自動產生說明、附瀏覽器擴充 zip）→ Windows x64、macOS arm64/x64（x64 用 `macos-15-intel`）、Linux x64 各自建置並用 `TAURI_SIGNING_PRIVATE_KEY` 簽更新檔，完成的平台由 `scripts/updater-json.mjs` 把自己加進 `latest.json` 並發布（第一個完成的讓 Release 公開，慢的平台不擋其他平台）→ 收尾的 `finish` 不論成敗都執行，用所有安裝檔重寫 `latest.json`，缺平台就失敗；在 Actions 按「Re-run failed jobs」補建缺的平台並再收尾一次。`latest.json` 還沒有自己平台時，app 視為沒有更新（`isPlatformNotReleased`）。app 從 `releases/latest/download/latest.json` 檢查更新（`tauri-plugin-updater`，公鑰在 `tauri.conf.json`），安裝前呼叫 `app_prepare_update` 停止下載並存檔。私鑰在開發者電腦（位置記在不入庫的 `CLAUDE.local.md`）與 GitHub secret，遺失就無法再推更新給已安裝的使用者。`createUpdaterArtifacts` 只在 `tauri.bundle.json`，開發建置不需要私鑰。
 
 Windows 注意：v8 crate 在 target 目錄與 cargo registry 位於不同磁碟時需要建立 symlink（未開啟開發人員模式會失敗，錯誤 1314），可設 `CARGO_TARGET_DIR` 到與 registry 同一磁碟。
 
