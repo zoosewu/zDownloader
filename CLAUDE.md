@@ -531,6 +531,8 @@ chmod +x .git/hooks/pre-commit
 
 ### Internationalization (i18n)
 
+一個 app 內建所有語言（`src/i18n.ts` 的 `BUILT_IN`）；設定的 `language` 為 `""` 時跟隨系統（新安裝的預設）。使用者可在 `<app 資料夾>/locales/<代碼>.json` 新增語言或覆寫內建語言的部分字串（`src/utils/languages.ts`、`commands/locales.rs`；缺的鍵顯示英文，`_name` 是選單上的名稱，開啟資料夾時寫入最新的 `_template.json`）。Windows 只出 NSIS 安裝檔，安裝畫面中英日依系統語言（`tauri.windows.conf.json`）。
+
 所有新增的 UI 文本都已添加翻譯：
 - **中文繁體** (`src/locales/zh-TW.json`): 完整翻譯
 - **英文** (`src/locales/en.json`): 完整翻譯

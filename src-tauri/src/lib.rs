@@ -25,6 +25,7 @@ use commands::site_modules::{
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
 use commands::app::app_prepare_update;
+use commands::locales::{locales_list, locales_open_folder};
 use commands::settings::{
     load_settings_from_file, settings_export, settings_get, settings_import, settings_reset,
     settings_update, SettingsState,
@@ -111,6 +112,8 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             captcha_open_window,
             categories_match,
             app_prepare_update,
+            locales_list,
+            locales_open_folder,
             add_window_open,
             add_window_take,
             add_window_import,

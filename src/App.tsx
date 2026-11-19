@@ -30,13 +30,14 @@ import { useAutomaticUpdateChecks } from './hooks/useAppUpdate';
 import { waitForTauri } from './utils/tauri';
 import { backend } from './backend';
 import './i18n';
+import { applyLanguage, loadUserLocales } from './utils/languages';
 
 type Startup = 'waiting' | 'ready' | 'failed';
 
 function App() {
   const [startup, setStartup] = useState<Startup>('waiting');
   const tauriReady = startup === 'ready';
-  const { i18n } = useTranslation();
+  useTranslation(); // re-render in the new language
 
   useEffect(() => {
     waitForTauri().then((ready) => setStartup(ready ? 'ready' : 'failed'));
@@ -53,19 +54,19 @@ function App() {
 
   const theme = useMemo(() => (currentTheme === 'light' ? lightTheme : darkTheme), [currentTheme]);
 
-  // Load settings once the backend answers, and apply the saved language.
+  // Load settings once the backend answers, and apply the saved language (the user's language
+  // files first, since it may be one of them).
   useEffect(() => {
     if (!tauriReady) return;
     backend.settings
       .get()
-      .then((settings) => {
+      .then(async (settings) => {
         setSettings(settings);
-        if (settings.language && settings.language !== i18n.language) {
-          i18n.changeLanguage(settings.language);
-        }
+        await loadUserLocales().catch((error) => console.error('Failed to load language files:', error.message));
+        await applyLanguage(settings.language);
       })
       .catch((error) => console.error('Failed to load settings:', error.message));
-  }, [tauriReady, setSettings, i18n]);
+  }, [tauriReady, setSettings]);
 
   if (!tauriReady) {
     return (

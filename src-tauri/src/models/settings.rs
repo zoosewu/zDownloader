@@ -8,7 +8,8 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     // General settings
-    pub language: String, // "zh-TW" | "en" | "ja"
+    /// A language code ("zh-TW", "en", "ja", or one of the user's files); "" follows the system.
+    pub language: String,
     pub theme: Theme,
 
     // Download settings
@@ -81,7 +82,7 @@ pub enum SpeedLimitMode {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            language: "zh-TW".to_string(),
+            language: String::new(),
             theme: Theme::Dark,
             default_download_dir: dirs::download_dir().unwrap_or_else(|| PathBuf::from(".")),
             max_concurrent_downloads: None,

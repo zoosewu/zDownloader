@@ -4,7 +4,7 @@ import type { AppSettings } from '../backend';
 
 // Default settings
 const defaultSettings: AppSettings = {
-  language: 'zh-TW',
+  language: '',
   theme: 'dark',
   defaultDownloadDir: '',  // Will be set from backend
   maxConcurrentDownloads: null,  // unlimited

@@ -25,6 +25,7 @@ import type { TaskUpdate } from './bindings/TaskUpdate';
 import type { ListedFile } from './bindings/ListedFile';
 import type { ExtensionSetup } from './bindings/ExtensionSetup';
 import type { UrlInfo } from './bindings/UrlInfo';
+import type { UserLocale } from './bindings/UserLocale';
 
 export type { AppSettings } from './bindings/AppSettings';
 export type { AddItem } from './bindings/AddItem';
@@ -160,6 +161,12 @@ export const backend = {
   app: {
     /** Stop downloads and save their state; call right before installing an update. */
     prepareUpdate: () => call<null>('app_prepare_update'),
+  },
+  locales: {
+    /** The user's language files (`<app data>/locales/<code>.json`), unparsed. */
+    list: () => call<UserLocale[]>('locales_list'),
+    /** Open that folder, with an up-to-date English template in it. */
+    openFolder: () => call<null>('locales_open_folder'),
   },
   addWindow: {
     /** Show the add-downloads window with these links added to its list. */

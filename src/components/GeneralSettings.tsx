@@ -4,26 +4,33 @@ import {
   Button,
   FormControl,
   FormControlLabel,
+  FormHelperText,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { settingsAtom } from '../stores/settingsStore';
 import { backend, type AppSettings, type Theme } from '../backend';
 import { open } from '@tauri-apps/plugin-dialog';
 import AppUpdateSection from './AppUpdateSection';
 import BrowserExtensionSection from './BrowserExtensionSection';
 import Toast, { type ToastMessage } from './Toast';
+import { applyLanguage, languagesAtom, loadUserLocales, localeProblemsAtom } from '../utils/languages';
 
 export default function GeneralSettings() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const languages = useAtomValue(languagesAtom);
+  const localeProblems = useAtomValue(localeProblemsAtom);
   const [saved, setGlobalSettings] = useAtom(settingsAtom);
   // The form edits a draft of the app's settings (loaded at startup, replaced by every save);
   // the backend is the only place they are written.
@@ -38,10 +45,7 @@ export default function GeneralSettings() {
       setGlobalSettings(next);
       setSettings(next);
 
-      // Update i18n language if changed
-      if (settings.language !== i18n.language) {
-        await i18n.changeLanguage(settings.language);
-      }
+      await applyLanguage(next.language);
 
       setMessage({ severity: 'success', text: t('settings.saveSuccess') || 'Settings saved successfully' });
     } catch (error) {
@@ -75,18 +79,38 @@ export default function GeneralSettings() {
     <Box>
       <Stack spacing={2.5}>
         {/* Language */}
-        <FormControl fullWidth>
-          <InputLabel>{t('settings.language')}</InputLabel>
-          <Select
-            value={settings.language}
-            label={t('settings.language')}
-            onChange={(e) => setSettings({ ...settings, language: e.target.value })}
-          >
-            <MenuItem value="zh-TW">繁體中文</MenuItem>
-            <MenuItem value="en">English</MenuItem>
-            <MenuItem value="ja">日本語</MenuItem>
-          </Select>
-        </FormControl>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+          <FormControl fullWidth error={localeProblems.length > 0}>
+            <InputLabel shrink>{t('settings.language')}</InputLabel>
+            <Select
+              value={settings.language}
+              label={t('settings.language')}
+              displayEmpty
+              notched
+              onOpen={() => loadUserLocales().catch((e) => console.error('Failed to load language files:', e.message))}
+              onChange={(e) => setSettings({ ...settings, language: e.target.value })}
+            >
+              <MenuItem value="">{t('settings.languageSystem')}</MenuItem>
+              {languages.map((l) => (
+                <MenuItem key={l.code} value={l.code}>
+                  {l.name}
+                </MenuItem>
+              ))}
+              {/* A saved language whose file is gone: keep it selectable as it is. */}
+              {settings.language && !languages.some((l) => l.code === settings.language) && (
+                <MenuItem value={settings.language}>{settings.language}</MenuItem>
+              )}
+            </Select>
+            {localeProblems.map((p) => (
+              <FormHelperText key={p.file}>{t('settings.languageFileError', { file: p.file, message: p.message })}</FormHelperText>
+            ))}
+          </FormControl>
+          <Tooltip title={t('settings.languageFolder')}>
+            <IconButton sx={{ mt: 1 }} onClick={() => backend.locales.openFolder().catch((e) => setMessage({ severity: 'error', text: e.message }))}>
+              <FolderOpenIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
 
         {/* Theme */}
         <FormControl fullWidth>
