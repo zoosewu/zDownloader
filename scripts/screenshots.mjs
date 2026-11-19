@@ -1,12 +1,14 @@
-// Store screenshots (1280x800) of the dev app with demo downloads put into the frontend store
-// only; the backend and the user's data are untouched, and a reload brings the real list back.
+// Screenshots (1280x800) of the dev app with demo downloads put into the frontend store only;
+// the backend and the user's data are untouched, and a reload brings the real list back.
+// Writes docs/screenshots/<NN-name>.<lang>.png (the portfolio's format, docs/screenshots/captions.json).
 // Needs the dev app with CDP on port 9222 (WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222).
-//   node scripts/store-screenshots.mjs <outDir> <lang: zh-TW|en>
-// Then: node scripts/optimize-png.mjs <outDir>/*.png
+//   node scripts/screenshots.mjs <lang: zh-TW|en> [outDir]
+// Then: node scripts/optimize-png.mjs docs/screenshots/*.png
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const [outDir, lang] = process.argv.slice(2);
+const [lang, outDir = 'docs/screenshots'] = process.argv.slice(2);
+if (lang !== 'zh-TW' && lang !== 'en') throw new Error('usage: node scripts/screenshots.mjs <zh-TW|en> [outDir]');
 mkdirSync(outDir, { recursive: true });
 const target = (await (await fetch('http://127.0.0.1:9222/json')).json()).find((t) => t.type === 'page' && t.url.includes('localhost:10020'));
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -24,8 +26,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const shot = async (name) => {
   // Laid out at 1440x900 so every column fits, saved at the store's 1280x800.
   const r = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: 1440, height: 900, scale: 1280 / 1440 } });
-  writeFileSync(join(outDir, `${name}.png`), Buffer.from(r.result.data, 'base64'));
-  console.log(`${name}.png`);
+  const file = `${name}.${lang}.png`;
+  writeFileSync(join(outDir, file), Buffer.from(r.result.data, 'base64'));
+  console.log(file);
 };
 
 // Start from a fresh page (a reload from an earlier run may still be pending), and let the app
@@ -67,7 +70,7 @@ await run(`
   // (window.__TAURI_INTERNALS__.invoke is read-only; the app reads settings through backend.settings.get.)
   const { backend } = await import('${backendUrl}');
   const get = backend.settings.get;
-  backend.settings.get = async () => ({ ...(await get()), language: ${JSON.stringify(lang)}, categories: demoCategories });
+  backend.settings.get = async () => ({ ...(await get()), language: ${JSON.stringify(lang)}, categories: demoCategories, defaultDownloadDir: 'D:\\\\Downloads' });
   await i18n.changeLanguage(${JSON.stringify(lang)});
   await new Promise((r) => setTimeout(r, 800));
   const now = Date.now();
@@ -96,7 +99,7 @@ await run(`
   });
   store.set(ds.tasksByIdAtom, tasks);
   const settings = store.get(ss.settingsAtom);
-  store.set(ss.settingsAtom, { ...settings, categories: [
+  store.set(ss.settingsAtom, { ...settings, defaultDownloadDir: 'D:\\\\Downloads', categories: [
     { id: 'video', name: ${JSON.stringify(names.video)}, matching: 'any', rules: [] },
     { id: 'software', name: ${JSON.stringify(names.software)}, matching: 'any', rules: [] },
     { id: 'archive', name: ${JSON.stringify(names.archive)}, matching: 'any', rules: [] },
@@ -106,7 +109,7 @@ await run(`
   return 'demo ready';
 `);
 await wait(1200);
-await shot('1-list');
+await shot('01-downloads');
 
 // One selected: the detail panel.
 await run(`
@@ -115,7 +118,7 @@ await run(`
   getDefaultStore().set(ds.selectionAtom, { ids: ['00000000-0000-4000-8000-000000000000'], anchor: '00000000-0000-4000-8000-000000000000' });
 `);
 await wait(1000);
-await shot('2-details');
+await shot('02-details');
 
 // The add dialog with links (demo URLs; nothing is added).
 await run(`
@@ -129,9 +132,30 @@ await run(`
   ] });
 `);
 await wait(2500);
-await shot('3-add');
+// The dialog fills its input from the clipboard: don't show what the user copied.
+await run(`
+  const input = document.querySelector('[role=dialog] input');
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.blur();
+`);
+await wait(500);
+await shot('03-add');
 await run(`[...document.querySelectorAll('[role=dialog] button')].find((b) => /取消|Cancel/.test(b.textContent))?.click();`);
 await wait(500);
+
+// Site modules: browsing the official marketplace (real, not personal, data).
+await run(`
+  const { getDefaultStore } = await import('${jotaiUrl}');
+  const nav = await import('/src/stores/navigationStore.ts');
+  getDefaultStore().set(nav.currentPageAtom, 'settings');
+`);
+await wait(800);
+await run(`[...document.querySelectorAll('[role=tab]')].find((t) => /網站模組|Site modules/.test(t.textContent))?.click();`);
+await wait(800);
+await run(`[...document.querySelectorAll('[role=tab]')].find((t) => /^(瀏覽|Browse)$/.test(t.textContent.trim()))?.click();`);
+await wait(2000);
+await shot('04-modules');
 
 await send('Emulation.clearDeviceMetricsOverride');
 // Back to the real list, settings and language.

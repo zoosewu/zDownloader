@@ -588,4 +588,13 @@ chmod +x .git/hooks/pre-commit
 
 官方 marketplace 在獨立的 repo `zoosewu/zoo-downloader-marketplace`（`docs/architecture/official-marketplace-repo.md`），app 從 GitHub 讀、不打包。改模組在那個 repo：`pnpm build && pnpm catalog`、`pnpm check`，推上 `main` 就生效。開發版可設 `ZOO_OFFICIAL_MARKETPLACE=<本機 clone>` 讀本機。改了 SDK（新的 API level，見 `module-versions.md`）後在那邊 `pnpm sdk <commit>`。檔案不在的已安裝模組（舊版 app 原地執行的官方模組）在啟動時由 `restore_missing` 重新下載。
 
+## 作品集（apex-code）
+
+本專案列在 zoosewu 的作品集：https://zoosewu.github.io/apex-code/
+- 截圖：依 https://github.com/zoosewu/apex-code/blob/main/docs/SCREENSHOTS.md 放在 `docs/screenshots/`；
+  介面有明顯改變時一併更新截圖與 captions.json
+- 要顯示「作者的其他專案」時：依 https://github.com/zoosewu/apex-code/blob/main/docs/API.md 讀取 API，不要把清單寫死在本專案
+- 重新產生截圖（示範資料，不碰使用者資料）：以 CDP 開 dev app（`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`），
+  `node scripts/screenshots.mjs zh-TW`、`node scripts/screenshots.mjs en`，再 `node scripts/optimize-png.mjs docs/screenshots/*.png`
+
 <!-- MANUAL ADDITIONS END -->

@@ -1,0 +1,6 @@
+{
+  "01-downloads": { "zh-TW": "下載清單：多線程分段下載、分類與佇列", "en": "Download list: segmented downloads, categories and queue" },
+  "02-details": { "zh-TW": "任務詳細資訊與分段進度", "en": "Task details and segment progress" },
+  "03-add": { "zh-TW": "新增下載：一次貼上多個連結", "en": "Add downloads: paste several links at once" },
+  "04-modules": { "zh-TW": "網站模組：從 marketplace 安裝，支援需要登入的網站", "en": "Site modules: installed from a marketplace, for sites that need an account" }
+}
