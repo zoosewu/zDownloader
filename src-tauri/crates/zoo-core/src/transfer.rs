@@ -397,7 +397,7 @@ async fn run_workers(spec: &TransferSpec, ctx: &Ctx, part: &Arc<PartFile>) -> Re
         .flat_map(|gap| split(gap, spec.segment_size.max(1)))
         .collect();
     let workers = spec.connections.max(1).min(queue.len());
-    let queue = Arc::new(Mutex::new(queue));
+    let queue = Arc::new(Mutex::new(Queue { ranges: queue, workers }));
 
     let mut set = JoinSet::new();
     let spec = Arc::new(spec.clone());
@@ -431,33 +431,71 @@ fn mark(ctx: &Ctx, worker: usize, range: &Range<u64>, retrying: bool) {
     ctx.progress.set_active(worker, Some(ActiveRange { start: range.start, end: range.end, retrying }));
 }
 
-async fn worker(
-    id: usize,
-    spec: &TransferSpec,
-    queue: &Mutex<VecDeque<Range<u64>>>,
-    part: &PartFile,
-    ctx: &Ctx,
-) -> Result<(), SegmentError> {
+/// The ranges still to fetch, and how many workers are left to fetch them. One lock for both,
+/// so a range handed back is always taken by a worker that has not left yet.
+struct Queue {
+    ranges: VecDeque<Range<u64>>,
+    workers: usize,
+}
+
+impl Queue {
+    /// The next range, or `None` when there is none: the caller leaves.
+    fn take(&mut self) -> Option<Range<u64>> {
+        let next = self.ranges.pop_front();
+        if next.is_none() {
+            self.workers -= 1;
+        }
+        next
+    }
+
+    /// Leave and hand `rest` to the remaining workers; false when this is the last worker.
+    fn hand_back(&mut self, rest: Range<u64>) -> bool {
+        if self.workers <= 1 {
+            return false;
+        }
+        self.workers -= 1;
+        self.ranges.push_front(rest);
+        true
+    }
+}
+
+/// A connection the server stopped serving (it stalls, resets, or answers an error) while the
+/// others still work: the server limits connections (Baidu Netdisk lets a free account's extra
+/// connections stall), so give its range to the others instead of failing the download.
+fn connection_refused(e: &CoreError) -> bool {
+    matches!(e, CoreError::Http(_) | CoreError::Network(_) | CoreError::NoConnection(_))
+}
+
+async fn worker(id: usize, spec: &TransferSpec, queue: &Mutex<Queue>, part: &PartFile, ctx: &Ctx) -> Result<(), SegmentError> {
     loop {
-        let Some(mut range) = queue.lock().unwrap().pop_front() else { return Ok(()) };
+        let Some(mut range) = queue.lock().unwrap().take() else { return Ok(()) };
         let (retry, mut attempt) = (spec.retry, 0);
         loop {
             mark(ctx, id, &range, false);
             let (result, reached) = fetch_range(spec, range.clone(), part, ctx).await;
-            match result {
+            let progressed = reached > range.start;
+            range.start = reached;
+            let e = match result {
                 Ok(()) => break,
+                // Every byte arrived before the connection failed.
+                Err(SegmentError::Core(e)) if range.is_empty() && e.is_retryable() => break,
                 Err(SegmentError::Core(e)) if e.is_retryable() => {
                     // Progress earns a fresh set of attempts; only a stuck segment gives up.
-                    attempt = if reached > range.start { 1 } else { attempt + 1 };
-                    if attempt >= retry.max_attempts {
-                        return Err(e.into());
+                    attempt = if progressed { 1 } else { attempt + 1 };
+                    if attempt < retry.max_attempts {
+                        mark(ctx, id, &range, true);
+                        sleep_or_cancel(retry.delay(attempt), &ctx.cancel).await?;
+                        continue;
                     }
-                    range.start = reached;
-                    mark(ctx, id, &range, true);
-                    sleep_or_cancel(retry.delay(attempt), &ctx.cancel).await?;
+                    e
                 }
+                Err(SegmentError::Core(e)) => e,
                 Err(e) => return Err(e),
+            };
+            if connection_refused(&e) && queue.lock().unwrap().hand_back(range.clone()) {
+                return Ok(());
             }
+            return Err(e.into());
         }
     }
 }

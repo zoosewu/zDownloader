@@ -125,6 +125,34 @@ async fn transient_errors_are_retried() {
 }
 
 #[tokio::test]
+async fn connections_the_server_refuses_hand_their_ranges_to_the_others() {
+    // Baidu Netdisk lets a free account's extra connections stall; other servers answer them
+    // with an error status. Either way the download continues on the connections that work.
+    for over in ["494", "drop"] {
+        let fx = Fixture::start().await;
+        let dir = tempfile::tempdir().unwrap();
+        let size = 640 * KB;
+        let url = fx.url(&format!("/file/{size}?limit=2&over={over}&delay_ms=2"));
+
+        let out = transfer::run(&spec(dir.path(), url, 4), &ctx(None)).await;
+
+        assert_file(&out.unwrap_or_else(|e| panic!("over={over}: {e}")), size);
+        no_leftovers(dir.path());
+    }
+}
+
+#[tokio::test]
+async fn a_server_refusing_every_connection_still_fails() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let url = fx.url(&format!("/file/{}?limit=0&over=494", 640 * KB));
+
+    let err = transfer::run(&spec(dir.path(), url, 4), &ctx(None)).await.unwrap_err();
+
+    assert_eq!(err, CoreError::Http(494));
+}
+
+#[tokio::test]
 async fn permanent_http_errors_fail_without_retry() {
     let fx = Fixture::start().await;
     let dir = tempfile::tempdir().unwrap();

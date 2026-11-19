@@ -11,6 +11,8 @@
 //!   delay_ms=D     sleep D ms before each 16 KiB chunk
 //!   alt            serve different bytes (see `alt_byte_at`): another file of the same size
 //!   disposition=V  send `Content-Disposition: V` (V percent-encoded in the query)
+//!   limit=N&over=CODE  while N ranged bodies are being sent, answer more with CODE (`drop`:
+//!                  close the connection right after the head, as a stalled one ends)
 //! Requests whose target is an absolute URL are recorded as proxied (the fixture doubles as
 //! a plain HTTP proxy for its own URLs).
 #![allow(dead_code)]
@@ -36,6 +38,17 @@ struct State {
     /// Remaining forced failures per (path+query) key.
     remaining: HashMap<String, u32>,
     etag: String,
+    /// Ranged bodies being sent now (for `limit`).
+    sending: u32,
+}
+
+/// Counts a body in `State::sending` while it lives.
+struct Sending(Arc<Mutex<State>>);
+
+impl Drop for Sending {
+    fn drop(&mut self) {
+        self.0.lock().unwrap().sending -= 1;
+    }
 }
 
 pub struct Fixture {
@@ -165,6 +178,29 @@ async fn handle(stream: TcpStream, state: Arc<Mutex<State>>) -> std::io::Result<
         }
         Some((s, e)) => ("206", s, e.min(size.saturating_sub(1)) + 1),
         None => ("200", 0, size),
+    };
+
+    let _sending = if let (Some(limit), false) = (params.get("limit").and_then(|n| n.parse::<u32>().ok()), probe) {
+        let over = params.get("over").copied().unwrap_or("503");
+        let admitted = {
+            let mut st = state.lock().unwrap();
+            let free = st.sending < limit;
+            if free {
+                st.sending += 1;
+            }
+            free
+        };
+        if !admitted {
+            if over == "drop" {
+                let (cr, len) = (format!("bytes {}-{}/{}", start, end - 1, size), (end - start).to_string());
+                write_head(&mut stream, status, &[("Content-Range", &cr), ("Content-Length", &len)]).await?;
+                return stream.shutdown().await;
+            }
+            return respond(&mut stream, over, &[], &[]).await;
+        }
+        Some(Sending(state.clone()))
+    } else {
+        None
     };
 
     let mut head: Vec<(&str, String)> = vec![("ETag", etag), ("Accept-Ranges", "bytes".into())];
