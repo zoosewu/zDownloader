@@ -1,6 +1,6 @@
 # Edge 附加元件商店上架資料
 
-上架到 Microsoft Edge Add-ons（Partner Center）要填的內容與步驟。Chrome 線上應用程式商店之後可沿用大部分文字。
+上架到 Microsoft Edge Add-ons（Partner Center）要填的內容與步驟。不上架 Chrome 線上應用程式商店：Chrome 使用者從 Edge 商店安裝。
 
 ## 0. 先準備
 

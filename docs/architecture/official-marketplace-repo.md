@@ -51,4 +51,5 @@ scripts/sync-sdk.mjs      # 從 app repo 的某個 tag 取 sdk/ 到各模組 typ
 1. ✅ 新 repo 推上 baidu 1.1.1、k2s 1.0.0 與 catalog（含 sha256），CI 通過。
 2. ✅ app：官方來源改遠端（`site_modules::OFFICIAL_MARKETPLACE`）、`restore_missing` 遷移、移除打包；
    app repo 刪除 `src-tauri/marketplace/`。
-3. 待做：release workflow 附 `zoo-module` 執行檔，新 repo 的 CI 加跑 `zoo-module test`（目前在本機跑）。
+3. ✅ release workflow 附 `zoo-module-<target>` 執行檔（v0.2.5 起）；新 repo 的 CI `replay` job 下載最新 release
+   的 Linux 版，在各模組跑 `zoo-module test`。

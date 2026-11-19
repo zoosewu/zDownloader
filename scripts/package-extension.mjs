@@ -1,4 +1,4 @@
-// The browser extension as a store upload (Edge Add-ons, Chrome Web Store):
+// The browser extension as a store upload (Edge Add-ons; Chrome users install it from there too):
 // dist-store/zoo-downloader-extension-<version>.zip. Same files as the folder people load by
 // hand, minus its tests and README, and without manifest `key`: the store gives the extension
 // its own ID (the app lets both IDs in, see zoo-native-host).

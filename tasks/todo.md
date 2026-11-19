@@ -227,4 +227,5 @@
 # 瀏覽器擴充安裝（2026-11-17）
 
 - [x] B app 內建引導：安裝包附擴充資料夾；設定「一般 → 瀏覽器擴充」偵測 Edge／Chrome，按鈕把擴充頁面網址放進剪貼簿並叫出瀏覽器（瀏覽器不讓其他程式直接開 edge://、chrome:// 頁面，Edge 只會開空白分頁），以及顯示擴充資料夾
-- [ ] A 上架 Chrome 線上應用程式商店與 Edge 附加元件商店（使用者決定時機）：需要開發者帳號（Chrome 5 美元）、隱私權政策頁面；商店給的擴充 ID 要加進 `zoo-native-host` 的允許清單與 host manifest 的 allowed_origins；上架後設定頁改成指向商店頁面
+- [x] A 上架 Edge 附加元件商店（v0.2.4，2026-11-18）：商店 ID `bhgmngdlfelamchfhlahkkclffhpgfma` 已加進 `zoo-native-host` 的 `EXTENSION_IDS`；設定頁的 Edge、Chrome 按鈕都開 Edge 商店頁面（Chrome 也能從 Edge 商店安裝）
+  - 不上架 Chrome 線上應用程式商店（2026-11-19 使用者決定）：Chrome 使用者用 Edge 商店
