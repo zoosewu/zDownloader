@@ -97,7 +97,10 @@ where
 {
     let (recv, mut send) = tokio::io::split(conn);
     let mut line = String::new();
-    BufReader::new(recv.take(MAX_LINE)).read_line(&mut line).await?;
+    // Closed without a request: another app instance checking whether we still listen.
+    if BufReader::new(recv.take(MAX_LINE)).read_line(&mut line).await? == 0 {
+        return Ok(());
+    }
     let response = match parse_request(&line) {
         Ok(request) => handle(request).await,
         Err(response) => response,
@@ -170,6 +173,13 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_connection_without_a_request_is_not_an_error() {
+        let (client, server) = tokio::io::duplex(64);
+        drop(client);
+        answer(server, |_| -> std::future::Ready<Response> { unreachable!("no request was sent") }).await.unwrap();
+    }
+
+    #[tokio::test]
     async fn bad_requests_never_reach_the_handler() {
         let (line, seen) = exchange("{\"v\":9,\"type\":\"ping\"}\n").await;
         assert!(line.contains("\"code\":\"unsupportedVersion\""), "{line}");
@@ -215,8 +225,17 @@ mod tests {
         // The name is taken: a second app instance must not listen on it.
         assert!(listen(name.clone()).is_err());
         let server = tokio::spawn(async move {
-            let conn = listener.accept().await.unwrap();
-            answer(conn, |_| async { Response::ok(None) }).await.unwrap();
+            // On Unix the second `listen` connected to check the name is live: no request.
+            let mut served = false;
+            while !served {
+                let conn = listener.accept().await.unwrap();
+                answer(conn, |_| {
+                    served = true;
+                    async { Response::ok(None) }
+                })
+                .await
+                .unwrap();
+            }
         });
         let conn = Stream::connect(name).await.unwrap();
         let (recv, mut send) = tokio::io::split(conn);
