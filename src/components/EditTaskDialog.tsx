@@ -1,6 +1,7 @@
 // Change a stopped task's URL (a mirror, a fresh share link) or its headers.
 import { useState } from 'react';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import DialogError from './DialogError';
 import { useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { backend, type Task } from '../backend';
@@ -47,7 +48,6 @@ function EditTask({ task, onClose }: { task: Task; onClose: () => void }) {
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{t('downloads.edit.title')}</DialogTitle>
       <DialogContent>
-        {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
         <TextField
           label={t('downloads.urlLabel')}
           value={url}
@@ -60,6 +60,7 @@ function EditTask({ task, onClose }: { task: Task; onClose: () => void }) {
         <HeaderFieldsEditor value={fields} onChange={setFields} />
       </DialogContent>
       <DialogActions>
+        <DialogError error={error} />
         <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" onClick={save} disabled={saving || !url.trim()}>
           {t('common.save')}

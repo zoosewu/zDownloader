@@ -5,14 +5,15 @@ import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { FolderOpen as FolderIcon, OpenInNew as OpenIcon, Storefront as StoreIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { backend, type ExtensionSetup } from '../backend';
+import Toast, { type ToastMessage } from './Toast';
 
 const BrowserExtensionSection: React.FC = () => {
   const { t } = useTranslation();
   const [setup, setSetup] = useState<ExtensionSetup | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ToastMessage | null>(null);
   /** The extensions page address just put on the clipboard. */
   const [copied, setCopied] = useState<string | null>(null);
-  const fail = (e: unknown) => setError(e instanceof Error ? e.message : String(e));
+  const fail = (e: unknown) => setError({ severity: 'error', text: e instanceof Error ? e.message : String(e) });
 
   useEffect(() => {
     backend.extension.setup().then(setSetup).catch(fail);
@@ -31,7 +32,7 @@ const BrowserExtensionSection: React.FC = () => {
 
   return (
     <Stack spacing={1}>
-      {error && <Alert severity="error">{error}</Alert>}
+      <Toast message={error} onClose={() => setError(null)} />
       {row(
         t('settings.extension.store'),
         setup?.browsers.length
@@ -59,7 +60,10 @@ const BrowserExtensionSection: React.FC = () => {
           </Button>
         )),
       )}
-      {copied && <Alert severity="info">{t('settings.extension.pasteAddress', { address: copied })}</Alert>}
+      {/* Its line is kept from the start, so step 2 does not move when the address is copied. */}
+      <Typography variant="body2" color="info.main" sx={{ minHeight: '1.43em', pl: 2, visibility: copied ? 'visible' : 'hidden' }}>
+        {copied && t('settings.extension.pasteAddress', { address: copied })}
+      </Typography>
       {step(
         2,
         t('settings.extension.step2'),

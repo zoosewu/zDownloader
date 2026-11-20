@@ -2,7 +2,6 @@
 // downloads when they are added; existing downloads keep their categories.
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Dialog,
@@ -18,6 +17,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import DialogError from './DialogError';
 import { Add as AddIcon, Close as RemoveIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import type { Category, Matching, Rule, Target } from '../backend';
@@ -176,10 +176,10 @@ const CategoryDialog: React.FC<Props> = ({ category, onClose, onSave }) => {
           <Typography variant="caption" color="text.secondary">
             {t('categories.help')}
           </Typography>
-          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
+        <DialogError error={error} />
         <Button onClick={onClose} color="inherit">
           {t('common.cancel')}
         </Button>

@@ -2,7 +2,6 @@
 // values are never shown: leave a field empty to keep it, or clear it.
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -15,6 +14,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import DialogError from '../DialogError';
 import { HelpOutlined as HelpIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { backend, type InstalledInfo } from '../../backend';
@@ -53,7 +53,6 @@ export default function CredentialsDialog({ module, onClose }: CredentialsDialog
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{module.name}</DialogTitle>
       <DialogContent>
-        {error && <Alert severity="error">{error}</Alert>}
         {(module.credentialsHelp || module.credentialsHelpUrl) && (
           <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
             {module.credentialsHelp && text(module.credentialsHelp)}
@@ -110,6 +109,7 @@ export default function CredentialsDialog({ module, onClose }: CredentialsDialog
         })}
       </DialogContent>
       <DialogActions>
+        <DialogError error={error} />
         <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" onClick={save} disabled={Object.keys(changes).length === 0}>
           {t('common.save')}

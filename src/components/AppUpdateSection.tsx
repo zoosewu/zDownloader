@@ -36,7 +36,8 @@ const AppUpdateSection: React.FC = () => {
           checkNow();
         }}
         disabled={state.kind === 'checking' || state.kind === 'downloading' || state.kind === 'installing'}
-        startIcon={state.kind === 'checking' ? <CircularProgress size={12} /> : undefined}
+        // The spinner's place is kept, so the button keeps its width while checking.
+        startIcon={<Box sx={{ width: 12, height: 12, display: 'flex' }}>{state.kind === 'checking' && <CircularProgress size={12} />}</Box>}
       >
         {t('update.checkNow')}
       </Button>

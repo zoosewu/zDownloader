@@ -6,7 +6,6 @@
 // (a shared folder) turns into one row per file under a header, to pick which to add.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Checkbox,
@@ -528,14 +527,10 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
           </Button>
         </Box>
 
-        {message && (
-          <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>
-            {message}
-          </Alert>
-        )}
+        {/* An error takes the count's place, so the list above does not move. */}
         <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-            {t('addWindow.count', { count: toAdd })}
+          <Typography variant="body2" color={message ? 'error' : 'text.secondary'} role={message ? 'alert' : undefined} sx={{ flex: 1, minWidth: 0 }}>
+            {message ?? t('addWindow.count', { count: toAdd })}
           </Typography>
           <Button color="inherit" onClick={close}>
             {t('common.cancel')}

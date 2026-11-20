@@ -13,6 +13,7 @@ import {
   DialogTitle,
   TextField,
 } from '@mui/material';
+import DialogError from './DialogError';
 import { useTranslation } from 'react-i18next';
 import { backend, type CaptchaRequest } from '../backend';
 import { localized } from '../utils/localized';
@@ -67,7 +68,6 @@ export default function CaptchaDialog() {
     <Dialog open onClose={decline} maxWidth="xs" fullWidth>
       <DialogTitle>{t(challenge.kind === 'ask' ? 'captcha.askTitle' : 'captcha.title')}</DialogTitle>
       <DialogContent>
-        {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
         {challenge.kind === 'recaptcha' ? (
           <DialogContentText>{t('captcha.recaptchaMessage', { host: hostOf(challenge.pageUrl) })}</DialogContentText>
         ) : (
@@ -108,6 +108,7 @@ export default function CaptchaDialog() {
         )}
       </DialogContent>
       <DialogActions>
+        <DialogError error={error} />
         <Button onClick={decline}>{t('captcha.decline')}</Button>
         {typed ? (
           <Button variant="contained" disabled={!text.trim()} onClick={submit}>

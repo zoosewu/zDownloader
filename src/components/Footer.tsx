@@ -27,6 +27,8 @@ const Footer: React.FC = () => {
         borderColor: 'divider',
         backgroundColor: 'background.paper',
         fontSize: '0.75rem',
+        // Changing counts and speed keep their width.
+        fontVariantNumeric: 'tabular-nums',
       }}
     >
       {/* Left side - Download statistics */}

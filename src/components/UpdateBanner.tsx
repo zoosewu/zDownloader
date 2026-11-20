@@ -1,7 +1,8 @@
-// A slim bar above the main window when a new version is out: what changed, "Update and
-// restart", "Later". Shows progress while downloading and the reason if it fails.
+// A card floating over the bottom-left corner when a new version is out: what changed,
+// "Update and restart", "Later". Shows progress while downloading and the reason if it fails.
+// It floats so the page never moves when it appears or goes.
 import React, { useState } from 'react';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Typography } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Paper, Typography } from '@mui/material';
 import { SystemUpdateAlt as UpdateIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAppUpdate } from '../hooks/useAppUpdate';
@@ -15,21 +16,31 @@ const UpdateBanner: React.FC = () => {
   const update = 'update' in state ? state.update : undefined;
   if (!update || (state.kind === 'available' && dismissed === update.version)) return null;
   const busy = state.kind === 'downloading' || state.kind === 'installing';
+  const tone = state.kind === 'failed' ? 'error' : 'info';
 
   return (
-    <Box
+    <Paper
+      elevation={6}
+      role="status"
       sx={{
+        position: 'fixed',
+        left: 16,
+        // Above the footer.
+        bottom: 36,
+        zIndex: (theme) => theme.zIndex.snackbar,
+        maxWidth: 'min(560px, calc(100vw - 32px))',
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 1,
         px: 1.5,
-        minHeight: 34,
-        bgcolor: (theme) => (state.kind === 'failed' ? theme.palette.error.main : theme.palette.info.main),
-        color: (theme) => theme.palette.getContrastText(state.kind === 'failed' ? theme.palette.error.main : theme.palette.info.main),
+        py: 0.75,
+        bgcolor: `${tone}.main`,
+        color: (theme) => theme.palette.getContrastText(theme.palette[tone].main),
       }}
     >
       <UpdateIcon fontSize="small" />
-      <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+      <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
         {state.kind === 'failed'
           ? t('update.failed', { message: state.message })
           : state.kind === 'downloading'
@@ -45,15 +56,15 @@ const UpdateBanner: React.FC = () => {
         <LinearProgress variant="determinate" value={(state.done / state.total) * 100} color="inherit" sx={{ width: 120 }} />
       )}
       {update.body && (
-        <Button color="inherit" onClick={() => setShowNotes(true)}>
+        <Button color="inherit" size="small" onClick={() => setShowNotes(true)}>
           {t('update.notes')}
         </Button>
       )}
-      <Button color="inherit" variant="outlined" disabled={busy} onClick={() => install(update)}>
+      <Button color="inherit" size="small" variant="outlined" disabled={busy} onClick={() => install(update)}>
         {state.kind === 'failed' ? t('update.retry') : t('update.install')}
       </Button>
       {!busy && (
-        <Button color="inherit" onClick={() => dismiss(update.version)}>
+        <Button color="inherit" size="small" onClick={() => dismiss(update.version)}>
           {t('update.later')}
         </Button>
       )}
@@ -69,7 +80,7 @@ const UpdateBanner: React.FC = () => {
           <Button onClick={() => setShowNotes(false)}>{t('common.close')}</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Paper>
   );
 };
 

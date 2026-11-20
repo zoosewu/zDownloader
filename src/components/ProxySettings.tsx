@@ -153,7 +153,8 @@ export default function ProxySettings() {
       </Box>
 
       {error && <Alert severity="error">{error}</Alert>}
-      {loading && <LinearProgress />}
+      {/* Always there, shown only while loading: the table below never moves. */}
+      <LinearProgress sx={{ visibility: loading ? 'visible' : 'hidden' }} />
 
       {!loading && proxies.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>

@@ -1,5 +1,5 @@
 // Settings → Modules: installed modules, the marketplaces they come from, and what those offer.
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Alert,
   Box,
@@ -35,16 +35,18 @@ import { useSiteModules } from '../../hooks/useSiteModules';
 import { settingsAtom } from '../../stores/settingsStore';
 import { useInstall } from './ConsentDialog';
 import CredentialsDialog from './CredentialsDialog';
+import Toast, { type ToastMessage } from '../Toast';
 import { localized } from '../../utils/localized';
 
 export default function ModulesSettings() {
   const { t } = useTranslation();
   const { installed, sources, error: loadError, loaded } = useSiteModules();
   const [tab, setTab] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  /** A failed command: a toast, so the list does not move. */
+  const [failure, setFailure] = useState<ToastMessage | null>(null);
+  const setError = useCallback((text: string | null) => setFailure(text ? { severity: 'error', text } : null), []);
   const { install, busy, dialog } = useInstall(setError);
 
-  /** Run a command; a failure shows above the tabs. */
   const run = (action: () => Promise<unknown>) => () => {
     setError(null);
     action().catch((e) => setError((e as Error).message));
@@ -60,11 +62,13 @@ export default function ModulesSettings() {
 
   return (
     <Box>
-      {(error ?? loadError) && (
-        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
-          {error ?? loadError}
+      {/* Not loading the modules is not a passing message: it stays until they load. */}
+      {loadError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {loadError}
         </Alert>
       )}
+      <Toast message={failure} onClose={() => setFailure(null)} />
       <Tabs value={tab} onChange={(_, next) => setTab(next)} sx={{ mb: 2 }}>
         <Tab label={t('modules.installed.title')} />
         <Tab label={t('modules.sources.title')} />
