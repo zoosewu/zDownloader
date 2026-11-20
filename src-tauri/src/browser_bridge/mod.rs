@@ -20,7 +20,11 @@ pub fn start(app: AppHandle) {
     register::register();
     // The listener needs the Tokio runtime, which Tauri's setup does not run in.
     tauri::async_runtime::spawn(async move {
-        let listener = match zoo_native_host::socket_name().and_then(listen) {
+        #[cfg(unix)]
+        let ready = zoo_native_host::socket_dir().and_then(|dir| private_dir(&dir));
+        #[cfg(windows)]
+        let ready = Ok(());
+        let listener = match ready.and_then(|()| zoo_native_host::socket_name()).and_then(listen) {
             Ok(l) => l,
             Err(e) => {
                 // Most likely another instance already listens; that one serves the extension.
@@ -54,13 +58,20 @@ fn listen(name: Name<'static>) -> io::Result<Listener> {
         // Protected DACL: full access for the pipe's owner (this user) and SYSTEM, nobody else.
         options.security_descriptor(SecurityDescriptor::deserialize(widestring::u16cstr!("D:P(A;;GA;;;OW)(A;;GA;;;SY)"))?)
     };
+    // Unix: the socket's folder is the user's alone (`private_dir`); a socket file's own mode
+    // cannot be set on macOS (fchmod fails, and the bridge would never listen). A socket file
+    // left by a crashed app would block the name forever.
     #[cfg(unix)]
-    let options = {
-        use interprocess::os::unix::local_socket::ListenerOptionsExt;
-        // A socket file left by a crashed app would block the name forever.
-        options.mode(0o600).try_overwrite(true)
-    };
+    let options = options.try_overwrite(true);
     options.create_tokio()
+}
+
+/// Make `dir` (created if missing) accessible to its owner only.
+#[cfg(unix)]
+fn private_dir(dir: &std::path::Path) -> io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::create_dir_all(dir)?;
+    std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
 }
 
 /// Read one request line, write one response line.
@@ -157,6 +168,16 @@ mod tests {
         assert_eq!(error_response(e), Response::error(ErrorCode::Invalid, "invalid URL: x"));
         let e = CommandError::new("io", "disk gone");
         assert_eq!(error_response(e).code, Some(ErrorCode::Internal));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_socket_folder_is_the_users_alone() {
+        use std::os::unix::fs::PermissionsExt;
+        let parent = tempfile::tempdir().unwrap();
+        let dir = parent.path().join("zoo-downloader");
+        private_dir(&dir).unwrap();
+        assert_eq!(std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700);
     }
 
     #[tokio::test]

@@ -1,6 +1,6 @@
 # Every push to main and every pull request: type check and tests on the frontend; the Rust
 # workspace is tested on Windows (where the app is tried for real) and must compile on macOS
-# and Linux, which the Release workflow also builds.
+# and Linux, which the Release workflow also builds; there only the browser bridge is tested.
 name: CI
 
 on:
@@ -52,3 +52,10 @@ jobs:
         if: runner.os != 'Windows'
         working-directory: src-tauri
         run: cargo check --workspace --all-targets
+      # The local socket differs per OS (macOS cannot set a socket file's mode).
+      - name: Test the browser extension bridge (macOS, Linux)
+        if: runner.os != 'Windows'
+        working-directory: src-tauri
+        run: |
+          cargo test -p zoo-native-host
+          cargo test -p zoo-downloader browser_bridge

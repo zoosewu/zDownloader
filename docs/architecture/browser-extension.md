@@ -67,7 +67,7 @@ Zoo Downloader（shell 的 browser_bridge 模組）
 
 - **誰能啟動 host**：host manifest 的 `allowed_origins` 只列我們的擴充 ID（`zoo-native-host` 的 `EXTENSION_IDS`：未封裝載入的版本與 Edge 商店版）。擴充 manifest 放固定的 `key`，未封裝載入時 ID 也固定；商店版的 ID 由商店決定。host 另外檢查瀏覽器傳入的 origin 參數是否為其中之一，不是就拒絕。
 - **誰能連 app 的 socket**：
-  - 名稱含使用者名稱，避免多使用者電腦互相連到；Unix socket 放在只有本人可讀寫的目錄（`$XDG_RUNTIME_DIR` 或 app 資料夾）。
+  - 名稱含使用者名稱，避免多使用者電腦互相連到；Unix socket 放在 app 資料夾，app 啟動時把它設成只有本人能進（0700）。不設 socket 檔本身的權限：macOS 不支援（`fchmod` 失敗，0.2.7 以前 bridge 因此在 macOS 從未啟動，擴充永遠回退給瀏覽器）。
   - Windows：拒絕遠端連線（`PIPE_REJECT_REMOTE_CLIENTS`），DACL 只給目前使用者；app 用 first-instance 建立，名稱被搶就記錄錯誤、不聽。
   - host 連上後在 Windows 檢查 pipe 另一端的程序路徑是 app 本身（`GetNamedPipeServerProcessId`，透過 interprocess 的 `peer_creds`），防止別的程式先佔名稱騙取 Cookie。
   - host 啟動 app 前把自己的 std handle 設為不可繼承：否則 app 會一直握著瀏覽器給 host 的 pipe。

@@ -131,9 +131,16 @@ pub fn socket_name() -> io::Result<Name<'static>> {
     #[cfg(unix)]
     {
         use interprocess::local_socket::{GenericFilePath, ToFsName};
-        let dir = dirs::config_dir().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no config directory"))?;
-        dir.join("zoo-downloader").join("bridge.sock").to_fs_name::<GenericFilePath>().map(Name::into_owned)
+        socket_dir()?.join("bridge.sock").to_fs_name::<GenericFilePath>().map(Name::into_owned)
     }
+}
+
+/// The folder of the app's socket file: the app's own folder. Only the user may enter it, which
+/// is what keeps others off the socket (macOS cannot set a socket file's mode).
+#[cfg(unix)]
+pub fn socket_dir() -> io::Result<std::path::PathBuf> {
+    let dir = dirs::config_dir().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no config directory"))?;
+    Ok(dir.join("zoo-downloader"))
 }
 
 #[cfg(test)]
