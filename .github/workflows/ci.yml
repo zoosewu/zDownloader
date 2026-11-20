@@ -56,6 +56,12 @@ jobs:
       - name: Test the browser extension bridge (macOS, Linux)
         if: runner.os != 'Windows'
         working-directory: src-tauri
+        shell: bash
+        # Failures also become annotations, which can be read without signing in.
         run: |
-          cargo test -p zoo-native-host
-          cargo test -p zoo-downloader browser_bridge
+          set -o pipefail
+          { cargo test -p zoo-native-host && cargo test -p zoo-downloader browser_bridge; } 2>&1 | tee test.log || {
+            grep -E -A6 "^error|panicked|FAILED|^---- " test.log | head -40 | sed 's/%/%25/g' | tr '\n' '\r' | sed 's/\r/%0A/g; s/^/::error title=bridge tests::/'
+            echo
+            exit 1
+          }
