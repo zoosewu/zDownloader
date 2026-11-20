@@ -38,8 +38,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # The create response carries the id; listing releases right after may not show the draft yet.
+          # The body (how to open the app on macOS) comes before the generated notes.
           id=$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$GITHUB_REF_NAME" \
-            -f name="Zoo Downloader ${GITHUB_REF_NAME#v}" -F draft=true -F generate_release_notes=true --jq .id)
+            -f name="Zoo Downloader ${GITHUB_REF_NAME#v}" -F body=@.github/release-notes.md \
+            -F draft=true -F generate_release_notes=true --jq .id)
           test -n "$id"
           echo "id=$id" >> "$GITHUB_OUTPUT"
       - name: Browser extension

@@ -66,7 +66,15 @@ A powerful, feature-rich download manager built with Tauri, React, and Rust. Zoo
 ## 🚀 Installation
 
 ### Download Pre-built Binary (Recommended)
-Coming soon! Pre-built binaries will be available on the [Releases](https://github.com/your-username/zoo-downloader/releases) page.
+Download the installer for your system from the [Releases](https://github.com/zoosewu/zoo-downloader/releases/latest) page. Installed apps update themselves.
+
+#### Opening on macOS for the first time
+The app is not notarized by Apple yet, so macOS says it cannot verify that it is free of malware. After dragging it to Applications, either:
+- Open it once and click **Done**. Then in **System Settings → Privacy & Security**, click **Open Anyway** next to "zoo-downloader was blocked", enter your password and open it again. macOS does not ask again.
+- Or run this in Terminal:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/zoo-downloader.app
+  ```
 
 ### Build from Source
 
