@@ -37,7 +37,14 @@ pub struct AppSettings {
     #[serde(default)]
     pub auto_start_copied: bool,
     pub enable_notifications: bool,
+    /// A tray icon; closing the window then hides it there instead of quitting.
     pub enable_system_tray: bool,
+    /// Start when the user logs in (the OS login item follows this).
+    #[serde(default)]
+    pub launch_at_startup: bool,
+    /// Started at login: stay hidden in the tray (needs the tray icon).
+    #[serde(default = "default_true")]
+    pub start_in_tray: bool,
 
     // Advanced settings
     pub auto_retry_enabled: bool,
@@ -98,6 +105,8 @@ impl Default for AppSettings {
             auto_start_copied: false,
             enable_notifications: true,
             enable_system_tray: true,
+            launch_at_startup: false,
+            start_in_tray: true,
             auto_retry_enabled: true,
             max_retry_count: 3,
             retry_interval_secs: 5,

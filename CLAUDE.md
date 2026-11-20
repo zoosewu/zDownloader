@@ -519,6 +519,7 @@ chmod +x .git/hooks/pre-commit
 - 傳給 memo 元件的 props 用基本型別或穩定參考（`useCallback`、atom 的值）；每次 render 新建的物件或函式會讓 memo 失效。`SortableContext` 的 `items` 要用 `taskIdsAtom` 的陣列。
 - 列分成「隨進度變化的格子」與只隨狀態變化的 `FilenameCell`、`StatusCell`、`ActionsCell`、`CreatedCell`。
 - 外來連結（剪貼簿 `clipboard-link`、瀏覽器擴充）：`urls::starts_at_once` 決定直接下載或送進新增視窗。來源的開關（瀏覽器 `autoStartBrowser`、剪貼簿 `autoStartCopied`，預設都關，關閉時一律進新增視窗；剪貼簿的判斷在 `urls_inspect` 的 `autoStart`）開著、且連結的模組（若有）分項開關允許（預設取 manifest 的 `autoStart`，使用者可覆寫）才直接下載。模組的網址比對是 `urlPatterns` 加選填的 `urlRegex`（兩者都要符合），不執行模組程式。
+- 視窗不在畫面上時（`src-tauri/src/app_window.rs`，2026-11-20）：只能有一個 app（single-instance 外掛，第二次開啟改為顯示已在執行的視窗）；主視窗在 `tauri.conf.json` 預設隱藏，setup 最後才顯示。`enableSystemTray` 開著時才有系統匣圖示，關閉視窗改為縮到系統匣（macOS 同時離開 Dock），結束要從系統匣選單；選單文字由前端在套用語言時送來（`app_set_tray_labels`）。開機啟動用 autostart 外掛，開機項目帶 `--autostart`，`startInTray` 時以隱藏狀態啟動；每次啟動重新登記（更新或搬移後路徑可能變了），開發版啟動時不動開機項目。
 - 新增對話框（`src-tauri/src/add_window.rs`、`src/components/AddDownloads.tsx`）：主視窗裡的對話框（2026-11-17 由獨立視窗合併，避免開啟時閃爍）。連結先放進後端的 `Pending`，`add_window_open` 把主視窗叫到前面並發 `add-items-ready`；對話框打開時用 `add_window_take` 取走，所以頁面載入前送來的連結不會遺失。對話框的清單只在開著時存在。主視窗關掉 Tauri 的 drag-drop handler，拖進來的連結與文字檔由頁面處理。app 命令只接受 `main` 視窗。
 - 分享資料夾（`docs/architecture/share-listing.md`）：模組可選擇實作 `list(url)`，每個檔案帶自己的網址（百度用 `#path=`）。新增視窗對模組連結呼叫 `urls_list`，多檔時展開成可勾選的一組；每個檔案是普通任務，之後只靠 `resolve(檔案網址)`。資料夾結構以 `downloads_add` 的 `folder` 傳給後端建立。多檔分享不會自動開始。
 - 單一真實來源＋事件（2026-11-17）：每份狀態只有一個擁有者（任務：zoo-core；設定：後端；模組：marketplace；代理：proxy pool），改變時由擁有者發事件，其他地方只跟著事件更新，不輪詢、不另存可能過期的副本。

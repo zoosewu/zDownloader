@@ -136,7 +136,9 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "systemTray": "Enable System Tray",
+    "systemTray": "Close to the tray",
+    "launchAtStartup": "Start when I log in",
+    "startInTray": "Start in the tray when started at login",
     "uiSettings": "UI Settings",
     "downloadSettings": "Download Settings",
     "segmentSize": "Segment Size (MB)",
@@ -365,5 +367,11 @@
     "title": "Something went wrong on this screen",
     "message": "Downloads are not affected and keep going in the background. Reloading the screen usually fixes it; if it keeps happening, please report the error below.",
     "reload": "Reload"
+  },
+  "tray": {
+    "showHide": "Show/Hide window",
+    "pauseAll": "Pause all",
+    "resumeAll": "Resume all",
+    "quit": "Quit"
   }
 }

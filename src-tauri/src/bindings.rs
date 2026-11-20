@@ -13,7 +13,7 @@ fn committed_dir() -> PathBuf {
 fn export(dir: &Path) {
     // serde writes u64 as a JSON number, not a BigInt.
     let cfg = Config::new().with_large_int("number").with_out_dir(dir);
-    let all: [fn(&Config) -> Result<(), ts_rs::ExportError>; 24] = [
+    let all: [fn(&Config) -> Result<(), ts_rs::ExportError>; 25] = [
         zoo_core::Task::export_all,
         zoo_core::Event::export_all,
         zoo_core::StartMode::export_all,
@@ -38,6 +38,7 @@ fn export(dir: &Path) {
         crate::commands::urls::ListedFile::export_all,
         crate::browser_bridge::install::ExtensionSetup::export_all,
         crate::commands::locales::UserLocale::export_all,
+        crate::app_window::TrayLabels::export_all,
     ];
     for f in all {
         f(&cfg).expect("export bindings");

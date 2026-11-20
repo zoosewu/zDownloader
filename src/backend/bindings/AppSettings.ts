@@ -20,7 +20,19 @@ autoStartBrowser: boolean,
 /**
  * The same for links copied to the clipboard (while it is watched).
  */
-autoStartCopied: boolean, enableNotifications: boolean, enableSystemTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
+autoStartCopied: boolean, enableNotifications: boolean, 
+/**
+ * A tray icon; closing the window then hides it there instead of quitting.
+ */
+enableSystemTray: boolean, 
+/**
+ * Start when the user logs in (the OS login item follows this).
+ */
+launchAtStartup: boolean, 
+/**
+ * Started at login: stay hidden in the tray (needs the tray icon).
+ */
+startInTray: boolean, autoRetryEnabled: boolean, maxRetryCount: number, retryIntervalSecs: number, 
 /**
  * User-Agent for downloads that do not set their own; `None` uses zoo-downloader's.
  */

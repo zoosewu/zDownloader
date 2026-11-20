@@ -210,7 +210,27 @@ export default function GeneralSettings() {
                   onChange={(e) => setSettings({ ...settings, enableSystemTray: e.target.checked })}
                 />
               }
-              label={t('settings.systemTray') || 'Enable System Tray'}
+              label={t('settings.systemTray')}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.launchAtStartup}
+                  onChange={(e) => setSettings({ ...settings, launchAtStartup: e.target.checked })}
+                />
+              }
+              label={t('settings.launchAtStartup')}
+            />
+            <FormControlLabel
+              sx={{ pl: 4 }}
+              disabled={!settings.launchAtStartup || !settings.enableSystemTray}
+              control={
+                <Switch
+                  checked={settings.startInTray && settings.enableSystemTray}
+                  onChange={(e) => setSettings({ ...settings, startInTray: e.target.checked })}
+                />
+              }
+              label={t('settings.startInTray')}
             />
           </Stack>
         </Box>

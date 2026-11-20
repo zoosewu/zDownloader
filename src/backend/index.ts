@@ -26,6 +26,7 @@ import type { ListedFile } from './bindings/ListedFile';
 import type { ExtensionSetup } from './bindings/ExtensionSetup';
 import type { UrlInfo } from './bindings/UrlInfo';
 import type { UserLocale } from './bindings/UserLocale';
+import type { TrayLabels } from './bindings/TrayLabels';
 
 export type { AppSettings } from './bindings/AppSettings';
 export type { AddItem } from './bindings/AddItem';
@@ -163,6 +164,8 @@ export const backend = {
   app: {
     /** Stop downloads and save their state; call right before installing an update. */
     prepareUpdate: () => call<null>('app_prepare_update'),
+    /** The tray menu in the page's language. */
+    setTrayLabels: (labels: TrayLabels) => call<null>('app_set_tray_labels', { labels }),
   },
   locales: {
     /** The user's language files (`<app data>/locales/<code>.json`), unparsed. */

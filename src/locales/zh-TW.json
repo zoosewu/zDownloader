@@ -136,7 +136,9 @@
     "theme": "主題",
     "themeLight": "淺色",
     "themeDark": "深色",
-    "systemTray": "啟用系統托盤",
+    "systemTray": "關閉視窗時縮到系統匣",
+    "launchAtStartup": "開機時啟動",
+    "startInTray": "開機啟動時只在系統匣",
     "uiSettings": "介面設定",
     "downloadSettings": "下載設定",
     "segmentSize": "分段大小 (MB)",
@@ -365,5 +367,11 @@
     "title": "這個畫面發生錯誤",
     "message": "下載不受影響，會在背景繼續。重新載入畫面通常就能恢復；如果一再發生，請把下面的錯誤訊息回報給開發者。",
     "reload": "重新載入"
+  },
+  "tray": {
+    "showHide": "顯示／隱藏視窗",
+    "pauseAll": "全部暫停",
+    "resumeAll": "全部繼續",
+    "quit": "結束"
   }
 }

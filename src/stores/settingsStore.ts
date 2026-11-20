@@ -20,6 +20,8 @@ const defaultSettings: AppSettings = {
   autoStartCopied: false,
   enableNotifications: true,
   enableSystemTray: true,
+  launchAtStartup: false,
+  startInTray: true,
   autoRetryEnabled: true,
   maxRetryCount: 3,
   retryIntervalSecs: 5,

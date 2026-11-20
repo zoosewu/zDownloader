@@ -136,7 +136,9 @@
     "theme": "テーマ",
     "themeLight": "ライト",
     "themeDark": "ダーク",
-    "systemTray": "システムトレイを有効にする",
+    "systemTray": "閉じるとトレイに格納",
+    "launchAtStartup": "ログイン時に起動",
+    "startInTray": "ログイン時の起動ではトレイにだけ表示",
     "uiSettings": "UI設定",
     "downloadSettings": "ダウンロード設定",
     "segmentSize": "セグメントサイズ (MB)",
@@ -365,5 +367,11 @@
     "title": "この画面でエラーが発生しました",
     "message": "ダウンロードには影響せず、バックグラウンドで続行します。通常は画面を再読み込みすると直ります。繰り返し起きる場合は、下のエラーを開発者に報告してください。",
     "reload": "再読み込み"
+  },
+  "tray": {
+    "showHide": "ウィンドウの表示／非表示",
+    "pauseAll": "すべて一時停止",
+    "resumeAll": "すべて再開",
+    "quit": "終了"
   }
 }

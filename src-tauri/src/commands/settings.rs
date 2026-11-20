@@ -6,7 +6,7 @@ use crate::models::settings::AppSettings;
 use crate::storage::paths::get_config_file;
 use std::path::Path;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use zoo_core::store::JsonStore;
 
@@ -33,11 +33,12 @@ pub fn load_settings_from_file() -> AppSettings {
 }
 
 /// Save, remember and apply `new`.
-async fn replace(new: AppSettings, state: &SettingsState, downloads: &Downloads) -> CmdResult<AppSettings> {
+async fn replace(new: AppSettings, state: &SettingsState, downloads: &Downloads, app: &AppHandle) -> CmdResult<AppSettings> {
     zoo_core::Classifier::new(&new.categories)?;
     store().save(&new)?;
     *state.settings.lock().await = new.clone();
     downloads.apply(&new);
+    crate::app_window::apply(app, &new, false);
     Ok(new)
 }
 
@@ -51,8 +52,9 @@ pub async fn settings_update(
     settings: AppSettings,
     state: State<'_, SettingsState>,
     downloads: State<'_, Downloads>,
+    app: AppHandle,
 ) -> CmdResult<AppSettings> {
-    replace(settings, &state, &downloads).await
+    replace(settings, &state, &downloads, &app).await
 }
 
 #[tauri::command]
@@ -67,15 +69,16 @@ pub async fn settings_import(
     path: String,
     state: State<'_, SettingsState>,
     downloads: State<'_, Downloads>,
+    app: AppHandle,
 ) -> CmdResult<AppSettings> {
     let imported = JsonStore::<AppSettings>::new(Path::new(&path))
         .load()
         .map_err(|e| CommandError::invalid(format!("not a settings file: {e}")))?
         .ok_or_else(|| CommandError::new("notFound", format!("file not found: {path}")))?;
-    replace(imported, &state, &downloads).await
+    replace(imported, &state, &downloads, &app).await
 }
 
 #[tauri::command]
-pub async fn settings_reset(state: State<'_, SettingsState>, downloads: State<'_, Downloads>) -> CmdResult<AppSettings> {
-    replace(AppSettings::default(), &state, &downloads).await
+pub async fn settings_reset(state: State<'_, SettingsState>, downloads: State<'_, Downloads>, app: AppHandle) -> CmdResult<AppSettings> {
+    replace(AppSettings::default(), &state, &downloads, &app).await
 }

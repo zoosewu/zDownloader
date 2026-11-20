@@ -70,9 +70,13 @@ export async function loadUserLocales(): Promise<void> {
   await i18n.changeLanguage(i18n.language);
 }
 
-/** Show the app in the language a setting asks for. */
+/** Show the app in the language a setting asks for (the tray menu too). */
 export async function applyLanguage(setting: string): Promise<void> {
   const code = resolveLanguage(setting);
   document.documentElement.lang = code;
   if (code !== i18n.language) await i18n.changeLanguage(code);
+  const t = i18n.getFixedT(code);
+  await backend.app
+    .setTrayLabels({ showHide: t('tray.showHide'), pauseAll: t('tray.pauseAll'), resumeAll: t('tray.resumeAll'), quit: t('tray.quit') })
+    .catch((error) => console.warn('[tray] cannot set the menu language:', error.message));
 }

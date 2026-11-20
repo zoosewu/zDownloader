@@ -12,7 +12,6 @@ use ts_rs::TS;
 
 use crate::commands::error::{CmdResult, CommandError};
 use crate::utils::parser::parse_url_file;
-use crate::MAIN_WINDOW;
 
 const READY_EVENT: &str = "add-items-ready";
 
@@ -41,12 +40,8 @@ pub struct Pending(Mutex<Vec<AddItem>>);
 /// (none: just open it).
 pub async fn open(app: &AppHandle, items: Vec<AddItem>) -> CmdResult<()> {
     app.state::<Pending>().0.lock().unwrap().extend(items);
-    if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
-        // From the tray or another app: the dialog is in this window.
-        let _ = window.unminimize();
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
+    // From the tray or another app: the dialog is in this window.
+    crate::app_window::show(app);
     app.emit(READY_EVENT, ()).map_err(|e| CommandError::new("window", format!("cannot open the add dialog: {e}")))
 }
 

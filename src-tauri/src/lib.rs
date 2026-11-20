@@ -1,5 +1,6 @@
 // Zoo Downloader - Tauri shell over zoo-core
 mod add_window;
+mod app_window;
 mod browser_bridge;
 mod clipboard_watch;
 mod commands;
@@ -25,6 +26,7 @@ use commands::site_modules::{
 };
 use commands::proxy::{proxies_clear, proxies_import, proxies_list, proxies_remove, proxies_reset_failed};
 use commands::app::app_prepare_update;
+use app_window::app_set_tray_labels;
 use commands::locales::{locales_list, locales_open_folder};
 use commands::settings::{
     load_settings_from_file, settings_export, settings_get, settings_import, settings_reset,
@@ -112,6 +114,7 @@ fn app_commands(invoke: tauri::ipc::Invoke) -> bool {
             captcha_open_window,
             categories_match,
             app_prepare_update,
+            app_set_tray_labels,
             locales_list,
             locales_open_folder,
             add_window_open,
@@ -126,6 +129,8 @@ pub fn run() {
     let settings = load_settings_from_file();
 
     let app = tauri::Builder::default()
+        // First: a second launch only shows this app (two would download the same tasks).
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| app_window::show(app)))
         .plugin(
             tauri_plugin_log::Builder::new()
                 .target(tauri_plugin_log::Target::new(
@@ -145,6 +150,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::Builder::new().args([app_window::AUTOSTART_ARG]).build())
+        .manage(app_window::CloseToTray::default())
+        .manage(app_window::Labels::default())
+        .on_window_event(app_window::on_window_event)
         .manage(SettingsState { settings: Arc::new(Mutex::new(settings.clone())) })
         .manage(Ready::default())
         .manage(add_window::Pending::default())
@@ -179,9 +188,8 @@ pub fn run() {
             browser_bridge::start(app.handle().clone());
             clipboard_watch::start(app.handle().clone());
 
-            if let Err(e) = utils::tray::create_tray(app.handle()) {
-                log::warn!("Failed to create system tray: {e}");
-            }
+            // Shown at the end: the window starts hidden (tauri.conf.json) and may stay in the tray.
+            app_window::start(app.handle(), &settings);
             app.state::<Ready>().0.store(true, std::sync::atomic::Ordering::SeqCst);
             let _ = app.emit(READY_EVENT, ());
             Ok(())
@@ -190,6 +198,11 @@ pub fn run() {
         .expect("error while building tauri application");
 
     app.run(|app, event| {
+        // The Dock icon of an app hidden in the tray.
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Reopen { .. } = event {
+            app_window::show(app);
+        }
         if let tauri::RunEvent::Exit = event {
             // Keep partial downloads and their state for the next start.
             let downloads = app.state::<Downloads>();
