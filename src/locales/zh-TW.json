@@ -190,6 +190,7 @@
   },
   "captcha": {
     "title": "需要驗證",
+    "askTitle": "網站需要你提供資訊",
     "imageAlt": "驗證碼圖片",
     "enterText": "輸入圖片中的文字",
     "recaptchaMessage": "{{host}} 需要通過 reCAPTCHA。會在新視窗開啟該網站，完成驗證後自動繼續。",

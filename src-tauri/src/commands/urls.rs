@@ -1,6 +1,8 @@
 //! What the app can tell about a URL before downloading it: for the add-download page and the
 //! clipboard watcher.
 
+use std::collections::BTreeMap;
+
 use serde::Serialize;
 use tauri::State;
 use ts_rs::TS;
@@ -40,16 +42,24 @@ pub struct ListedFile {
     pub size: Option<u64>,
     /// Folder inside the share (`a/b`); `None` at the top.
     pub folder: Option<String>,
+    /// What the user answered the module while it listed the link (an extraction code): give
+    /// it to `downloads_add` so the download does not ask again. Secret answers are not here.
+    pub answers: BTreeMap<String, String>,
 }
 
 /// The files behind `url`: several for a shared folder whose module lists it, otherwise one
-/// (the link itself). Runs the module, so it may take a few seconds.
+/// (the link itself). Runs the module, so it may take a few seconds and may ask the user.
 #[tauri::command]
 pub async fn urls_list(url: String, modules: State<'_, SiteModules>) -> CmdResult<Vec<ListedFile>> {
-    let items = modules.resolver.list(&url).await?;
+    Ok(list(&url, &modules).await?)
+}
+
+async fn list(url: &str, modules: &SiteModules) -> Result<Vec<ListedFile>, zoo_core::CoreError> {
+    let (items, answers) = modules.resolver.list(url).await?;
+    let answers = answers.saved().clone();
     Ok(items
         .into_iter()
-        .map(|i| ListedFile { url: i.url, filename: i.filename, size: i.size, folder: i.folder })
+        .map(|i| ListedFile { url: i.url, filename: i.filename, size: i.size, folder: i.folder, answers: answers.clone() })
         .collect())
 }
 
@@ -59,12 +69,17 @@ pub async fn urls_inspect(url: String, modules: State<'_, SiteModules>, settings
     Ok(inspect(&url, module_for(&url, &modules), allowed))
 }
 
-/// Whether a download the browser extension sends starts at once: the switch for the browser
-/// is on, the link's module (if any) allows it, and the link is one file. A shared folder waits in the add window for the user to pick its files,
-/// and so does a link its module cannot list (the add window shows why).
-pub async fn starts_at_once(url: &str, modules: &SiteModules, settings: &SettingsState) -> bool {
+/// The file to start at once for a download the browser extension sends: the switch for the
+/// browser is on, the link's module (if any) allows it, and the link is one file. A shared
+/// folder waits in the add window for the user to pick its files, and so does a link its
+/// module cannot list (the add window shows why).
+pub async fn starts_at_once(url: &str, modules: &SiteModules, settings: &SettingsState) -> Option<ListedFile> {
     let allowed = settings.settings.lock().await.auto_start_browser;
-    allowed && module_for(url, modules).is_none_or(|m| m.auto_start) && matches!(modules.resolver.list(url).await.as_deref(), Ok([_]))
+    if !allowed || !module_for(url, modules).is_none_or(|m| m.auto_start) {
+        return None;
+    }
+    let mut files = list(url, modules).await.ok()?;
+    if files.len() == 1 { files.pop() } else { None }
 }
 
 fn module_for(url: &str, modules: &SiteModules) -> Option<InstalledInfo> {

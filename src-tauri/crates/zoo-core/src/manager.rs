@@ -16,7 +16,7 @@ use crate::error::CoreError;
 use crate::naming;
 use crate::part_file::PartFile;
 use crate::rate::RateLimiter;
-use crate::resolve::{self, Resolver};
+use crate::resolve::{self, Answers, Memory, Resolver};
 use crate::store::JsonStore;
 use crate::task::{AddRequest, Config, Event, Phase, ProgressTick, SegmentMap, StartMode, Task, TaskId, TaskState, TaskUpdate};
 use crate::transfer::{self, Ctx, Progress, TransferSpec};
@@ -219,6 +219,8 @@ enum JobMsg {
     Phase(TaskId, Phase),
     /// Resolution suggested a file name and the task had none of its own.
     Renamed(TaskId, String),
+    /// What the user answered the site module, after each resolution.
+    Answers(TaskId, Answers),
     Done(TaskId, Result<PathBuf, CoreError>),
 }
 
@@ -362,6 +364,7 @@ impl Actor {
             custom_tags: req.tags.is_some(),
             tags: req.tags.unwrap_or_else(|| self.cfg.categories.tags(&req.url, &name)),
             module: None,
+            answers: Answers::from_saved(req.answers),
             name,
             custom_name: req.filename.is_some(),
             url: req.url,
@@ -536,6 +539,10 @@ impl Actor {
         }
         self.set(id, |t| {
             if let Some(url) = update.url {
+                // Answers belong to the old link (a new share has its own code).
+                if url != t.url {
+                    t.answers = Answers::default();
+                }
                 t.url = url;
             }
             if let Some(headers) = update.headers {
@@ -658,8 +665,9 @@ impl Actor {
             },
         );
         let (msgs, resolver) = (self.job_tx.clone(), self.resolver.clone());
+        let memory: Memory = Arc::new(std::sync::Mutex::new(task.answers.clone()));
         tokio::spawn(async move {
-            let result = run_job(id, spec, &ctx, resolver.as_ref(), may_rename, &msgs).await;
+            let result = run_job(id, spec, &ctx, resolver.as_ref(), &memory, may_rename, &msgs).await;
             let _ = msgs.send(JobMsg::Done(id, result));
         });
         let _ = self.set(id, |t| {
@@ -679,6 +687,11 @@ impl Actor {
                     }
                     t.phase = Some(phase);
                 });
+            }
+            JobMsg::Answers(id, answers) => {
+                if self.tasks.iter().any(|t| t.id == id && t.answers != answers) {
+                    let _ = self.set(id, |t| t.answers = answers);
+                }
             }
             JobMsg::Renamed(id, name) => {
                 let dir = self.tasks.iter().find(|t| t.id == id).map(|t| t.dir.clone());
@@ -897,6 +910,7 @@ async fn run_job(
     mut spec: TransferSpec,
     ctx: &Ctx,
     resolver: &dyn Resolver,
+    memory: &Memory,
     may_rename: bool,
     msgs: &mpsc::UnboundedSender<JobMsg>,
 ) -> Result<PathBuf, CoreError> {
@@ -909,10 +923,13 @@ async fn run_job(
                 let _ = msgs.send(JobMsg::Phase(id, phase));
             })
         };
-        let source = tokio::select! {
-            _ = ctx.cancel.cancelled() => return Err(CoreError::Cancelled),
-            source = resolver.resolve(&spec.origin, report) => source?,
+        let resolved = tokio::select! {
+            _ = ctx.cancel.cancelled() => Err(CoreError::Cancelled),
+            source = resolver.resolve(&spec.origin, memory.clone(), report) => source,
         };
+        // Kept whatever happened: a code the user typed before a later step failed still counts.
+        let _ = msgs.send(JobMsg::Answers(id, memory.lock().unwrap().clone()));
+        let source = resolved?;
         // The module's name, else the server's (Content-Disposition), else the URL's.
         let may_name = may_rename && !resolved_again;
         if let Some(suggested) = source.filename.as_deref().filter(|_| may_name) {

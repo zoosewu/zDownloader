@@ -242,6 +242,7 @@
   },
   "captcha": {
     "title": "認証が必要です",
+    "askTitle": "サイトが情報を求めています",
     "imageAlt": "CAPTCHA 画像",
     "enterText": "画像の文字を入力",
     "recaptchaMessage": "{{host}} で reCAPTCHA が必要です。サイトを新しいウィンドウで開き、認証が済むと自動で続行します。",

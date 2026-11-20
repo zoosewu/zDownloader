@@ -66,6 +66,8 @@ interface Row {
   folder: string | null;
   size: number | null;
   selected: boolean;
+  /** What the user answered its module while it listed the link (an extraction code). */
+  answers: Record<string, string>;
 }
 
 /** A shared folder whose files are rows of their own. */
@@ -120,7 +122,8 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
 
   const update = (key: number, patch: Partial<Row>) => setRows((all) => all.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
-  /** A link its module lists as several files becomes a group with a row per file. */
+  /** A link its module lists as several files becomes a group with a row per file; a single
+   * file takes the module's link, name and answers (an extraction code the user typed). */
   const expand = useCallback(async (key: number, url: string) => {
     update(key, { listing: true });
     let files;
@@ -131,7 +134,15 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
       return;
     }
     if (files.length <= 1) {
-      update(key, { listing: false });
+      const [file] = files;
+      setRows((all) =>
+        all.map((r) => {
+          if (r.key !== key) return r;
+          if (!file) return { ...r, listing: false };
+          const filename = r.filenameEdited ? r.filename : (file.filename ?? r.filename);
+          return { ...r, listing: false, url: file.url, filename, size: file.size, answers: file.answers };
+        }),
+      );
       return;
     }
     const tags = await Promise.all(files.map((f) => backend.categories.match(f.url, f.filename).catch(() => [] as string[])));
@@ -152,6 +163,7 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
               folder: f.folder,
               size: f.size,
               selected: true,
+              answers: f.answers,
             })),
       ),
     );
@@ -198,6 +210,7 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
           folder: null,
           size: null,
           selected: true,
+          answers: {},
         });
       }
       setRows((all) => [...all, ...added]);
@@ -271,6 +284,7 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
           headers: mergeHeaders(row.headers, extra),
           tags: row.tagsEdited ? row.tags : null,
           folder: keepFolders ? row.folder : null,
+          answers: row.answers,
         });
         setRows((all) => all.filter((r) => r.key !== row.key));
       } catch (e) {

@@ -4,8 +4,8 @@
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use zoo_core::resolve::{PhaseReport, Resolving};
-use zoo_core::{CoreError, Phase, Resolver, Source};
+use zoo_core::resolve::{Memory, PhaseReport, Resolving};
+use zoo_core::{Answers, CoreError, Phase, Resolver, Source};
 
 use crate::manifest::handles;
 use crate::protocol::{Captcha, Limits, Listed, ModuleError, ModuleRef};
@@ -51,16 +51,18 @@ impl ModuleResolver {
         modules.iter().find(|m| m.matches(url)).cloned()
     }
 
-    /// The files behind `url`, each with a URL of its own (see `Request::List`). A URL no module
+    /// The files behind `url`, each with a URL of its own (see `Request::List`), and what the
+    /// user answered the module meanwhile (for the downloads of these files). A URL no module
     /// handles is one file. Every item must go back to the same module, or `resolve` could not
     /// download it.
-    pub async fn list(&self, url: &str) -> Result<Vec<Listed>, CoreError> {
+    pub async fn list(&self, url: &str) -> Result<(Vec<Listed>, Answers), CoreError> {
         let Some(installed) = self.module_for(url) else {
-            return Ok(vec![Listed { url: url.into(), filename: None, size: None, folder: None }]);
+            return Ok((vec![Listed { url: url.into(), filename: None, size: None, folder: None }], Answers::default()));
         };
         let id = installed.module.id.clone();
         let report: PhaseReport = Box::new(|_| {});
-        let call = Reporting { user: self.user.as_ref(), report: &report, module: &id };
+        let memory = Memory::default();
+        let call = Reporting { user: self.user.as_ref(), report: &report, module: &id, memory: &memory };
         let items = self
             .supervisor
             .list(installed.module, url, installed.limits, &call)
@@ -70,17 +72,18 @@ impl ModuleResolver {
             let message = format!("{id}: list returned {:?}, which this module's urlPatterns do not match", stray.url);
             return Err(CoreError::Resolve { message, hint: None, retryable: false });
         }
-        Ok(items)
+        let answers = memory.lock().unwrap().clone();
+        Ok((items, answers))
     }
 }
 
 impl Resolver for ModuleResolver {
-    fn resolve<'a>(&'a self, url: &'a str, report: PhaseReport) -> Resolving<'a> {
+    fn resolve<'a>(&'a self, url: &'a str, memory: Memory, report: PhaseReport) -> Resolving<'a> {
         Box::pin(async move {
             let Some(installed) = self.module_for(url) else { return Ok(Source::direct(url)) };
             let id = installed.module.id.clone();
             report(Phase::Resolving { module: Some(id.clone()) });
-            let call = Reporting { user: self.user.as_ref(), report: &report, module: &id };
+            let call = Reporting { user: self.user.as_ref(), report: &report, module: &id, memory: &memory };
             let resolved = self
                 .supervisor
                 .resolve(installed.module, url, installed.limits, &call)
@@ -98,11 +101,14 @@ impl Resolver for ModuleResolver {
     }
 }
 
-/// Passes countdowns and captchas to the user and shows them as the task's phase.
+/// Passes countdowns and captchas to the user and shows them as the task's phase. A question
+/// the user already answered for this download (`zoo.ask` with `remember`) is answered from
+/// `memory` without asking, unless the module says that answer did not work.
 struct Reporting<'a> {
     user: &'a dyn Interaction,
     report: &'a PhaseReport,
     module: &'a str,
+    memory: &'a Memory,
 }
 
 impl Interaction for Reporting<'_> {
@@ -117,9 +123,23 @@ impl Interaction for Reporting<'_> {
         challenge: Captcha,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send + '_>> {
         Box::pin(async move {
+            let remember = match &challenge {
+                Captcha::Ask { id, secret, remember: true, error, .. } => {
+                    if error.is_none() {
+                        if let Some(known) = self.memory.lock().unwrap().get(id) {
+                            return Some(known.to_string());
+                        }
+                    }
+                    Some((id.clone(), *secret))
+                }
+                _ => None,
+            };
             (self.report)(Phase::AwaitingUser);
             let solution = self.user.solve_captcha(challenge).await;
             (self.report)(Phase::Resolving { module: Some(self.module.to_string()) });
+            if let (Some((id, secret)), Some(answer)) = (remember, &solution) {
+                self.memory.lock().unwrap().set(&id, answer.clone(), secret);
+            }
             solution
         })
     }

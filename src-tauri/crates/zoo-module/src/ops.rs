@@ -12,10 +12,12 @@ use deno_error::JsErrorBox;
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha384, Sha512};
+use zoo_module_client::manifest::Text;
 use zoo_module_client::protocol::Captcha;
 
 use crate::budget::Budget;
 use crate::hooks::Hooks;
+use crate::runtime::ApiLevel;
 use crate::net::{FetchRequest, Net, Redirect};
 
 /// Longest single `zoo.wait`.
@@ -119,6 +121,17 @@ async fn op_zoo_wait(state: Rc<RefCell<OpState>>, ms: f64, #[string] reason: Str
 enum CaptchaArgs {
     Recaptcha { site_key: String, page_url: String },
     Image { url: String },
+    Ask { id: String, message: Text, #[serde(default)] secret: bool, #[serde(default)] remember: bool, error: Option<Text> },
+}
+
+/// `zoo.ask`'s arguments, as a module author needs to hear about mistakes in them.
+fn check_ask(id: &str, message: &Text, error: Option<&Text>) -> Result<(), String> {
+    let id_ok = !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+    if !id_ok {
+        return Err(format!("zoo.ask: id {id:?} must be 1 to 64 letters, digits, _ or -"));
+    }
+    message.check("zoo.ask: message", 300)?;
+    error.map_or(Ok(()), |e| e.check("zoo.ask: error", 300))
 }
 
 /// The user's solution, or null if they declined.
@@ -144,6 +157,13 @@ async fn op_zoo_captcha(state: Rc<RefCell<OpState>>, #[serde] args: CaptchaArgs)
                 .map(|(_, v)| v.clone())
                 .unwrap_or_else(|| "application/octet-stream".into());
             Captcha::Image { mime, base64: base64::engine::general_purpose::STANDARD.encode(&image.body) }
+        }
+        CaptchaArgs::Ask { id, message, secret, remember, error } => {
+            if state.borrow().borrow::<ApiLevel>().0 < 3 {
+                return Err(JsErrorBox::type_error("zoo.ask needs \"apiVersion\": 3 in manifest.json"));
+            }
+            check_ask(&id, &message, error.as_ref()).map_err(JsErrorBox::type_error)?;
+            Captcha::Ask { id, message, secret, remember, error }
         }
     };
     let answer = hooks.ask(challenge);

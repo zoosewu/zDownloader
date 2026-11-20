@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use zoo_core::connection::Direct;
-use zoo_core::resolve::{PhaseReport, Resolving};
+use zoo_core::resolve::{Memory, PhaseReport, Resolving};
 use zoo_core::transfer::RetryPolicy;
 use zoo_core::{
     AddRequest, AutoRetry, Config, CoreError, DownloadManager, Event, Phase, Resolver, Source, StartMode, Task, TaskId,
@@ -55,7 +55,7 @@ impl Scripted {
 }
 
 impl Resolver for Scripted {
-    fn resolve<'a>(&'a self, url: &'a str, report: PhaseReport) -> Resolving<'a> {
+    fn resolve<'a>(&'a self, url: &'a str, _memory: Memory, report: PhaseReport) -> Resolving<'a> {
         Box::pin(async move {
             let n = self.calls.fetch_add(1, Ordering::SeqCst);
             self.seen.lock().unwrap().push(url.to_string());
@@ -84,7 +84,7 @@ fn start(cfg: Config, store: &Path, resolver: Arc<dyn Resolver>) -> DownloadMana
 }
 
 fn req(dir: &Path, filename: Option<&str>) -> AddRequest {
-    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None }
+    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None, answers: Default::default() }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {
@@ -220,6 +220,66 @@ async fn resolve_failures_fail_the_task_and_honour_retryability() {
     let id = m.add(req(dir.path(), None)).await.unwrap().id;
     let task = wait_until(&m, id, |t| t.state == TaskState::Failed).await;
     assert!(task.next_retry_at.is_some(), "retried later");
+}
+
+/// Asks for `pwd` (remembered) and `otp` (remembered, secret) when it does not know them; the
+/// first call then fails as a flaky site would.
+struct Asking {
+    file: String,
+    seen: Mutex<Vec<(Option<String>, Option<String>)>>,
+}
+
+impl Resolver for Asking {
+    fn resolve<'a>(&'a self, _url: &'a str, memory: Memory, _report: PhaseReport) -> Resolving<'a> {
+        Box::pin(async move {
+            let mut answers = memory.lock().unwrap();
+            let seen = (answers.get("pwd").map(String::from), answers.get("otp").map(String::from));
+            let first = self.seen.lock().unwrap().is_empty();
+            self.seen.lock().unwrap().push(seen.clone());
+            if seen.0.is_none() {
+                answers.set("pwd", "8k3t".into(), false);
+            }
+            if seen.1.is_none() {
+                answers.set("otp", "123456".into(), true);
+            }
+            if first {
+                return Err(CoreError::Resolve { message: "busy".into(), hint: None, retryable: true });
+            }
+            Ok(expiring(self.file.clone()))
+        })
+    }
+}
+
+#[tokio::test]
+async fn answers_are_remembered_across_retries_and_saved_without_secrets() {
+    let fx = Fixture::start().await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = config();
+    cfg.auto_retry = AutoRetry { enabled: true, max_attempts: 3, interval: Duration::from_millis(50) };
+    let asking = Arc::new(Asking { file: fx.url(&format!("/file/{}", 10 * KB)), seen: Mutex::new(Vec::new()) });
+
+    let m = start(cfg.clone(), dir.path(), asking.clone());
+    let id = m.add(req(dir.path(), None)).await.unwrap().id;
+    let task = wait_until(&m, id, |t| t.state == TaskState::Completed).await;
+    let known = (Some("8k3t".to_string()), Some("123456".to_string()));
+    assert_eq!(*asking.seen.lock().unwrap(), vec![(None, None), known], "the retry did not ask again");
+    assert_eq!(task.answers.get("pwd"), Some("8k3t"));
+    drop(m);
+
+    // After a restart the code is still known; the secret answer is not.
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let m = start(cfg, dir.path(), asking.clone());
+    let task = m.list().await.unwrap().into_iter().find(|t| t.id == id).unwrap();
+    assert_eq!((task.answers.get("pwd"), task.answers.get("otp")), (Some("8k3t"), None));
+    assert!(!serde_json::to_string(&task).unwrap().contains("123456"), "secret answers are never written or shown");
+
+    // Answers given while listing the share come with the new task.
+    asking.seen.lock().unwrap().clear();
+    let mut with_code = req(dir.path(), Some("b.bin"));
+    with_code.answers = [("pwd".to_string(), "abcd".to_string())].into();
+    let id = m.add(with_code).await.unwrap().id;
+    wait_until(&m, id, |t| t.state == TaskState::Completed).await;
+    assert_eq!(asking.seen.lock().unwrap()[0].0.as_deref(), Some("abcd"));
 }
 
 #[tokio::test]

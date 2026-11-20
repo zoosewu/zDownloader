@@ -2,9 +2,11 @@
 
 use crate::category::Classifier;
 use crate::error::CoreError;
+use crate::resolve::Answers;
 use crate::transfer::RetryPolicy;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -113,6 +115,10 @@ pub struct Task {
     /// The site module that resolved the URL (`id@marketplace`); `None` for a direct download.
     #[serde(default)]
     pub module: Option<String>,
+    /// What the user answered the module for this download (see `resolve::Answers`).
+    #[serde(default, skip_serializing_if = "Answers::is_empty")]
+    #[ts(skip)]
+    pub answers: Answers,
 }
 
 /// Steps of a running task. Resolution happens before every transfer; only site modules
@@ -196,6 +202,9 @@ pub struct AddRequest {
     /// Categories the user chose; `None` lets the category rules decide.
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+    /// Answers the module already got for this URL (from listing its share), so it does not ask again.
+    #[serde(default)]
+    pub answers: BTreeMap<String, String>,
 }
 
 /// Changes to a task that is not running. Missing fields stay as they are.

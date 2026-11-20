@@ -68,6 +68,54 @@ async fn recaptcha_is_answered_by_the_user_outside_the_time_limit() {
 }
 
 #[tokio::test]
+async fn ask_passes_the_question_and_returns_the_answer() {
+    let dir = TempDir::new().unwrap();
+    let m = module(
+        &dir,
+        "ask",
+        "export default { async resolve(url, zoo) {
+            const code = await zoo.ask({ id: 'pwd', message: { en: 'Code', 'zh-TW': '提取碼' }, remember: true, error: 'wrong code' });
+            return { url: 'https://x/?pwd=' + code };
+        } };",
+    );
+    let user = User { answer: Some("8k3t".into()), ..Default::default() };
+    let resolved = loopback_host().resolve(m, "https://page/", limits(5_000), &user).await.unwrap();
+    assert_eq!(resolved.url, "https://x/?pwd=8k3t");
+    let message = zoo_module_client::manifest::Text::Translated([("en".into(), "Code".into()), ("zh-TW".into(), "提取碼".into())].into());
+    assert_eq!(
+        *user.challenges.lock().unwrap(),
+        vec![Captcha::Ask { id: "pwd".into(), message, secret: false, remember: true, error: Some("wrong code".into()) }]
+    );
+
+    // Declining fails the call; a bad id says what is wrong.
+    let declined = module(&dir, "ask-declined", "export default { async resolve(url, zoo) { await zoo.ask({ id: 'pwd', message: 'Code' }); } };");
+    match loopback_host().resolve(declined, "https://page/", limits(5_000), &User::default()).await {
+        Err(ModuleError::Script { message, .. }) => assert!(message.contains("did not answer"), "{message}"),
+        other => panic!("expected script error, got {other:?}"),
+    }
+    let bad = module(&dir, "ask-bad", "export default { async resolve(url, zoo) { await zoo.ask({ id: 'a b', message: 'Code' }); } };");
+    match loopback_host().resolve(bad, "https://page/", limits(5_000), &user).await {
+        Err(ModuleError::Script { message, .. }) => assert!(message.contains("id \"a b\""), "{message}"),
+        other => panic!("expected script error, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn ask_needs_api_level_3() {
+    let dir = TempDir::new().unwrap();
+    let m = zoo_module_client::ModuleRef {
+        api_version: 2,
+        ..module(&dir, "old", "export default { async resolve(url, zoo) { await zoo.ask({ id: 'pwd', message: 'Code' }); } };")
+    };
+    let user = User { answer: Some("x".into()), ..Default::default() };
+    match loopback_host().resolve(m, "https://page/", limits(5_000), &user).await {
+        Err(ModuleError::Script { message, .. }) => assert!(message.contains("\"apiVersion\": 3"), "{message}"),
+        other => panic!("expected script error, got {other:?}"),
+    }
+    assert!(user.challenges.lock().unwrap().is_empty(), "the user was not asked");
+}
+
+#[tokio::test]
 async fn declined_captcha_fails_the_call() {
     let dir = TempDir::new().unwrap();
     let m = module(&dir, "declined", "export default { async resolve(url, zoo) { await zoo.captcha.recaptcha({ siteKey: 'k', pageUrl: url }); } };");

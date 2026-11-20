@@ -21,6 +21,10 @@ marketplace 都讀不了。官方 marketplace 打包在 app 裡、不受影響�
 |---|---|
 | 1 | 第一版 |
 | 2 | `credentialsHelp`、`credentialsHelpUrl`、欄位的 `help`、`helpUrl`、可多語言的 `label`（app 0.2.5） |
+| 3 | `zoo.ask`：向使用者要一個值（提取碼等），可記在這次下載（app 0.2.6）。執行期的 API 由 host 依 `ModuleRef.apiVersion` 開放，宣告較舊 level 的模組呼叫會得到「需要 apiVersion 3」 |
+
+`zoo.ask` 記住的答案存在任務的 `answers`（zoo-core `resolve::Answers`）：重試、繼續、連結過期都沿用；
+`secret` 的只在記憶體；列出分享時的答案經 `ListedFile.answers` 帶給 `downloads_add`；改任務網址時清掉。
 
 ## catalog
 

@@ -200,7 +200,7 @@ fn hung_host() -> Supervisor {
 }
 
 fn dummy() -> ModuleRef {
-    ModuleRef { id: "dummy@test".into(), entry: "dummy.js".into(), grants: Default::default() }
+    ModuleRef { id: "dummy@test".into(), entry: "dummy.js".into(), grants: Default::default(), api_version: 1 }
 }
 
 #[tokio::test]

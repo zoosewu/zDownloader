@@ -67,7 +67,7 @@ fn manager(dir: &TempDir, site: &Server) -> (DownloadManager, Arc<ModuleResolver
 }
 
 fn add(dir: &TempDir, url: String) -> AddRequest {
-    AddRequest { url, filename: None, dir: dir.path().to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None }
+    AddRequest { url, filename: None, dir: dir.path().to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None, answers: Default::default() }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {
@@ -157,7 +157,7 @@ async fn listed_files_resolve_and_download_through_the_same_module() {
         limits: Limits::default(),
     }]);
 
-    let items = resolver.list(&site.url("/page/abc")).await.unwrap();
+    let (items, _) = resolver.list(&site.url("/page/abc")).await.unwrap();
     assert_eq!(items.iter().map(|i| i.filename.as_deref().unwrap()).collect::<Vec<_>>(), ["one.mp4", "two.mp4"]);
     // Each listed URL is a task of its own that the module resolves.
     let id = m.add(add(&dir, items[1].url.clone())).await.unwrap().id;
@@ -168,7 +168,83 @@ async fn listed_files_resolve_and_download_through_the_same_module() {
     let stray = resolver.list(&site.url("/page/abc?stray")).await.unwrap_err();
     assert!(stray.to_string().contains("urlPatterns do not match"), "{stray}");
 
-    let plain = resolver.list(&site.url("/plain.bin")).await.unwrap();
+    let (plain, _) = resolver.list(&site.url("/plain.bin")).await.unwrap();
     assert_eq!(plain.len(), 1);
     assert_eq!(plain[0].url, site.url("/plain.bin"));
+}
+
+/// Answers every question with "good" and keeps what it was asked.
+#[derive(Default)]
+struct Answering(std::sync::Mutex<Vec<zoo_module_client::Captcha>>);
+
+impl zoo_module_client::Interaction for Answering {
+    fn waiting(&self, _ms: u64, _reason: Option<&str>) {}
+    fn solve_captcha(
+        &self,
+        challenge: zoo_module_client::Captcha,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send + '_>> {
+        self.0.lock().unwrap().push(challenge);
+        Box::pin(async { Some("good".to_string()) })
+    }
+}
+
+/// A share behind an extraction code: `list` and `resolve` both need it.
+const CODE_MODULE: &str = r#"
+import { defineModule } from 'zoo-module';
+const code = async (zoo) => {
+  let pwd = await zoo.ask({ id: 'pwd', message: 'Extraction code', remember: true });
+  if (pwd !== 'good') pwd = await zoo.ask({ id: 'pwd', message: 'Extraction code', remember: true, error: 'wrong code' });
+  return pwd;
+};
+export default defineModule({
+  async list(url, zoo) {
+    await code(zoo);
+    return [{ url: url + '#path=one', filename: 'one.bin' }];
+  },
+  async resolve(url, zoo) {
+    await code(zoo);
+    return { url: new URL('/plain.bin', url).href };
+  },
+});
+"#;
+
+#[tokio::test]
+async fn remembered_answers_are_given_again_without_asking() {
+    let site = share_site().await;
+    let dir = TempDir::new().unwrap();
+    let user = Arc::new(Answering::default());
+    let resolver = Arc::new(ModuleResolver::new(Arc::new(loopback_host()), user.clone()));
+    let mut code_module = module_allowing(&dir, "coded", CODE_MODULE, &["127.0.0.1"]);
+    code_module.api_version = 3;
+    resolver.set_modules(vec![InstalledModule {
+        module: code_module,
+        url_patterns: vec![format!("http://{}/page/*", site.addr)],
+        url_regex: None,
+        limits: Limits::default(),
+    }]);
+    let store = dir.path().join("store");
+    std::fs::create_dir_all(&store).unwrap();
+    let m = DownloadManager::start_with(Default::default(), &store, Arc::new(Direct::new().unwrap()), resolver.clone()).unwrap();
+
+    // Listing asks once; the file's download gets that answer and does not ask.
+    let (items, answers) = resolver.list(&site.url("/page/abc")).await.unwrap();
+    assert_eq!(answers.get("pwd"), Some("good"));
+    let mut req = add(&dir, items[0].url.clone());
+    req.answers = answers.saved().clone();
+    let id = m.add(req).await.unwrap().id;
+    let task = wait_until(&m, id, |t| matches!(t.state, TaskState::Completed | TaskState::Failed)).await;
+    assert_eq!(task.state, TaskState::Completed, "{:?}", task.error);
+    assert_eq!(user.0.lock().unwrap().len(), 1, "asked only while listing");
+
+    // A remembered answer that no longer works: the module asks again, saying why, and the
+    // task keeps the new answer.
+    let mut req = add(&dir, items[0].url.clone());
+    req.answers = [("pwd".to_string(), "stale".to_string())].into();
+    let id = m.add(req).await.unwrap().id;
+    let task = wait_until(&m, id, |t| matches!(t.state, TaskState::Completed | TaskState::Failed)).await;
+    assert_eq!(task.state, TaskState::Completed, "{:?}", task.error);
+    let asked = user.0.lock().unwrap().clone();
+    assert_eq!(asked.len(), 2);
+    assert!(matches!(&asked[1], zoo_module_client::Captcha::Ask { error: Some(_), .. }), "{asked:?}");
+    assert_eq!(task.answers.get("pwd"), Some("good"));
 }

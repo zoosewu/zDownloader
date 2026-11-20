@@ -750,6 +750,7 @@ impl Marketplace {
                         id: key,
                         entry: m.dir.join(&m.manifest.entry),
                         grants: Grants { allow_domains: allowed.allow_domains, credentials },
+                        api_version: m.manifest.api_version,
                     },
                     url_patterns: m.manifest.url_patterns.clone(),
                     url_regex,

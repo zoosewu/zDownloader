@@ -190,6 +190,7 @@
   },
   "captcha": {
     "title": "Verification needed",
+    "askTitle": "The site needs something from you",
     "imageAlt": "Captcha image",
     "enterText": "Type the text in the image",
     "recaptchaMessage": "{{host}} asks for a reCAPTCHA. The site opens in a new window; the download continues once you pass it.",

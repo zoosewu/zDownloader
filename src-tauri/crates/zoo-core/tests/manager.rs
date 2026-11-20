@@ -31,7 +31,7 @@ fn start(cfg: Config, store: &Path) -> DownloadManager {
 }
 
 fn req(url: String, dir: &Path, start: StartMode) -> AddRequest {
-    AddRequest { url, filename: None, dir: dir.to_path_buf(), start, headers: Vec::new(), tags: None }
+    AddRequest { url, filename: None, dir: dir.to_path_buf(), start, headers: Vec::new(), tags: None, answers: Default::default() }
 }
 
 async fn get(m: &DownloadManager, id: TaskId) -> Task {

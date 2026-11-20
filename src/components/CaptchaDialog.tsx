@@ -1,5 +1,6 @@
-// A site module needs a captcha solved. Image captchas are answered here; a reCAPTCHA is
-// solved on the site's own page in a window of its own. One captcha at a time, oldest first.
+// A site module needs the user: an image captcha or a question (`zoo.ask`, e.g. an extraction
+// code) is answered here; a reCAPTCHA is solved on the site's own page in a window of its own.
+// One at a time, oldest first.
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -14,6 +15,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { backend, type CaptchaRequest } from '../backend';
+import { localized } from '../utils/localized';
 
 /** Captchas waiting for an answer, kept in step with the backend. */
 function usePendingCaptchas(): CaptchaRequest[] {
@@ -42,7 +44,7 @@ function usePendingCaptchas(): CaptchaRequest[] {
 }
 
 export default function CaptchaDialog() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const pending = usePendingCaptchas();
   const current = pending[0] ?? null;
   const [text, setText] = useState('');
@@ -57,44 +59,58 @@ export default function CaptchaDialog() {
 
   const run = (action: Promise<unknown>) => action.catch((e) => setError((e as Error).message));
   const decline = () => run(backend.captcha.answer(current.id, null));
+  const submit = () => run(backend.captcha.answer(current.id, text.trim()));
   const challenge = current.challenge;
+  const typed = challenge.kind === 'image' || challenge.kind === 'ask';
 
   return (
     <Dialog open onClose={decline} maxWidth="xs" fullWidth>
-      <DialogTitle>{t('captcha.title')}</DialogTitle>
+      <DialogTitle>{t(challenge.kind === 'ask' ? 'captcha.askTitle' : 'captcha.title')}</DialogTitle>
       <DialogContent>
         {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
-        {challenge.kind === 'image' ? (
+        {challenge.kind === 'recaptcha' ? (
+          <DialogContentText>{t('captcha.recaptchaMessage', { host: hostOf(challenge.pageUrl) })}</DialogContentText>
+        ) : (
           <Box
             component="form"
             onSubmit={(e) => {
               e.preventDefault();
-              run(backend.captcha.answer(current.id, text.trim()));
+              if (text.trim()) submit();
             }}
           >
-            <Box
-              component="img"
-              src={`data:${challenge.mime};base64,${challenge.base64}`}
-              alt={t('captcha.imageAlt')}
-              sx={{ display: 'block', maxWidth: '100%', mx: 'auto', my: 1, imageRendering: 'pixelated' }}
-            />
+            {challenge.kind === 'image' ? (
+              <Box
+                component="img"
+                src={`data:${challenge.mime};base64,${challenge.base64}`}
+                alt={t('captcha.imageAlt')}
+                sx={{ display: 'block', maxWidth: '100%', mx: 'auto', my: 1, imageRendering: 'pixelated' }}
+              />
+            ) : (
+              <>
+                {challenge.error && (
+                  <Alert severity="warning" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>
+                    {localized(challenge.error, i18n.language)}
+                  </Alert>
+                )}
+                <DialogContentText sx={{ whiteSpace: 'pre-wrap' }}>{localized(challenge.message, i18n.language)}</DialogContentText>
+              </>
+            )}
             <TextField
               value={text}
               onChange={(e) => setText(e.target.value)}
-              label={t('captcha.enterText')}
+              label={challenge.kind === 'image' ? t('captcha.enterText') : undefined}
+              type={challenge.kind === 'ask' && challenge.secret ? 'password' : 'text'}
               fullWidth
               autoFocus
               margin="dense"
             />
           </Box>
-        ) : (
-          <DialogContentText>{t('captcha.recaptchaMessage', { host: hostOf(challenge.pageUrl) })}</DialogContentText>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={decline}>{t('captcha.decline')}</Button>
-        {challenge.kind === 'image' ? (
-          <Button variant="contained" disabled={!text.trim()} onClick={() => run(backend.captcha.answer(current.id, text.trim()))}>
+        {typed ? (
+          <Button variant="contained" disabled={!text.trim()} onClick={submit}>
             {t('captcha.submit')}
           </Button>
         ) : (

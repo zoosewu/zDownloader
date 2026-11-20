@@ -121,6 +121,14 @@ the download. Many sites also want the page as Referer:
 `const text = await zoo.captcha.image(imageUrl);` The user solves it in the app; while
 recording, `zoo-module test` asks you in the terminal.
 
+**Something only the user knows** (an extraction code, a one-time login code):
+`const code = await zoo.ask({ id: 'pwd', message: { en: 'Extraction code', 'zh-TW': '提取碼' }, remember: true });`
+Each call is one dialog; ask again for the next step. `remember: true` keeps the answer for this
+download, so retries and an expired link do not ask again; when the answer turns out wrong, ask
+with `error: 'Wrong code'` (that always asks). Use `secret: true` for passwords. Needs
+`"apiVersion": 3`. Values the user keeps for every download (an account) belong in manifest
+`permissions.credentials`, not here.
+
 **Pretend to be the site's own downloader.** Some sites only serve their own client. Set its
 User-Agent on `fetch` and in the result:
 `return { url: dlink, headers: { 'User-Agent': 'netdisk;7.42.0.5;PC;PC-Windows;10.0.22631;WindowsBaiduYunGuanJia' } };`

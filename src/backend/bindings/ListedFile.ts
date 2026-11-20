@@ -11,4 +11,9 @@ url: string, filename: string | null, size: number | null,
 /**
  * Folder inside the share (`a/b`); `None` at the top.
  */
-folder: string | null, };
+folder: string | null, 
+/**
+ * What the user answered the module while it listed the link (an extraction code): give
+ * it to `downloads_add` so the download does not ask again. Secret answers are not here.
+ */
+answers: { [key in string]: string }, };

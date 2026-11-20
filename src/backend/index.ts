@@ -110,12 +110,14 @@ export interface AddDownload {
   tags?: string[] | null;
   /** Folder inside a share (`a/b`), created under `dir`. */
   folder?: string | null;
+  /** What the user answered the module while listing the link (`ListedFile.answers`). */
+  answers?: Record<string, string> | null;
 }
 
 export const backend = {
   downloads: {
-    add: ({ url, filename = null, dir = null, start, headers = null, tags = null, folder = null }: AddDownload) =>
-      call<Task>('downloads_add', { url, filename, dir, start, headers, tags, folder }),
+    add: ({ url, filename = null, dir = null, start, headers = null, tags = null, folder = null, answers = null }: AddDownload) =>
+      call<Task>('downloads_add', { url, filename, dir, start, headers, tags, folder, answers }),
     list: () => call<Task[]>('downloads_list'),
     pause: (id: TaskId) => call<Task>('downloads_pause', { id }),
     resume: (id: TaskId) => call<Task>('downloads_resume', { id }),

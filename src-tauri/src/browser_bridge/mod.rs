@@ -90,14 +90,16 @@ async fn handle(app: &AppHandle, request: Request) -> Response {
             let headers = add.headers();
             let AddDownload { url, filename, .. } = add;
             let (downloads, settings) = (app.state::<Downloads>(), app.state::<SettingsState>());
-            if !urls::starts_at_once(&url, &app.state::<SiteModules>(), &settings).await {
+            let Some(file) = urls::starts_at_once(&url, &app.state::<SiteModules>(), &settings).await else {
                 // The user checks it first, with the browser's headers kept.
                 return match add_window::open(app, vec![AddItem { url, filename, headers }]).await {
                     Ok(()) => Response::ok(None),
                     Err(e) => error_response(e),
                 };
-            }
-            match downloads::add_now(&downloads, &settings, url, filename, headers).await {
+            };
+            // The module's link for the file, with what the user answered it while listing.
+            let filename = filename.or(file.filename);
+            match downloads::add_now(&downloads, &settings, file.url, filename, headers, file.answers).await {
                 Ok(task) => Response::ok(Some(task.name)),
                 Err(e) => error_response(e),
             }

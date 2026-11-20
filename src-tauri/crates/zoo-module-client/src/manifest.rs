@@ -1,6 +1,6 @@
 //! `manifest.json` of a site module. `apiVersion` is the API level the module is written
 //! against; this app runs levels `MIN_API_VERSION..=API_VERSION`. A level adds to the one
-//! before it (level 2: help texts and translations for account fields); a change that breaks
+//! before it (level 2: help texts and translations for account fields; level 3: `zoo.ask`); a change that breaks
 //! old modules would raise `MIN_API_VERSION`.
 //! The editor-facing contract is `crates/zoo-module/sdk/manifest.schema.json`; tests keep the
 //! two in agreement.
@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 /// The newest API level this app runs (the SDK's).
-pub const API_VERSION: u32 = 2;
+pub const API_VERSION: u32 = 3;
 /// The oldest API level this app still runs.
 pub const MIN_API_VERSION: u32 = 1;
 
@@ -71,8 +71,16 @@ pub enum Text {
 }
 
 impl Text {
+    /// English, else the first language: for logs and terminals.
+    pub fn fallback(&self) -> &str {
+        match self {
+            Text::Plain(s) => s,
+            Text::Translated(by_language) => by_language.get("en").or_else(|| by_language.values().next()).map_or("", String::as_str),
+        }
+    }
+
     /// Every value is 1 to `max` characters; languages are tags such as `en` or `zh-TW`.
-    fn check(&self, what: &str, max: usize) -> Result<(), String> {
+    pub fn check(&self, what: &str, max: usize) -> Result<(), String> {
         let values: Vec<&String> = match self {
             Text::Plain(s) => vec![s],
             Text::Translated(by_language) => {
@@ -365,9 +373,9 @@ mod tests {
         assert_eq!(m.entry, "dist/index.js");
         assert!(m.permissions.credentials[0].secret);
 
-        let newer = Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 3")).unwrap_err();
+        let newer = Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 4")).unwrap_err();
         assert!(newer.contains("needs a newer Zoo Downloader"), "{newer}");
-        let newer_with_new_fields = minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 3").replace("\"id\"", "\"futureField\": 1, \"id\"");
+        let newer_with_new_fields = minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 4").replace("\"id\"", "\"futureField\": 1, \"id\"");
         assert!(Manifest::parse(&newer_with_new_fields).unwrap_err().contains("needs a newer Zoo Downloader"), "the level is checked first");
         assert!(Manifest::parse(&minimal.replace("\"apiVersion\": 1", "\"apiVersion\": 0")).unwrap_err().contains("no longer supported"));
         assert!(Manifest::parse(&minimal.replace("\"id\"", "\"className\": \"X\", \"id\"")).is_err(), "unknown fields fail");

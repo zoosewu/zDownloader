@@ -51,7 +51,7 @@ fn load(project: &Project) -> Option<Diagnostic> {
     let policy = Policy::new(&project.manifest.permissions.network.allow_domains, false);
     // Top-level code may not reach the network: an empty cassette refuses every request.
     let net = Net::new(policy, Credentials::new(&Default::default()), Transport::Replay(Default::default()), None).ok()?;
-    match runtime::run_call(&project.entry, Work::Load, Limits::default(), Rc::new(net), Rc::new(NullHooks)) {
+    match runtime::run_call(&project.entry, project.manifest.api_version, Work::Load, Limits::default(), Rc::new(net), Rc::new(NullHooks)) {
         Ok(_) => None,
         Err(error) => {
             let hint = hint_for(&error);

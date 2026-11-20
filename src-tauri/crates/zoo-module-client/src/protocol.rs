@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::manifest::Text;
+
 /// An installed module: its entry point (the bundled single-file ESM) and what the user let it do.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,6 +17,13 @@ pub struct ModuleRef {
     pub entry: PathBuf,
     #[serde(default)]
     pub grants: Grants,
+    /// The manifest's `apiVersion`: the host offers only that level's API.
+    #[serde(default = "first_level")]
+    pub api_version: u32,
+}
+
+fn first_level() -> u32 {
+    1
 }
 
 /// Permissions the user consented to (from the manifest). Everything not granted is denied.
@@ -168,6 +177,11 @@ pub enum Captcha {
     Recaptcha { site_key: String, page_url: String },
     /// Show the image (already fetched through the module's session); the solution is the text.
     Image { mime: String, base64: String },
+    /// `zoo.ask`: something only the user knows, such as a share's extraction code; the solution
+    /// is what they type. `id` names the question within the module. With `remember` the app keeps
+    /// the answer for this download and gives it again without asking; `error` (the answer the
+    /// module had did not work) always asks.
+    Ask { id: String, message: Text, secret: bool, remember: bool, error: Option<Text> },
 }
 
 #[cfg(test)]
@@ -186,6 +200,7 @@ mod tests {
                     allow_domains: vec!["k2s.cc".into()],
                     credentials: BTreeMap::from([("password".into(), Secret("hunter2".into()))]),
                 },
+                api_version: 3,
             },
             url: "https://example.com/f".into(),
             limits: Limits::default(),
@@ -195,7 +210,7 @@ mod tests {
             json!({
                 "type": "resolve",
                 "id": 7,
-                "module": { "id": "k2s@official", "entry": "m/index.js", "grants": { "allowDomains": ["k2s.cc"], "credentials": { "password": "hunter2" } } },
+                "module": { "id": "k2s@official", "entry": "m/index.js", "grants": { "allowDomains": ["k2s.cc"], "credentials": { "password": "hunter2" } }, "apiVersion": 3 },
                 "url": "https://example.com/f",
                 "limits": { "heapMb": 128, "timeoutMs": 30000 }
             })
@@ -259,6 +274,11 @@ mod tests {
             serde_json::to_value(&reply).unwrap(),
             json!({ "type": "event", "id": 4, "event": { "kind": "captcha", "ticket": 1,
                     "challenge": { "type": "recaptcha", "siteKey": "k", "pageUrl": "https://p" } } })
+        );
+        let ask = Captcha::Ask { id: "pwd".into(), message: "Code".into(), secret: false, remember: true, error: None };
+        assert_eq!(
+            serde_json::to_value(&ask).unwrap(),
+            json!({ "type": "ask", "id": "pwd", "message": "Code", "secret": false, "remember": true, "error": null })
         );
         let answer = Request::Answer { id: 4, ticket: 1, solution: None };
         assert_eq!(serde_json::to_value(&answer).unwrap(), json!({ "type": "answer", "id": 4, "ticket": 1, "solution": null }));

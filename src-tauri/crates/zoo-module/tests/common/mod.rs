@@ -30,6 +30,7 @@ pub fn module_allowing(dir: &TempDir, name: &str, code: &str, domains: &[&str]) 
         id: format!("{name}@test"),
         entry,
         grants: Grants { allow_domains: domains.iter().map(|d| d.to_string()).collect(), ..Default::default() },
+        api_version: zoo_module_client::manifest::API_VERSION,
     }
 }
 

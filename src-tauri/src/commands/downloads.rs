@@ -3,6 +3,7 @@
 use crate::commands::error::{CmdResult, CommandError};
 use crate::commands::settings::SettingsState;
 use crate::downloads::Downloads;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, State};
 use tauri_plugin_opener::OpenerExt;
@@ -46,12 +47,13 @@ pub async fn downloads_add(
     headers: Option<Vec<(String, String)>>,
     tags: Option<Vec<String>>,
     folder: Option<String>,
+    answers: Option<BTreeMap<String, String>>,
     downloads: State<'_, Downloads>,
     settings: State<'_, SettingsState>,
 ) -> CmdResult<Task> {
     let dir = inside(target_dir(dir, &settings).await?, folder.as_deref());
     ensure_dir(&dir)?;
-    let req = AddRequest { url, filename, dir, start, headers: headers.unwrap_or_default(), tags };
+    let req = AddRequest { url, filename, dir, start, headers: headers.unwrap_or_default(), tags, answers: answers.unwrap_or_default() };
     Ok(downloads.manager.add(req).await?)
 }
 
@@ -62,9 +64,10 @@ pub async fn add_now(
     url: String,
     filename: Option<String>,
     headers: Vec<(String, String)>,
+    answers: BTreeMap<String, String>,
 ) -> CmdResult<Task> {
     let dir = target_dir(None, settings).await?;
-    Ok(downloads.manager.add(AddRequest { url, filename, dir, start: StartMode::Now, headers, tags: None }).await?)
+    Ok(downloads.manager.add(AddRequest { url, filename, dir, start: StartMode::Now, headers, tags: None, answers }).await?)
 }
 
 /// The categories a download would get from the rules (to pre-fill the add window).

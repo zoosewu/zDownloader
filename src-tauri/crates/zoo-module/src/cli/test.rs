@@ -164,7 +164,7 @@ fn run_case(
         .and_then(|net| {
             let net = Rc::new(net);
             let work = if case.list { Work::List(&case.url) } else { Work::Resolve(&case.url) };
-            let result = runtime::run_call(&project.entry, work, Limits::default(), net.clone(), hooks.clone());
+            let result = runtime::run_call(&project.entry, project.manifest.api_version, work, Limits::default(), net.clone(), hooks.clone());
             if mode == Mode::Record {
                 let cassette = Cassette {
                     version: cassette::VERSION,
@@ -274,13 +274,16 @@ impl Hooks for TestHooks {
         let description = match &challenge {
             Captcha::Recaptcha { site_key, page_url } => format!("reCAPTCHA site key {site_key} on {page_url}"),
             Captcha::Image { mime, .. } => format!("image captcha ({mime})"),
+            Captcha::Ask { id, remember, .. } => format!("ask {id}{}", if *remember { " (remembered)" } else { "" }),
         };
         let answer = if self.mode == Mode::Replay {
             self.replay_answers.borrow_mut().pop_front().flatten()
         } else {
             let answer = ask_terminal(&challenge);
             if self.mode == Mode::Record {
-                self.recorded_answers.borrow_mut().push(answer.clone());
+                // A secret the user typed is not written into the recording.
+                let secret = matches!(challenge, Captcha::Ask { secret: true, .. });
+                self.recorded_answers.borrow_mut().push(answer.clone().map(|a| if secret { "<secret>".into() } else { a }));
             }
             answer
         };
@@ -315,6 +318,12 @@ fn ask_terminal(challenge: &Captcha) -> Option<String> {
             eprint!(
                 "reCAPTCHA (site key {site_key}) on {page_url}\nsolve it in a browser and paste the g-recaptcha-response token (empty to decline): "
             );
+        }
+        Captcha::Ask { message, error, .. } => {
+            if let Some(error) = error {
+                eprintln!("{}", error.fallback());
+            }
+            eprint!("{} (empty to decline): ", message.fallback());
         }
     }
     let _ = std::io::stderr().flush();

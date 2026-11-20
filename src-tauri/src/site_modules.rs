@@ -14,6 +14,7 @@ use tokio::sync::{broadcast, oneshot};
 use ts_rs::TS;
 use zoo_marketplace::{MarketError, Marketplace, Plan, SecretStore};
 use zoo_module_client::resolver::ModuleResolver;
+use zoo_module_client::manifest::Text;
 use zoo_module_client::{Captcha, Interaction, Secret, Supervisor};
 
 /// Installed modules or marketplaces changed (by a command, a refresh or a local edit).
@@ -267,6 +268,9 @@ pub enum CaptchaChallenge {
     Image { mime: String, base64: String },
     /// Solve it on the site's own page (`captcha_open_window`).
     Recaptcha { site_key: String, page_url: String },
+    /// Type what the module asks for (`zoo.ask`): `error` says why the last answer did not work;
+    /// a `secret` answer is typed hidden.
+    Ask { message: Text, error: Option<Text>, secret: bool },
 }
 
 impl From<Captcha> for CaptchaChallenge {
@@ -274,6 +278,7 @@ impl From<Captcha> for CaptchaChallenge {
         match c {
             Captcha::Image { mime, base64 } => CaptchaChallenge::Image { mime, base64 },
             Captcha::Recaptcha { site_key, page_url } => CaptchaChallenge::Recaptcha { site_key, page_url },
+            Captcha::Ask { message, error, secret, .. } => CaptchaChallenge::Ask { message, error, secret },
         }
     }
 }
@@ -312,7 +317,7 @@ impl Captchas {
     pub fn recaptcha_page(&self, id: &str) -> Option<String> {
         match &self.pending.lock().unwrap().get(id)?.0.challenge {
             CaptchaChallenge::Recaptcha { page_url, .. } => Some(page_url.clone()),
-            CaptchaChallenge::Image { .. } => None,
+            CaptchaChallenge::Image { .. } | CaptchaChallenge::Ask { .. } => None,
         }
     }
 

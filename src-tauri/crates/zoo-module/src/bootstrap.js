@@ -52,6 +52,21 @@
         solved(await op_zoo_captcha({ kind: "recaptcha", siteKey: String(siteKey), pageUrl: String(pageUrl) })),
       image: async (imageUrl) => solved(await op_zoo_captcha({ kind: "image", url: String(imageUrl) })),
     }),
+    // Something only the user knows (an extraction code). With `remember` the app answers again
+    // for this download without asking; `error` (the answer did not work) always asks.
+    ask: async ({ id, message, secret = false, remember = false, error } = {}) => {
+      const text = (value) => (value !== null && typeof value === "object" ? value : String(value));
+      const answer = await op_zoo_captcha({
+        kind: "ask",
+        id: String(id),
+        message: text(message),
+        secret: Boolean(secret),
+        remember: Boolean(remember),
+        error: error === undefined || error === null ? null : text(error),
+      });
+      if (answer === null) throw fail("the user did not answer", { hint: "they declined or did not answer in time" });
+      return answer;
+    },
     // A site countdown. Shown to the user; does not count against the time limit.
     wait: async (seconds, reason) => {
       const ms = Math.round(Number(seconds) * 1000);

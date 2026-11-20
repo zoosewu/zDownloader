@@ -70,11 +70,22 @@ pub fn call(module: &ModuleRef, work: Work, limits: Limits, options: HostOptions
     let policy = Policy::new(&module.grants.allow_domains, options.allow_loopback);
     let net = Net::new(policy, Credentials::new(&module.grants.credentials), Transport::Live, None)
         .map_err(|message| ModuleError::Crashed { message })?;
-    run_call(&module.entry, work, limits, Rc::new(net), Rc::new(link))
+    run_call(&module.entry, module.api_version, work, limits, Rc::new(net), Rc::new(link))
 }
 
-/// Runs `work` on the module at `entry` in a fresh isolate on this thread.
-pub fn run_call(entry: &Path, work: Work, limits: Limits, net: Rc<Net>, hooks: Rc<dyn Hooks>) -> Result<Done, ModuleError> {
+/// The module's API level (manifest `apiVersion`), for ops that only newer levels have.
+#[derive(Debug, Clone, Copy)]
+pub struct ApiLevel(pub u32);
+
+/// Runs `work` on the module at `entry` (written for API `level`) in a fresh isolate on this thread.
+pub fn run_call(
+    entry: &Path,
+    level: u32,
+    work: Work,
+    limits: Limits,
+    net: Rc<Net>,
+    hooks: Rc<dyn Hooks>,
+) -> Result<Done, ModuleError> {
     let specifier = std::path::absolute(entry)
         .ok()
         .and_then(|path| ModuleSpecifier::from_file_path(path).ok())
@@ -85,12 +96,13 @@ pub fn run_call(entry: &Path, work: Work, limits: Limits, net: Rc<Net>, hooks: R
         .enable_all()
         .build()
         .map_err(|e| ModuleError::Crashed { message: format!("cannot start event loop: {e}") })?
-        .block_on(run(specifier, code, net, hooks, work, limits))
+        .block_on(run(specifier, code, ApiLevel(level), net, hooks, work, limits))
 }
 
 async fn run(
     entry: ModuleSpecifier,
     code: String,
+    level: ApiLevel,
     net: Rc<Net>,
     hooks: Rc<dyn Hooks>,
     work: Work<'_>,
@@ -104,6 +116,7 @@ async fn run(
         ..Default::default()
     });
     runtime.op_state().borrow_mut().put(net.clone());
+    runtime.op_state().borrow_mut().put(level);
     let tripped = Arc::new(AtomicU8::new(TRIP_NONE));
     let isolate = runtime.v8_isolate().thread_safe_handle();
     {
