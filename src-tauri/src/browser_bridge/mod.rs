@@ -51,6 +51,16 @@ pub fn start(app: AppHandle) {
 /// Only the current user may connect. On Windows the pipe is also local-only and must be the
 /// first instance of its name (interprocess defaults); the host checks who owns it.
 fn listen(name: Name<'static>) -> io::Result<Listener> {
+    match create(name.clone(), false) {
+        // A socket file left by a crashed app would block the name forever; one that still
+        // answers belongs to a running app and is left alone.
+        #[cfg(unix)]
+        Err(e) if e.kind() == io::ErrorKind::AddrInUse && !answers(name.clone()) => create(name, true),
+        result => result,
+    }
+}
+
+fn create(name: Name<'static>, overwrite: bool) -> io::Result<Listener> {
     let options = ListenerOptions::new().name(name);
     #[cfg(windows)]
     let options = {
@@ -59,11 +69,15 @@ fn listen(name: Name<'static>) -> io::Result<Listener> {
         options.security_descriptor(SecurityDescriptor::deserialize(widestring::u16cstr!("D:P(A;;GA;;;OW)(A;;GA;;;SY)"))?)
     };
     // Unix: the socket's folder is the user's alone (`private_dir`); a socket file's own mode
-    // cannot be set on macOS (fchmod fails, and the bridge would never listen). A socket file
-    // left by a crashed app would block the name forever.
-    #[cfg(unix)]
-    let options = options.try_overwrite(true);
+    // cannot be set on macOS (fchmod fails, and the bridge would never listen).
+    let options = options.try_overwrite(overwrite);
     options.create_tokio()
+}
+
+#[cfg(unix)]
+fn answers(name: Name<'static>) -> bool {
+    use interprocess::local_socket::{traits::Stream as _, Stream};
+    Stream::connect(name).is_ok()
 }
 
 /// Make `dir` (created if missing) accessible to its owner only.
@@ -178,6 +192,20 @@ mod tests {
         let dir = parent.path().join("zoo-downloader");
         private_dir(&dir).unwrap();
         assert_eq!(std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700);
+    }
+
+    /// A socket file nobody listens on (a crashed app's) is taken over; a live one is not.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn takes_over_only_a_dead_socket_file() {
+        use interprocess::local_socket::{GenericFilePath, ToFsName};
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("bridge.sock");
+        drop(std::os::unix::net::UnixListener::bind(&path).unwrap());
+        assert!(path.exists());
+        let name = path.as_path().to_fs_name::<GenericFilePath>().unwrap().into_owned();
+        let _live = listen(name.clone()).unwrap();
+        assert!(listen(name).is_err());
     }
 
     #[tokio::test]
