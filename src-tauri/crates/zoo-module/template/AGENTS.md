@@ -121,6 +121,13 @@ the download. Many sites also want the page as Referer:
 `const text = await zoo.captcha.image(imageUrl);` The user solves it in the app; while
 recording, `zoo-module test` asks you in the terminal.
 
+**Every kind of link.** Users paste whatever their browser shows: the share page, the page a
+site redirects to (a password or login step), mobile pages, older domains, `http://`, a folder
+opened inside a share. Find them all (follow the site's redirects), list each in `urlPatterns`,
+parse each in `resolve`, and give each a case in `tests/cases.json`; `zoo-module check` warns
+about a pattern no case tries. Anything a link may lack (a password, a code) is asked with
+`zoo.ask`, never a reason to fail.
+
 **Something only the user knows** (an extraction code, a one-time login code):
 `const code = await zoo.ask({ id: 'pwd', message: { en: 'Extraction code', 'zh-TW': '提取碼' }, remember: true });`
 Each call is one dialog; ask again for the next step. `remember: true` keeps the answer for this

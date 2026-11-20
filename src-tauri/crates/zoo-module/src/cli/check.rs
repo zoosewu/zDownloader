@@ -3,6 +3,7 @@
 use std::path::Path;
 use std::rc::Rc;
 
+use zoo_module_client::manifest::url_matches;
 use zoo_module_client::protocol::{Limits, ModuleError};
 
 use super::project::{Diagnostic, Level, Project};
@@ -31,6 +32,15 @@ pub fn diagnostics(dir: &Path) -> Vec<Diagnostic> {
         Ok(Some(cases)) => {
             if cases.is_empty() {
                 found.push(Diagnostic::warning("tests/cases.json has no cases", None));
+            }
+            // Every kind of link the module claims should be tried at least once.
+            for pattern in &project.manifest.url_patterns {
+                if !cases.iter().any(|c| url_matches(pattern, &c.url)) {
+                    found.push(Diagnostic::warning(
+                        format!("no test case has a URL matching urlPatterns entry {pattern:?}"),
+                        Some("add a case for this kind of link to tests/cases.json".into()),
+                    ));
+                }
             }
             for case in cases.iter().filter(|c| !project.cassette_path(&c.name).exists()) {
                 found.push(Diagnostic::warning(

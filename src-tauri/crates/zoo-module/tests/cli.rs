@@ -109,6 +109,15 @@ async fn check_reports_what_to_fix() {
     let messages: Vec<&str> = report["diagnostics"].as_array().unwrap().iter().map(|d| d["message"].as_str().unwrap()).collect();
     assert!(messages.iter().any(|m| m.contains("\"apiKey\"")), "undeclared credential: {messages:?}");
     assert!(messages.iter().any(|m| m.contains("no recording")), "unrecorded case: {messages:?}");
+    assert!(!messages.iter().any(|m| m.contains("urlPatterns entry")), "the template's case covers its pattern: {messages:?}");
+
+    // A kind of link no case tries.
+    let mut manifest: Value = serde_json::from_str(&std::fs::read_to_string(dir.join("manifest.json")).unwrap()).unwrap();
+    manifest["urlPatterns"].as_array_mut().unwrap().push(json!("https://m.example.com/share/*"));
+    std::fs::write(dir.join("manifest.json"), manifest.to_string()).unwrap();
+    let (_, report) = json_of(&dir, &["check", "--json"]).await;
+    let messages: Vec<&str> = report["diagnostics"].as_array().unwrap().iter().map(|d| d["message"].as_str().unwrap()).collect();
+    assert!(messages.iter().any(|m| m.contains("https://m.example.com/share/*")), "uncovered pattern: {messages:?}");
 
     std::fs::write(dir.join("dist/index.js"), "import x from 'cheerio'; export default {};").unwrap();
     let (ok, stdout, _) = zoo_module(&dir, &["check"]).await;
