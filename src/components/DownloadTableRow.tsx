@@ -24,7 +24,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useNow } from '../hooks/useNow';
 import { deadline, formatTaskForTable } from '../utils/downloadCalculations';
-import { formatAbsoluteTime, formatRelativeTime } from '../utils/formatters';
+import { formatAbsoluteTime } from '../utils/formatters';
+import { useRelativeTime } from '../hooks/useRelativeTime';
 import { clickMode, type ClickMode } from '../utils/selection';
 import { actionsFor, type Action } from '../utils/taskActions';
 
@@ -135,11 +136,12 @@ const ActionsCell = React.memo(
 );
 
 const CreatedCell = React.memo(({ createdAt, width }: { createdAt: string; width?: number }) => {
-  useTranslation(); // re-render in the new language
+  const { i18n } = useTranslation(); // re-render in the new language
+  const ago = useRelativeTime(createdAt, i18n.language);
   return (
     <TableCell sx={widthSx(width)}>
       <Tooltip title={formatAbsoluteTime(createdAt)} arrow>
-        <span>{formatRelativeTime(createdAt)}</span>
+        <span>{ago}</span>
       </Tooltip>
     </TableCell>
   );

@@ -525,7 +525,7 @@ chmod +x .git/hooks/pre-commit
 - 單一真實來源＋事件（2026-11-17）：每份狀態只有一個擁有者（任務：zoo-core；設定：後端；模組：marketplace；代理：proxy pool），改變時由擁有者發事件，其他地方只跟著事件更新，不輪詢、不另存可能過期的副本。
   - 事件：`download-event`（含 zoo-core 判定的 `finished`，通知只看它）、`downloads-resync`、`modules-changed`（本機模組靠檔案系統通知）、`proxies-changed`（最多每 0.5 秒）、`clipboard-link`、`captcha-event`、`add-items-ready`、`app-ready`（前端先訂閱再問一次 `app_ready`）。
   - 前端共用狀態：下載（`downloadStore`，`useDownloadSync`）、模組（`useSiteModules`，`useModulesSync`）、設定（`settingsAtom`；設定頁編輯的是草稿，存檔後以後端回傳值為準）。
-  - 保留的計時器只限「時間本身就是條件」：檢查更新（啟動時＋定期）、倒數顯示（`useNow`）、排程、重試間隔、限速、每秒 flush、事件節流（進度 250 ms、只在有下載時；分段圖 500 ms）。
+  - 保留的計時器只限「時間本身就是條件」：檢查更新（啟動時＋定期）、倒數顯示（`useNow`）、相對時間（`useRelativeTime`，所有列共用一個 15 秒時鐘，文字變了的格子才重畫）、排程、重試間隔、限速、每秒 flush、事件節流（進度 250 ms、只在有下載時；分段圖 500 ms）。
 - React 19 開發版會為每次 render 記 `performance.measure()`，沒有上限；`main.tsx` 在開發模式定期清除（曾讓 WebView 約 2.5 小時後當機）。
 - 驗證方式：在開發模式用 CDP 數 `performance.getEntriesByType('measure')` 的元件名稱（每秒、每個元件幾次）。
 5. **Sticky Header**: 表格頭部固定，改善大量下載時的用戶體驗
