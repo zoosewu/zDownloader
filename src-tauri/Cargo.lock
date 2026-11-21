@@ -8211,7 +8211,7 @@ dependencies = [
 
 [[package]]
 name = "zoo-downloader"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "apple-native-keyring-store",
  "clipboard-rs",
