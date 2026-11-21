@@ -205,8 +205,10 @@ fn second_fetched(requests: &[common::Request]) -> u64 {
         .sum()
 }
 
+/// A new ETag (a share site's fresh link from another server) is checked by sampling the
+/// progress, which is kept when the bytes match.
 #[tokio::test]
-async fn changed_resource_restarts_from_zero() {
+async fn another_etag_with_the_same_bytes_keeps_the_progress() {
     let fx = Fixture::start().await;
     let dir = tempfile::tempdir().unwrap();
     let size = 1024 * KB;
@@ -227,7 +229,10 @@ async fn changed_resource_restarts_from_zero() {
     let out = transfer::run(&spec(dir.path(), url, 2), &ctx(None)).await.unwrap();
 
     assert_file(&out, size);
-    assert_eq!(second_fetched(&fx.requests()[requests_before..]), size);
+    // The missing part plus at most four 64 KB samples, not the whole file again.
+    let kept = progress.downloaded();
+    let fetched = second_fetched(&fx.requests()[requests_before..]);
+    assert!(fetched <= size - kept + 4 * 64 * KB, "fetched {fetched} of {size}, {kept} kept");
 }
 
 #[tokio::test]

@@ -47,10 +47,12 @@ pub enum Previous {
     None,
     /// The same resource: continue.
     Same(PartFile),
-    /// Recorded for another URL, same size. Check its content (`read_at`) against the new
-    /// URL before keeping it; it is only recorded as the new URL's once flushed.
-    Moved(PartFile),
-    /// Recorded for another URL that cannot be serving the same file; why.
+    /// Same size, but recorded for another URL or with another ETag / Last-Modified (a share
+    /// site's new link may come from another server). Check its content (`read_at`) against
+    /// the link before keeping it; it is only recorded as the link's once flushed.
+    Unverified(PartFile),
+    /// Progress that cannot belong to the file the link serves now; why. Never dropped
+    /// silently: the user decides.
     Changed(String),
 }
 
@@ -99,15 +101,16 @@ impl PartFile {
             Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Previous::None),
             Err(e) => return Err(e),
         };
-        let moved = sidecar.validator.url != validator.url;
-        if moved && sidecar.done.covered() > 0 && (validator.size.is_none() || validator.size != sidecar.validator.size) {
+        // Progress of a known size could be resumed: keep it unless it cannot be this file.
+        let resumable = sidecar.done.covered() > 0 && sidecar.validator.size.is_some();
+        if resumable && validator.size != sidecar.validator.size {
             return Ok(Previous::Changed(match validator.size {
                 Some(size) => format!("size is {size} bytes, the download so far is for {:?}", sidecar.validator.size),
-                None => "the new URL does not report a size".into(),
+                None => "the link does not report a size, so the download so far cannot be checked".into(),
             }));
         }
         // Without a known size there is no way to verify what is missing.
-        if validator.size.is_none() || (!moved && sidecar.validator != *validator) {
+        if validator.size.is_none() {
             return Ok(Previous::None);
         }
         let file = match OpenOptions::new().read(true).write(true).open(&path) {
@@ -118,9 +121,10 @@ impl PartFile {
         if Some(file.metadata()?.len()) != validator.size {
             return Ok(Previous::None);
         }
-        // A moved part carries the new validator, persisted by its first flush.
+        // An unverified part carries the new validator, persisted by its first flush.
+        let same = sidecar.validator == *validator;
         let part = Self::with_state(path, file, validator.clone(), sidecar.done);
-        Ok(if moved { Previous::Moved(part) } else { Previous::Same(part) })
+        Ok(if same { Previous::Same(part) } else { Previous::Unverified(part) })
     }
 
     /// Read `buf.len()` bytes at `offset`.
@@ -472,13 +476,33 @@ mod tests {
 
         assert!(matches!(PartFile::open(path.clone(), &moved(Some(9))).unwrap(), Previous::Changed(_)));
         assert!(matches!(PartFile::open(path.clone(), &moved(None)).unwrap(), Previous::Changed(_)));
-        let Previous::Moved(part) = PartFile::open(path.clone(), &moved(Some(8))).unwrap() else { panic!("moved") };
+        let Previous::Unverified(part) = PartFile::open(path.clone(), &moved(Some(8))).unwrap() else { panic!("moved") };
         let mut buf = [0; 2];
         part.read_at(2, &mut buf).unwrap();
         assert_eq!((&buf, part.done_ranges()), (b"cd", vec![(2, 4)]));
         drop(part);
         // Not flushed: the record still belongs to the old URL.
         assert!(PartFile::resume(path.clone(), &validator(Some(8))).unwrap().is_some());
+    }
+
+    /// A share site's fresh link for the same page may come from another server: another ETag
+    /// is checked, not a reason to throw the progress away; another size is the user's call.
+    #[test]
+    fn progress_is_never_dropped_silently_for_the_same_url() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("f.part");
+        {
+            let part = PartFile::create(path.clone(), validator(Some(8))).unwrap();
+            part.write_at(0, b"ab").unwrap();
+            part.flush().unwrap();
+        }
+        let mut other_server = validator(Some(8));
+        other_server.etag = Some("\"node-2\"".into());
+        other_server.last_modified = None;
+        assert!(matches!(PartFile::open(path.clone(), &other_server).unwrap(), Previous::Unverified(_)));
+        assert!(matches!(PartFile::open(path.clone(), &validator(Some(9))).unwrap(), Previous::Changed(_)));
+        assert!(matches!(PartFile::open(path.clone(), &validator(None)).unwrap(), Previous::Changed(_)));
+        assert!(matches!(PartFile::open(path.clone(), &validator(Some(8))).unwrap(), Previous::Same(_)));
     }
 
     #[test]

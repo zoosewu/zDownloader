@@ -103,8 +103,8 @@
       "urlHelp": "A mirror or a fresh share link; progress is kept if the file is the same."
     },
     "sourceChanged": {
-      "title": "The new URL serves a different file",
-      "message": "The new URL of \"{{name}}\" does not match what was downloaded, so it cannot continue.",
+      "title": "The link serves a different file",
+      "message": "What the link of \"{{name}}\" serves now does not match what was downloaded, so it cannot continue.",
       "restart": "Start over",
       "otherUrl": "Use another URL"
     },

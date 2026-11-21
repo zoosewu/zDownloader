@@ -182,7 +182,7 @@ pub async fn fetch(spec: &TransferSpec, ctx: &Ctx, probed: Probed) -> Result<Pat
             Ok(path) => Ok(path),
         },
         Probe::Whole(response) => {
-            // Progress made at another URL cannot be checked against a server without ranges.
+            // Progress cannot be checked against a server without ranges: the user decides.
             let no_size = Validator { url: spec.origin.clone(), size: None, etag: None, last_modified: None };
             if let Previous::Changed(_) = PartFile::open(spec.part_path.clone(), &no_size)? {
                 return Err(no_ranges());
@@ -207,7 +207,7 @@ fn check_space(dir: &Path, needed: u64) -> Result<(), CoreError> {
 }
 
 fn no_ranges() -> CoreError {
-    CoreError::SourceChanged("the new URL does not support resuming, so the download so far cannot be checked".into())
+    CoreError::SourceChanged("the link does not support resuming, so the download so far cannot be checked".into())
 }
 
 enum Probe {
@@ -294,8 +294,8 @@ impl From<std::io::Error> for SegmentError {
 async fn ranged(spec: &TransferSpec, ctx: &Ctx, validator: Validator) -> Result<PathBuf, SegmentError> {
     let part = match PartFile::open(spec.part_path.clone(), &validator)? {
         Previous::Same(part) => part,
-        Previous::Moved(part) => {
-            verify_moved(spec, ctx, &part).await?;
+        Previous::Unverified(part) => {
+            verify(spec, ctx, &part).await?;
             part.flush()?;
             part
         }
@@ -328,9 +328,9 @@ async fn ranged(spec: &TransferSpec, ctx: &Ctx, validator: Validator) -> Result<
 const SAMPLES: u64 = 4;
 const SAMPLE_LEN: u64 = 64 * 1024;
 
-/// The task's URL changed since `part` was downloaded: sampled ranges of what it holds must
-/// come back identical from the new URL, or the progress is not this file's.
-async fn verify_moved(spec: &TransferSpec, ctx: &Ctx, part: &PartFile) -> Result<(), CoreError> {
+/// The link is not the one `part` was downloaded from (a new URL, or another server's ETag):
+/// sampled ranges of what it holds must come back identical, or the progress is not this file's.
+async fn verify(spec: &TransferSpec, ctx: &Ctx, part: &PartFile) -> Result<(), CoreError> {
     for range in samples(&part.done_ranges()) {
         let mut ours = vec![0; (range.end - range.start) as usize];
         part.read_at(range.start, &mut ours)?;
