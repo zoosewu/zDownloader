@@ -22,11 +22,16 @@ export function useDownloadActions() {
       cancel: (id: TaskId) => one(backend.downloads.cancel(id)),
       retry: (id: TaskId) => one(backend.downloads.retry(id)),
       restart: (id: TaskId) => one(backend.downloads.restart(id)),
+      /** Open a finished download with its default app. */
+      openFile: (id: TaskId) => backend.downloads.openFile(id),
+      /** Show a finished download in its folder. */
+      openFolder: (id: TaskId) => backend.downloads.showInFolder(id),
       /** `deleteFile`: a finished download's file goes to the recycle bin too. */
       remove: async (id: TaskId, deleteFile = false) => {
         await backend.downloads.remove(id, deleteFile);
         removed(id);
       },
+      deleteFile: (id: TaskId) => backend.downloads.remove(id, true).then(() => removed(id)),
       /** Shown at once (a dropped row stays where it was dropped); undone from the backend's list if refused. */
       move: async (id: TaskId, before: TaskId | null) => {
         moveLocally(id, before);

@@ -3,12 +3,7 @@
 // category rules from changing those downloads.
 import React, { useState } from 'react';
 import {
-  Button,
   Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   ListItemIcon,
   ListItemText,
@@ -23,6 +18,7 @@ import { tasksByIdAtom, upsertTaskAtom } from '../stores/downloadStore';
 import { useCategories } from '../hooks/useCategories';
 import { useDownloadActions } from '../hooks/useDownloadActions';
 import { actionsFor, canRestart, type Action } from '../utils/taskActions';
+import DeleteFilesDialog from './DeleteFilesDialog';
 
 export interface MenuAnchor {
   x: number;
@@ -132,18 +128,12 @@ const TaskMenu: React.FC<{ anchor: MenuAnchor; ids: TaskId[]; onClose: () => voi
         })}
       </Menu>
 
-      <Dialog open={confirming} onClose={onClose}>
-        <DialogTitle>{t('downloads.menu.deleteTitle')}</DialogTitle>
-        <DialogContent>{t('downloads.menu.deleteConfirm', { count: finished.length })}</DialogContent>
-        <DialogActions>
-          <Button color="inherit" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button color="error" variant="contained" onClick={run(tasks, (task) => actions.remove(task.id, task.state === 'completed'))}>
-            {t('downloads.menu.deleteAction')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteFilesDialog
+        open={confirming}
+        count={finished.length}
+        onConfirm={run(tasks, (task) => actions.remove(task.id, task.state === 'completed'))}
+        onClose={onClose}
+      />
     </>
   );
 };

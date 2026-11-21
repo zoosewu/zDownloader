@@ -36,6 +36,7 @@
       "clearCompleted": "清除已完成",
       "openFile": "開啟檔案",
       "openFolder": "開啟資料夾",
+      "deleteFile": "刪除檔案",
       "copyUrl": "複製連結",
       "title": "操作",
       "remove": "移除"
@@ -115,7 +116,7 @@
     "menu": {
       "restart": "從頭下載",
       "categories": "分類",
-      "removeWithFile": "移除並刪除檔案…",
+      "removeWithFile": "刪除檔案…",
       "deleteTitle": "刪除檔案",
       "deleteConfirm": "把 {{count}} 個已下載的檔案移到資源回收筒，並移除這些下載？",
       "deleteAction": "刪除"

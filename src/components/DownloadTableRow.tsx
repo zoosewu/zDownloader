@@ -1,5 +1,5 @@
 // Download table row component - single row in the download table
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { TableRow, TableCell, Chip, Box, LinearProgress, Tooltip, IconButton } from '@mui/material';
 import {
@@ -12,7 +12,10 @@ import {
   PlayArrow as ResumeIcon,
   Stop as CancelIcon,
   Replay as RetryIcon,
-  DeleteOutlined as RemoveIcon,
+  Close as RemoveIcon,
+  DeleteOutlined as DeleteFileIcon,
+  OpenInNew as OpenFileIcon,
+  FolderOpenOutlined as OpenFolderIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -28,6 +31,7 @@ import { formatAbsoluteTime } from '../utils/formatters';
 import { useRelativeTime } from '../hooks/useRelativeTime';
 import { clickMode, type ClickMode } from '../utils/selection';
 import { actionsFor, type Action } from '../utils/taskActions';
+import DeleteFilesDialog from './DeleteFilesDialog';
 
 interface RowProps {
   isSelected: boolean;
@@ -81,7 +85,10 @@ const ACTION_ICON: Record<Action, React.ReactElement> = {
   resume: <ResumeIcon fontSize="small" />,
   cancel: <CancelIcon fontSize="small" />,
   retry: <RetryIcon fontSize="small" />,
+  openFile: <OpenFileIcon fontSize="small" />,
+  openFolder: <OpenFolderIcon fontSize="small" />,
   remove: <RemoveIcon fontSize="small" />,
+  deleteFile: <DeleteFileIcon fontSize="small" />,
 };
 
 // Cells that change only with the task's state, not its progress. Memoized on primitive
@@ -117,9 +124,12 @@ const ActionsCell = React.memo(
   ({ id, state, onActionError, width }: { id: TaskId; state: TaskState; onActionError?: (message: string) => void; width?: number }) => {
     const { t } = useTranslation();
     const actions = useDownloadActions();
+    const [confirming, setConfirming] = useState(false);
+    const perform = (action: Action) => actions[action](id).catch((error) => onActionError?.(error.message));
     const run = (action: Action) => (event: React.MouseEvent) => {
       event.stopPropagation(); // don't select the row
-      actions[action](id).catch((error) => onActionError?.(error.message));
+      if (action === 'deleteFile') setConfirming(true);
+      else perform(action);
     };
     return (
       <TableCell align="center" sx={widthSx(width)}>
@@ -130,6 +140,17 @@ const ActionsCell = React.memo(
             </IconButton>
           </Tooltip>
         ))}
+        {confirming && (
+          <DeleteFilesDialog
+            open
+            count={1}
+            onConfirm={() => {
+              setConfirming(false);
+              perform('deleteFile');
+            }}
+            onClose={() => setConfirming(false)}
+          />
+        )}
       </TableCell>
     );
   },

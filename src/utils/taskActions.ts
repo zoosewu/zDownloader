@@ -1,7 +1,8 @@
 // What can be done to a download in each state (mirrors the transitions zoo-core allows).
 import type { TaskState } from '../backend';
 
-export type Action = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove';
+/** `deleteFile`: remove a finished download and move its file to the recycle bin (asks first). */
+export type Action = 'pause' | 'resume' | 'cancel' | 'retry' | 'openFile' | 'openFolder' | 'remove' | 'deleteFile';
 
 /** The row's buttons, in order. */
 export function actionsFor(state: TaskState): Action[] {
@@ -17,7 +18,7 @@ export function actionsFor(state: TaskState): Action[] {
     case 'cancelled':
       return ['retry', 'remove'];
     case 'completed':
-      return ['remove'];
+      return ['openFile', 'openFolder', 'remove', 'deleteFile'];
   }
 }
 

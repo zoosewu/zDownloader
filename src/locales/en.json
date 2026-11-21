@@ -36,6 +36,7 @@
       "clearCompleted": "Clear Completed",
       "openFile": "Open File",
       "openFolder": "Open Folder",
+      "deleteFile": "Delete File",
       "copyUrl": "Copy URL",
       "title": "Actions",
       "remove": "Remove"
@@ -115,7 +116,7 @@
     "menu": {
       "restart": "Download again from the start",
       "categories": "Categories",
-      "removeWithFile": "Remove and delete file…",
+      "removeWithFile": "Delete File…",
       "deleteTitle": "Delete files",
       "deleteConfirm": "Move {{count}} downloaded file(s) to the Recycle Bin and remove the downloads?",
       "deleteAction": "Delete"

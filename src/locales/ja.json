@@ -36,6 +36,7 @@
       "clearCompleted": "完了を削除",
       "openFile": "ファイルを開く",
       "openFolder": "フォルダを開く",
+      "deleteFile": "ファイルを削除",
       "copyUrl": "URLをコピー",
       "title": "操作",
       "remove": "削除"
@@ -115,7 +116,7 @@
     "menu": {
       "restart": "最初からダウンロード",
       "categories": "カテゴリ",
-      "removeWithFile": "削除してファイルも消す…",
+      "removeWithFile": "ファイルを削除…",
       "deleteTitle": "ファイルを削除",
       "deleteConfirm": "ダウンロード済みの {{count}} 個のファイルをごみ箱に移し、ダウンロードを削除しますか？",
       "deleteAction": "削除"
