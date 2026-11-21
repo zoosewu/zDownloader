@@ -21,7 +21,7 @@ export function usePageGuards() {
       if (e.defaultPrevented || !e.dataTransfer) return;
       e.preventDefault();
       const links = await linksDropped(e.dataTransfer);
-      if (links.length > 0) await backend.addWindow.open(links.map((url) => ({ url, filename: null, headers: [] }))).catch(() => {});
+      if (links.length > 0) await backend.addWindow.open(links.map((url) => ({ url, filename: null, headers: [], pageUrl: null }))).catch(() => {});
     };
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('dragover', onDragOver);

@@ -24,7 +24,7 @@ export function useClipboard(tauriReady: boolean = false) {
               // Could not add it: the add window shows the link and lets the user see why.
             }
           }
-          await backend.addWindow.open([{ url, filename: null, headers: [] }]);
+          await backend.addWindow.open([{ url, filename: null, headers: [], pageUrl: null }]);
         } catch {
           // Not a URL the backend understands: ignore it.
         }

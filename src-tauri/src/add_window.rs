@@ -25,11 +25,14 @@ pub struct AddItem {
     /// From the browser extension (Cookie, Referer, User-Agent): sites may need them.
     #[serde(default)]
     pub headers: Vec<(String, String)>,
+    /// The page the browser extension found the link on.
+    #[serde(default)]
+    pub page_url: Option<String>,
 }
 
 impl AddItem {
     pub fn url(url: String) -> Self {
-        Self { url, filename: None, headers: Vec::new() }
+        Self { url, filename: None, headers: Vec::new(), page_url: None }
     }
 }
 
@@ -75,7 +78,7 @@ mod tests {
     fn items_cross_the_seam_in_camel_case() {
         let item: AddItem = serde_json::from_value(serde_json::json!({ "url": "https://x/a.zip" })).unwrap();
         assert_eq!(item, AddItem::url("https://x/a.zip".into()));
-        let json = serde_json::to_value(AddItem { filename: Some("a".into()), ..item }).unwrap();
-        assert_eq!(json, serde_json::json!({ "url": "https://x/a.zip", "filename": "a", "headers": [] }));
+        let json = serde_json::to_value(AddItem { filename: Some("a".into()), page_url: Some("https://x/".into()), ..item }).unwrap();
+        assert_eq!(json, serde_json::json!({ "url": "https://x/a.zip", "filename": "a", "headers": [], "pageUrl": "https://x/" }));
     }
 }

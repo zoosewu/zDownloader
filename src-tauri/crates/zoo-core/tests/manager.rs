@@ -31,7 +31,7 @@ fn start(cfg: Config, store: &Path) -> DownloadManager {
 }
 
 fn req(url: String, dir: &Path, start: StartMode) -> AddRequest {
-    AddRequest { url, filename: None, dir: dir.to_path_buf(), start, headers: Vec::new(), tags: None, answers: Default::default() }
+    AddRequest { url, filename: None, dir: dir.to_path_buf(), start, headers: Vec::new(), tags: None, answers: Default::default(), note: String::new(), page_url: None }
 }
 
 async fn get(m: &DownloadManager, id: TaskId) -> Task {
@@ -465,4 +465,26 @@ async fn finished_is_sent_once_and_not_for_edits_of_finished_tasks() {
     let mut events = m.subscribe();
     m.set_tags(id, vec!["b".into()]).await.unwrap();
     assert_eq!(finished(&mut events), 0);
+}
+
+#[tokio::test]
+async fn note_and_source_page_are_kept() {
+    let (dir, store) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let m = start(config(), store.path());
+    let added = m
+        .add(AddRequest {
+            note: "  for the report \n".into(),
+            page_url: Some("https://example.com/post/1".into()),
+            ..req("https://example.com/a.zip".into(), dir.path(), StartMode::Later)
+        })
+        .await
+        .unwrap();
+    assert_eq!((added.note.as_str(), added.page_url.as_deref()), ("for the report", Some("https://example.com/post/1")));
+    assert_eq!(m.set_note(added.id, "second thought".into()).await.unwrap().note, "second thought");
+    m.shutdown().await;
+
+    let m = start(config(), store.path());
+    let task = m.list().await.unwrap().into_iter().find(|t| t.id == added.id).unwrap();
+    assert_eq!((task.note.as_str(), task.page_url.as_deref()), ("second thought", Some("https://example.com/post/1")));
+    assert_eq!(m.set_note(added.id, " ".into()).await.unwrap().note, "");
 }

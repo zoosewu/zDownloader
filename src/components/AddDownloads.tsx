@@ -48,6 +48,8 @@ interface Row {
   url: string;
   /** From the browser extension; the "Headers" option adds to them. */
   headers: HeaderPairs;
+  /** The page the browser extension found the link on. */
+  pageUrl: string | null;
   /** Shown in the name field: the link's own name, or what the user typed. */
   filename: string;
   /** The user typed the name: it is kept even if the server or module names the file. */
@@ -109,6 +111,8 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
   const [scheduleAt, setScheduleAt] = useState('');
   const [headers, setHeaders] = useState<HeaderFields>(emptyHeaderFields);
   const [editingHeaders, setEditingHeaders] = useState(false);
+  /** Given to every download added. */
+  const [note, setNote] = useState('');
   const [dragging, setDragging] = useState(false);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -199,6 +203,7 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
           key: nextKey++,
           url: i.url,
           headers: i.headers,
+          pageUrl: i.pageUrl ?? null,
           filename: i.filename ?? '',
           filenameEdited: !!i.filename,
           module: null,
@@ -219,7 +224,7 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
   );
   const addLinks = useCallback((text: string) => {
     const links = linksIn(text);
-    addItems(links.map((url) => ({ url, filename: null, headers: [] })));
+    addItems(links.map((url) => ({ url, filename: null, headers: [], pageUrl: null })));
     return links.length;
   }, [addItems]);
 
@@ -284,6 +289,8 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
           tags: row.tagsEdited ? row.tags : null,
           folder: keepFolders ? row.folder : null,
           answers: row.answers,
+          note,
+          pageUrl: row.pageUrl,
         });
         setRows((all) => all.filter((r) => r.key !== row.key));
       } catch (e) {
@@ -526,6 +533,11 @@ const AddDownloads: React.FC<{ initial: AddItem[]; onClose: () => void }> = ({ i
             {customHeaders ? t('addWindow.headersCount', { count: customHeaders }) : t('addWindow.headers')}
           </Button>
         </Box>
+
+        <Typography variant="body2" color="text.secondary">
+          {t('downloads.details.note')}
+        </Typography>
+        <TextField value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('addWindow.notePlaceholder')} fullWidth />
 
         {/* An error takes the count's place, so the list above does not move. */}
         <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>

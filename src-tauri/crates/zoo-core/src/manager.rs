@@ -50,6 +50,7 @@ enum Cmd {
     Remove(TaskId, Reply<()>),
     MoveBefore(TaskId, Option<TaskId>, Reply<Task>),
     SetTags(TaskId, Vec<String>, Reply<Task>),
+    SetNote(TaskId, String, Reply<Task>),
     PauseAll(oneshot::Sender<Vec<Task>>),
     ResumeAll(oneshot::Sender<Vec<Task>>),
     ClearFinished(oneshot::Sender<Vec<TaskId>>),
@@ -144,6 +145,11 @@ impl DownloadManager {
     /// Put a task in exactly these categories, in any state. Category rules stop changing it.
     pub async fn set_tags(&self, id: TaskId, tags: Vec<String>) -> Result<Task, CoreError> {
         self.ask(|r| Cmd::SetTags(id, tags, r)).await?
+    }
+
+    /// The user's note on the task, in any state; empty removes it.
+    pub async fn set_note(&self, id: TaskId, note: String) -> Result<Task, CoreError> {
+        self.ask(|r| Cmd::SetNote(id, note, r)).await?
     }
     /// Drop the task from the list. Partial data is deleted; a finished file is kept.
     pub async fn remove(&self, id: TaskId) -> Result<(), CoreError> {
@@ -309,6 +315,9 @@ impl Actor {
             Cmd::MoveBefore(id, before, reply) => {
                 let _ = reply.send(self.move_before(id, before));
             }
+            Cmd::SetNote(id, note, reply) => {
+                let _ = reply.send(self.set_note(id, &note));
+            }
             Cmd::SetTags(id, tags, reply) => {
                 let _ = reply.send(self.set_tags(id, tags));
             }
@@ -385,6 +394,8 @@ impl Actor {
             next_retry_at: None,
             rev: self.rev,
             order: self.tasks.last().map_or(1.0, |t| t.order + 1.0),
+            note: tidy_note(&req.note),
+            page_url: req.page_url.filter(|u| !u.trim().is_empty()),
         };
         self.tasks.push(task.clone());
         self.emit(Event::Upserted(task.clone()));
@@ -407,6 +418,11 @@ impl Actor {
             t.tags = tags;
             t.custom_tags = true;
         })
+    }
+
+    fn set_note(&mut self, id: TaskId, note: &str) -> Result<Task, CoreError> {
+        let note = tidy_note(note);
+        self.set(id, |t| t.note = note)
     }
 
     /// After categories were deleted.
@@ -965,6 +981,11 @@ fn rename(spec: &mut TransferSpec, id: TaskId, suggested: &str, msgs: &mpsc::Unb
         spec.name = name.clone();
         let _ = msgs.send(JobMsg::Renamed(id, name));
     }
+}
+
+/// A note as kept: without surrounding blank space.
+fn tidy_note(note: &str) -> String {
+    note.trim().to_string()
 }
 
 fn check_url(url: &str) -> Result<(), CoreError> {

@@ -48,12 +48,24 @@ pub async fn downloads_add(
     tags: Option<Vec<String>>,
     folder: Option<String>,
     answers: Option<BTreeMap<String, String>>,
+    note: Option<String>,
+    page_url: Option<String>,
     downloads: State<'_, Downloads>,
     settings: State<'_, SettingsState>,
 ) -> CmdResult<Task> {
     let dir = inside(target_dir(dir, &settings).await?, folder.as_deref());
     ensure_dir(&dir)?;
-    let req = AddRequest { url, filename, dir, start, headers: headers.unwrap_or_default(), tags, answers: answers.unwrap_or_default() };
+    let req = AddRequest {
+        url,
+        filename,
+        dir,
+        start,
+        headers: headers.unwrap_or_default(),
+        tags,
+        answers: answers.unwrap_or_default(),
+        note: note.unwrap_or_default(),
+        page_url,
+    };
     Ok(downloads.manager.add(req).await?)
 }
 
@@ -65,9 +77,11 @@ pub async fn add_now(
     filename: Option<String>,
     headers: Vec<(String, String)>,
     answers: BTreeMap<String, String>,
+    page_url: Option<String>,
 ) -> CmdResult<Task> {
     let dir = target_dir(None, settings).await?;
-    Ok(downloads.manager.add(AddRequest { url, filename, dir, start: StartMode::Now, headers, tags: None, answers }).await?)
+    let req = AddRequest { url, filename, dir, start: StartMode::Now, headers, tags: None, answers, note: String::new(), page_url };
+    Ok(downloads.manager.add(req).await?)
 }
 
 /// The categories a download would get from the rules (to pre-fill the add window).
@@ -116,6 +130,11 @@ pub async fn downloads_update(id: String, update: TaskUpdate, downloads: State<'
 }
 
 /// Put a task in exactly these categories; their rules no longer change it.
+#[tauri::command]
+pub async fn downloads_set_note(id: String, note: String, downloads: State<'_, Downloads>) -> CmdResult<Task> {
+    Ok(downloads.manager.set_note(task_id(&id)?, note).await?)
+}
+
 #[tauri::command]
 pub async fn downloads_set_tags(id: String, tags: Vec<String>, downloads: State<'_, Downloads>) -> CmdResult<Task> {
     Ok(downloads.manager.set_tags(task_id(&id)?, tags).await?)

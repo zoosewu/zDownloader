@@ -84,7 +84,7 @@ fn start(cfg: Config, store: &Path, resolver: Arc<dyn Resolver>) -> DownloadMana
 }
 
 fn req(dir: &Path, filename: Option<&str>) -> AddRequest {
-    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None, answers: Default::default() }
+    AddRequest { url: SHARE_PAGE.into(), filename: filename.map(String::from), dir: dir.to_path_buf(), start: StartMode::Now, headers: Vec::new(), tags: None, answers: Default::default(), note: String::new(), page_url: None }
 }
 
 async fn wait_until(m: &DownloadManager, id: TaskId, pred: impl Fn(&Task) -> bool) -> Task {

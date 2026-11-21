@@ -116,18 +116,19 @@ async fn handle(app: &AppHandle, request: Request) -> Response {
             // Not the URL or headers: they can carry tokens and cookies.
             log::info!("download added by the browser extension");
             let headers = add.headers();
-            let AddDownload { url, filename, .. } = add;
+            // The Referer is the page the link is on: kept as the download's source.
+            let AddDownload { url, filename, referer: page_url, .. } = add;
             let (downloads, settings) = (app.state::<Downloads>(), app.state::<SettingsState>());
             let Some(file) = urls::starts_at_once(&url, &app.state::<SiteModules>(), &settings).await else {
                 // The user checks it first, with the browser's headers kept.
-                return match add_window::open(app, vec![AddItem { url, filename, headers }]).await {
+                return match add_window::open(app, vec![AddItem { url, filename, headers, page_url }]).await {
                     Ok(()) => Response::ok(None),
                     Err(e) => error_response(e),
                 };
             };
             // The module's link for the file, with what the user answered it while listing.
             let filename = filename.or(file.filename);
-            match downloads::add_now(&downloads, &settings, file.url, filename, headers, file.answers).await {
+            match downloads::add_now(&downloads, &settings, file.url, filename, headers, file.answers, page_url).await {
                 Ok(task) => Response::ok(Some(task.name)),
                 Err(e) => error_response(e),
             }

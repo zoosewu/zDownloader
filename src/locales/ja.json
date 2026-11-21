@@ -71,7 +71,10 @@
       "notScheduled": "スケジュール未設定",
       "nextRetryAt": "次の自動再試行",
       "module": "サイトモジュール",
-      "directDownload": "直接ダウンロード"
+      "directDownload": "直接ダウンロード",
+      "pageUrl": "リンク元のページ",
+      "note": "メモ",
+      "notePlaceholder": "メモを入力（欄を離れると保存）"
     },
     "state": {
       "scheduled": "予約済み",
@@ -333,6 +336,7 @@
     "addAll": "ダウンロードを追加",
     "add": "追加",
     "saveTo": "保存先",
+    "notePlaceholder": "今回追加するすべてのダウンロードに付けます（任意）",
     "start": "開始",
     "startNow": "すぐに",
     "startPaused": "一時停止",

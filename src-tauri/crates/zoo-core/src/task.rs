@@ -119,6 +119,12 @@ pub struct Task {
     #[serde(default, skip_serializing_if = "Answers::is_empty")]
     #[ts(skip)]
     pub answers: Answers,
+    /// The user's note; empty for none.
+    #[serde(default)]
+    pub note: String,
+    /// The page the link came from (the browser tab that started the download).
+    #[serde(default)]
+    pub page_url: Option<String>,
 }
 
 /// Steps of a running task. Resolution happens before every transfer; only site modules
@@ -205,6 +211,12 @@ pub struct AddRequest {
     /// Answers the module already got for this URL (from listing its share), so it does not ask again.
     #[serde(default)]
     pub answers: BTreeMap<String, String>,
+    /// See `Task::note`.
+    #[serde(default)]
+    pub note: String,
+    /// See `Task::page_url`.
+    #[serde(default)]
+    pub page_url: Option<String>,
 }
 
 /// Changes to a task that is not running. Missing fields stay as they are.

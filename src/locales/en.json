@@ -71,7 +71,10 @@
       "notScheduled": "Not Scheduled",
       "nextRetryAt": "Next automatic retry",
       "module": "Site module",
-      "directDownload": "Direct download"
+      "directDownload": "Direct download",
+      "pageUrl": "Found on",
+      "note": "Note",
+      "notePlaceholder": "Write a note; saved when you leave the field"
     },
     "state": {
       "scheduled": "Scheduled",
@@ -333,6 +336,7 @@
     "addAll": "Add downloads",
     "add": "Add",
     "saveTo": "Save to",
+    "notePlaceholder": "For every download added now (optional)",
     "start": "Start",
     "startNow": "Now",
     "startPaused": "Paused",

@@ -7,4 +7,8 @@ export type AddItem = { url: string, filename: string | null,
 /**
  * From the browser extension (Cookie, Referer, User-Agent): sites may need them.
  */
-headers: Array<[string, string]>, };
+headers: Array<[string, string]>, 
+/**
+ * The page the browser extension found the link on.
+ */
+pageUrl: string | null, };

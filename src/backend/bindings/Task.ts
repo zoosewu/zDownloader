@@ -53,4 +53,12 @@ customTags: boolean,
 /**
  * The site module that resolved the URL (`id@marketplace`); `None` for a direct download.
  */
-module: string | null, };
+module: string | null, 
+/**
+ * The user's note; empty for none.
+ */
+note: string, 
+/**
+ * The page the link came from (the browser tab that started the download).
+ */
+pageUrl: string | null, };

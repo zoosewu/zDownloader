@@ -71,7 +71,10 @@
       "notScheduled": "未排程",
       "nextRetryAt": "下次自動重試",
       "module": "解析模組",
-      "directDownload": "直接下載"
+      "directDownload": "直接下載",
+      "pageUrl": "來源頁面",
+      "note": "備註",
+      "notePlaceholder": "寫點什麼，離開欄位時儲存"
     },
     "state": {
       "scheduled": "已排程",
@@ -333,6 +336,7 @@
     "addAll": "加入下載",
     "add": "加入",
     "saveTo": "儲存到",
+    "notePlaceholder": "套用到這次加入的每個下載（選填）",
     "start": "開始",
     "startNow": "立即",
     "startPaused": "暫停",

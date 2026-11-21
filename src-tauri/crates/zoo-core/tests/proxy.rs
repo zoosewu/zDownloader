@@ -24,7 +24,7 @@ fn config() -> Config {
 }
 
 async fn download(m: &DownloadManager, url: String, dir: &std::path::Path) -> zoo_core::Task {
-    let id = m.add(AddRequest { url, filename: None, dir: dir.into(), start: StartMode::Now, headers: Vec::new(), tags: None, answers: Default::default() }).await.unwrap().id;
+    let id = m.add(AddRequest { url, filename: None, dir: dir.into(), start: StartMode::Now, headers: Vec::new(), tags: None, answers: Default::default(), note: String::new(), page_url: None }).await.unwrap().id;
     for _ in 0..500 {
         let t = m.list().await.unwrap().into_iter().find(|t| t.id == id).unwrap();
         if matches!(t.state, TaskState::Completed | TaskState::Failed) {

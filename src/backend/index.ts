@@ -113,12 +113,16 @@ export interface AddDownload {
   folder?: string | null;
   /** What the user answered the module while listing the link (`ListedFile.answers`). */
   answers?: Record<string, string> | null;
+  /** The user's note. */
+  note?: string | null;
+  /** The page the link was found on (from the browser extension). */
+  pageUrl?: string | null;
 }
 
 export const backend = {
   downloads: {
-    add: ({ url, filename = null, dir = null, start, headers = null, tags = null, folder = null, answers = null }: AddDownload) =>
-      call<Task>('downloads_add', { url, filename, dir, start, headers, tags, folder, answers }),
+    add: ({ url, filename = null, dir = null, start, headers = null, tags = null, folder = null, answers = null, note = null, pageUrl = null }: AddDownload) =>
+      call<Task>('downloads_add', { url, filename, dir, start, headers, tags, folder, answers, note, pageUrl }),
     list: () => call<Task[]>('downloads_list'),
     pause: (id: TaskId) => call<Task>('downloads_pause', { id }),
     resume: (id: TaskId) => call<Task>('downloads_resume', { id }),
@@ -128,6 +132,8 @@ export const backend = {
     restart: (id: TaskId) => call<Task>('downloads_restart', { id }),
     /** Put the task in exactly these categories; their rules no longer change it. */
     setTags: (id: TaskId, tags: string[]) => call<Task>('downloads_set_tags', { id, tags }),
+    /** The user's note, in any state; empty removes it. */
+    setNote: (id: TaskId, note: string) => call<Task>('downloads_set_note', { id, note }),
     /** Change the URL or headers of a task that is not running. */
     update: (id: TaskId, update: TaskUpdate) => call<Task>('downloads_update', { id, update }),
     /** `deleteFile`: also move a finished download's file to the recycle bin. */
